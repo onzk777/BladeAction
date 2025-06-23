@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4ddf5f3c783bef448b61f6bb43d2c43, type: 3}
+  m_Name: ImperialBlade_Slash_Vertical
+  m_EditorClassIdentifier: 
+  commandType: 1
+  commandName: "\uC81C\uAD6D \uAC80\uC220 - \uB113\uAC8C \uBCA0\uAE30"
+  animationName: 
+  isMultiHit: 0
+  hitCount: 1
+  instantTimingFactor: 1

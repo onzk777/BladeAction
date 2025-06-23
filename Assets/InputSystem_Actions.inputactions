@@ -990,6 +990,34 @@
                     "isPartOfComposite": false
                 }
             ]
+        },
+        {
+            "name": "Combat",
+            "id": "71c2a50c-0f93-42c6-909a-6df53d64500b",
+            "actions": [
+                {
+                    "name": "TimingInput",
+                    "type": "Button",
+                    "id": "9d3e3091-cb45-4614-845a-2a050cd16a59",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "c2d332a1-3ea9-4601-857a-11960bc2a93e",
+                    "path": "<Keyboard>/space",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "TimingInput",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
         }
     ],
     "controlSchemes": [
