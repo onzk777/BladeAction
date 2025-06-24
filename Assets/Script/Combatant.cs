@@ -6,7 +6,7 @@ public class Combatant
     public SwordArtStyleData EquippedStyle { get; protected set; }
 
     public ActionCommandData[] Commands { get; protected set; }
-    public List<ActionCommandData> SelectedCommands { get; set; } = new List<ActionCommandData>();
+    public List<CombatantCommandResult> SelectedCommandResults { get; set; } = new List<CombatantCommandResult>();
     public bool[] IsPerfectTiming { get; set; }
 
     public Combatant(string name)

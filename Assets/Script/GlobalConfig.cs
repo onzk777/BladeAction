@@ -7,4 +7,7 @@ public class GlobalConfig : MonoBehaviour
     private float inputWindowSeconds = 1.0f;
 
     public float InputWindowSeconds => inputWindowSeconds;
+
+    [SerializeField, Tooltip("AI 기본 완벽 입력 확률(테스트용)")]    
+    public float npcActionPerfectRate = 0.5f;
 }

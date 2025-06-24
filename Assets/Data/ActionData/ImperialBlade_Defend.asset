@@ -14,9 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   commandType: 3
   commandName: "\uC81C\uAD6D \uBC29\uC5B4\uC220"
-  animationName: 
-  isMultiHit: 0
-  hitCount: 0
+  perfectTimings:
+  - start: 0.5
+    duration: 0.5
+  canInterruptTarget: 0
+  canBeInterrupted: 1
   instantTimingFactor: 1
-  perfectTimeStart: 0
-  perfectTimeRange: 3
+  perfectTimeStart: 1.5
+  perfectTimeRange: 0.5

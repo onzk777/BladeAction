@@ -48,5 +48,6 @@ public class TimingInputHandler : MonoBehaviour
 
         //Debug.Log("타이밍 입력 성공!");
         manager?.RegisterPerfectInput();
+        
     }
 }

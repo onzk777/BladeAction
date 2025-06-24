@@ -13,10 +13,12 @@ MonoBehaviour:
   m_Name: ImperialBlade_Slash_Horizontal
   m_EditorClassIdentifier: 
   commandType: 0
-  commandName: "\uC81C\uAD6D \uAC80\uC220 - \uB0B4\uB824\uCE58\uAE30"
-  animationName: 
-  isMultiHit: 0
-  hitCount: 1
+  commandName: "\uC81C\uAD6D \uAC80\uC220 - \uD718\uB458\uB7EC \uBCA0\uAE30"
+  perfectTimings:
+  - start: 1.5
+    duration: 0.5
+  canInterruptTarget: 0
+  canBeInterrupted: 1
   instantTimingFactor: 1
-  perfectTimeStart: 0.5
-  perfectTimeRange: 1.5
+  perfectTimeStart: 1
+  perfectTimeRange: 1
