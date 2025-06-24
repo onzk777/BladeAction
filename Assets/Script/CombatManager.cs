@@ -117,18 +117,28 @@ public class CombatManager : MonoBehaviour
             CombatStatusDisplay.Instance?.SetEnemyActionCommandName(enemyResult.command.commandName);
 
             // ⏱ 동시에 실행
-            Coroutine playerCoroutine = StartCoroutine(ExecutePlayerAction(playerResult, enemyResult));
-            Coroutine enemyCoroutine = StartCoroutine(ExecuteEnemyAction(enemyResult, playerResult));
-
-            // 두 액션이 완료될 때까지 대기
+            StartCoroutine(ExecutePlayerAction(playerResult, enemyResult));
+            StartCoroutine(ExecuteEnemyAction(enemyResult, playerResult));
+            // 두 코루틴이 끝날 때까지 딱 한 번만 대기
             yield return new WaitUntil(() => playerActionDone && enemyActionDone);
+
+
 
             // 💥 중단 판정: 서로가 서로를 끊을 수 있는지 확인
             TryInterrupt(playerResult, enemyResult); // 플레이어가 적을 중단시킬 수 있는가?
             TryInterrupt(enemyResult, playerResult); // 적이 플레이어를 중단시킬 수 있는가?
 
+            float actionStartTime = Time.time; // ★ 액션 시작 시각 기록
+            // ▶️ 'GlobalConfig.InputWindowSeconds'만큼 최소 보장
+            float actionElapsed = Time.time - actionStartTime;
+            float minActionDuration = config.InputWindowSeconds; // 3초
+            if (actionElapsed < minActionDuration)
+            yield return new WaitForSeconds(minActionDuration - actionElapsed);
+
+
+            //yield return new WaitForSeconds(1f); // Optional: 다음 액션 직전 짧은 숨고르기
+
             // 💡 이후 대결 결과 판정은 CombatJudge.Resolve() 등에서 처리 예정
-            yield return new WaitForSeconds(1f);
         }
 
         resetButton.gameObject.SetActive(true);
@@ -137,7 +147,13 @@ public class CombatManager : MonoBehaviour
 
     private IEnumerator ExecutePlayerAction(CombatantCommandResult playerResult, CombatantCommandResult enemyResult)
     {
+        float actionTime0 = Time.time;
         var action = playerResult.command;
+        if (action.hitCount ==0)
+        {
+            Debug.Log($"[Player] 히트 타이밍 없음 - 입력 스킵");
+            yield break;
+        }
         if (playerResult.wasInterrupted)
         {
             Debug.Log("⛔ 액션 중단: 이 커맨드는 더 이상 진행되지 않습니다.");
@@ -173,6 +189,13 @@ public class CombatManager : MonoBehaviour
     private IEnumerator ExecuteEnemyAction(CombatantCommandResult enemyResult, CombatantCommandResult playerResult)
     {
         var action = enemyResult.command;
+        if (action.hitCount == 0)
+        {
+            Debug.Log($"[Enemy] 히트 타이밍 없음 - 입력 스킵");
+            yield break;
+        }
+        Debug.Log($"[검사] Enemy HitCount: {enemyResult.command.hitCount}, perfectTimings.Length: {enemyResult.command.perfectTimings?.Length}, hitResults.Length: {enemyResult.hitResults?.Length}");
+
         if (enemyResult.wasInterrupted)
         {
             Debug.Log("⛔ 액션 중단: 이 커맨드는 더 이상 진행되지 않습니다.");
@@ -200,12 +223,7 @@ public class CombatManager : MonoBehaviour
 
         for (int i = 0; i < action.hitCount; i++)
         {
-            // AI 완벽 입력 여부는 무조건 false (임시)
-            for (int j = 0; j < action.hitCount; j++)
-            {
-                // 적도 타이밍 입력 처리를 통해 UI 표시 진행
-                yield return StartCoroutine(HandleHitTimingInput(false, enemyResult, i));
-            }
+            yield return StartCoroutine(HandleHitTimingInput(false, enemyResult, i));
         }
         enemyActionDone = true;
     }
@@ -217,16 +235,45 @@ public class CombatManager : MonoBehaviour
     private IEnumerator HandleHitTimingInput(bool isPlayer, CombatantCommandResult commandResult, int hitIndex)
     {
         var action = commandResult.command;
+        inputAccepted = false;
+        /////////////////히트가 없는 액션////////////////
+        if (action.hitCount == 0)
+        {
+            Debug.Log($"[{(isPlayer ? "Player" : "Enemy")}] 히트 수가 0이므로 타이밍 입력 스킵");
+            yield break;
+        }
+        ///////////////////////////////////////////////
+
+        /////////////////////Debug/////////////////////
+        if (action == null)
+        {
+            Debug.LogError("[HandleHitTimingInput] action is null");
+            yield break;
+        }
         if (action.perfectTimings == null || hitIndex >= action.perfectTimings.Length)
         {
             Debug.LogError($"[Error] perfectTimings 배열이 null이거나 hitIndex({hitIndex})가 길이({action.perfectTimings?.Length})를 초과했습니다. Command: {action.commandName}");
             yield break;
         }
+        if (action.perfectTimings == null || action.perfectTimings.Length == 0)
+        {
+            Debug.LogWarning($"[{(isPlayer ? "Player" : "Enemy")}] perfectTimings가 null이거나 비어 있음 → 스킵");
+            yield break;
+        }
+        if (hitIndex >= action.perfectTimings.Length)
+        {
+            Debug.LogError($"[Error] hitIndex({hitIndex})가 perfectTimings.Length({action.perfectTimings.Length})보다 큼");
+            yield break;
+        }
+        ////////////////////////////////////////////////
+
         var timing = action.perfectTimings[hitIndex];
 
-        inputAccepted = false;
-        float elapsed = 0f;
+
         float window = config.InputWindowSeconds;
+        float startTime = Time.time;                 // ← (A) 타이밍 시작 순간 저장
+        float elapsed = 0f;
+
         if (isPlayer) CombatStatusDisplay.Instance?.ShowPlayerStatus(""); // 플레이어 입력 상태 표시 초기화
         else CombatStatusDisplay.Instance?.ShowEnemyStatus(""); // 적 입력 상태 표시 초기화
         
@@ -244,6 +291,14 @@ public class CombatManager : MonoBehaviour
         // ✅ 적(AI) 처리: 랜덤으로 성공 여부 판단
         if (!isPlayer)
         {
+            ////////////////타이밍 정보 표시/////////////////////
+            CombatStatusDisplay.Instance?.SetEnemyTimingInfoText(
+            $"[Hit {hitIndex + 1}/{action.hitCount}] " +
+            $"Perfect: {perfectStart:F2} ~ {perfectEnd:F2}s | " +
+            $"Elapsed: {elapsed:F2}s"
+            );
+            ////////////////////////////////////////////////////
+
             yield return new WaitForSeconds(perfectStart + (timing.duration * 0.5f)); // 타이밍 중심에서 판정
 
             bool aiPerfect = Random.value < config.npcActionPerfectRate;
@@ -273,8 +328,9 @@ public class CombatManager : MonoBehaviour
 
 
 
-        while (elapsed < window && IsTimingWindowOpen)
+        while ((Time.time - startTime) < window && IsTimingWindowOpen)
         {
+            elapsed = Time.time - startTime;
             // ⏱️ 타이밍 정보 표시
             CombatStatusDisplay.Instance?.SetPlayerTimingInfoText(
             $"[Hit {hitIndex + 1}/{action.hitCount}] " +
@@ -334,17 +390,23 @@ public class CombatManager : MonoBehaviour
         if (isPlayer) CombatStatusDisplay.Instance?.ShowPlayerTimingEnd();
         else CombatStatusDisplay.Instance?.ShowEnemyTimingEnd();
 
-        // 다음 히트까지 대기
-   
+        
+        /*
         if (hitIndex + 1 < action.perfectTimings.Length)
         {
             float nextHitStart = action.perfectTimings[hitIndex + 1].start;
-            
-            float waitTime = Mathf.Max(0f, nextHitStart - elapsed);
+            float actualElapsed = Time.time - startTime;                  // ← (D) 실제 경과시간
+            float waitTime = Mathf.Max(0f, nextHitStart - actualElapsed);
             yield return new WaitForSeconds(waitTime);
         }
 
-
+        // ⏱️ 액션 전체 시간(3초) 보장
+        float actionDuration = config.InputWindowSeconds;  // 3초 (예정)
+        if (elapsed < actionDuration)
+        {
+            yield return new WaitForSeconds(actionDuration - elapsed);
+        }
+        */
     }
 
     private void TryInterrupt(CombatantCommandResult attacker, CombatantCommandResult defender)

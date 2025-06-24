@@ -15,7 +15,8 @@ public class CombatStatusDisplay : MonoBehaviour
     public TextMeshProUGUI enemyActionCommandName;
     public TextMeshProUGUI enemyTimingStatusText;
     public TextMeshProUGUI enemyInputResultText;
-    [SerializeField] private TextMeshProUGUI timingInfoText;
+    [SerializeField] private TextMeshProUGUI playerTimingInfoText;
+    [SerializeField] private TextMeshProUGUI enemyTimingInfoText;
 
     private void Awake()
     {
@@ -41,8 +42,13 @@ public class CombatStatusDisplay : MonoBehaviour
     }
     public void SetPlayerTimingInfoText(string text)
     {
-        if (timingInfoText != null)
-            timingInfoText.text = text;
+        if (playerTimingInfoText != null)
+            playerTimingInfoText.text = text;
+    }
+    public void SetEnemyTimingInfoText(string text)
+    {
+        if (enemyTimingInfoText != null)
+            enemyTimingInfoText.text = $"<color=red>{text}</color>"; // 구분을 위해 붉은색
     }
 
     public void SetPlayerActionCommandName(string commandName)

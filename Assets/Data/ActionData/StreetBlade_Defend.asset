@@ -14,10 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   commandType: 3
   commandName: "\uAE38\uAC70\uB9AC \uBC29\uC5B4\uC220"
-  perfectTimings:
-  - start: 0
-    duration: 0
-  isMultiHit: 0
+  perfectTimings: []
   canInterruptTarget: 0
   canBeInterrupted: 1
   instantTimingFactor: 1
