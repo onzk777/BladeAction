@@ -16,8 +16,9 @@ MonoBehaviour:
   commandName: "\uC81C\uAD6D \uAC80\uC220 - \uB0B4\uB824 \uBCA0\uAE30"
   perfectTimings:
   - start: 1.5
-    duration: 0.5
-  isMultiHit: 0
+    duration: 1
+  canInterruptTarget: 0
+  canBeInterrupted: 1
   instantTimingFactor: 1
   perfectTimeStart: 1
   perfectTimeRange: 1
