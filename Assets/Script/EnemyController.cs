@@ -1,41 +1,27 @@
-﻿using System;
-using UnityEngine;
-using System.Collections.Generic;
+﻿using UnityEngine;
 
 public class EnemyController : MonoBehaviour
 {
-    public SwordArtStyleData equippedStyle; // 적의 검술 스타일
-    public EnemyCombatant combatant;
+    [SerializeField] private SwordArtStyleData equippedStyle;
+    private EnemyCombatant combatant;
 
-    /*
-    [SerializeField]
-    public List<global::CommandSelection> selectedCommandIndices = new();
-    */
+    // 외부에서 combatant에 접근할 수 있도록 프로퍼티로 공개
+    public EnemyCombatant Combatant => combatant;
 
-    [SerializeField]
-    public int[] selectedCommandIndices = new int[5];
+    public int CommandCount => combatant.AvailableCommands.Count;
 
     void Awake()
     {
-        combatant = new EnemyCombatant("Monster");
+        combatant = new EnemyCombatant("Enemy");
         combatant.EquipSwordArtStyle(equippedStyle);
+    }
 
-        var resultList = new List<CombatantCommandResult>();
-        for (int i = 0; i < selectedCommandIndices.Length; i++)
-        {
-            int sel = selectedCommandIndices[i];
-            if (equippedStyle.commandSet[sel] == null)
-            {
-                Debug.LogError($"[EnemyController] commandSet[{sel}] 는 null입니다.");
-                continue; // 또는 return;
-            }
-            if (equippedStyle.commandSet != null && sel < equippedStyle.commandSet.Length)
-            {
-                var cmd = equippedStyle.commandSet[sel];
-                resultList.Add(new CombatantCommandResult(cmd));
-            }
-        }
-        combatant.SelectedCommandResults = resultList;
-
+    // (AI 로직에서 호출) 현재 커맨드를 반환
+    public ActionCommandData GetCommandByIndex(int turnIndex)
+    {
+        if (CommandCount == 0) return null;
+        var list = combatant.AvailableCommands;
+        // 예시: 순환 선택
+        return list[turnIndex % list.Count];
     }
 }

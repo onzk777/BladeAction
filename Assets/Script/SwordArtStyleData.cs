@@ -1,17 +1,16 @@
-using NUnit.Framework;
+using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "NewSwordArtStyle", menuName = "Combat/SwordArtStyle")]
 public class SwordArtStyleData : ScriptableObject
 {
     public string styleName;
-    public ActionCommandData[] commandSet = new ActionCommandData[5]; // 장착 시 자동 할당
+    [SerializeField] public List<ActionCommandData> commandSet = new List<ActionCommandData>();
 
-    public ActionCommandData[] GetActionCommands()
+    public List<ActionCommandData> GetActionCommands()
     {
+        // 리스트로 바로 반환
         return commandSet;
     }
-
-    
 }
 

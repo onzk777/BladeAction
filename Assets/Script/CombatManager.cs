@@ -1,358 +1,147 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.TextCore.Text;
-using UnityEngine.UI;
 
 public class CombatManager : MonoBehaviour
 {
-    private PlayerCombatant player;
-    private Combatant enemy;
-    public TimingInputHandler timingInputHandler;
-    [SerializeField] private GameObject playerActor;
-    [SerializeField] private GameObject currentEnemyActor;
-    private PlayerController playerController;
-    private EnemyController enemyController;
-    [SerializeField] private SwordArtStyleData defaultSwordArt;
+    [Header("Actors")]
+    [SerializeField] private PlayerController playerController;
+    [SerializeField] private EnemyController enemyController;
+
+    [Header("Config")]
     [SerializeField] private GlobalConfig config;
-    [SerializeField] private Button resetButton;
+    [Tooltip("테스트할 총 턴 수")]
+    [SerializeField] private int testTurnCount = 3;
 
-    private int currentHitIndex = 0;
-    private int currentCommandIndex = 0;
-    private bool inputAccepted = false;
-    public bool IsTimingWindowOpen { get; private set; } = false;
+    [Header("Test Commands")]
+    [Tooltip("테스트용 플레이어 커맨드 리스트")]
+    [SerializeField] private List<ActionCommandData> playerTestCommands;
+    [Tooltip("테스트용 적 커맨드 리스트")]
+    [SerializeField] private List<ActionCommandData> enemyTestCommands;
 
-    private bool playerActionDone = false;
-    private bool enemyActionDone = false;
+    [Header("Input Handler")]
+    [SerializeField] private TimingInputHandler timingInputHandler;
 
-    public void OpenTimingWindow()
+    // 마지막 입력 시각
+    private float lastInputTime = float.MinValue;
+
+    private void Start()
     {
-        IsTimingWindowOpen = true;
+        timingInputHandler.OnPerfectInput += OnPlayerInput;
+        StartCoroutine(RunCombat());
     }
 
-    public void CloseTimingWindow()
+    private void OnDestroy()
     {
-        IsTimingWindowOpen = false;
+        timingInputHandler.OnPerfectInput -= OnPlayerInput;
     }
 
-    public struct CommandPair
+    private void OnPlayerInput()
     {
-        public ActionCommand playerCommand;
-        public ActionCommand enemyCommand;
-        public bool playerPerfect;
-        public bool enemyPerfect;
+        lastInputTime = Time.time;
     }
 
-    void RestartAction()
+    private IEnumerator RunCombat()
     {
-        StartCoroutine(ExecuteTurn());
-        resetButton.gameObject.SetActive(false);
+        for (int turn = 0; turn < testTurnCount; turn++)
+        {
+            // 플레이어 턴
+            var pList = (playerTestCommands != null && playerTestCommands.Count > 0)
+                        ? playerTestCommands
+                        : playerController.Combatant.AvailableCommands;
+            Debug.Log($"=== 턴 {turn + 1} 시작: 플레이어 ===");
+            yield return StartCoroutine(PerformTurn(
+                pList, turn, true
+            ));
+
+            // 적 턴
+            var eList = (enemyTestCommands != null && enemyTestCommands.Count > 0)
+                        ? enemyTestCommands
+                        : enemyController.Combatant.AvailableCommands;
+            Debug.Log($"=== 턴 {turn + 1} 시작: 적 ===");
+            yield return StartCoroutine(PerformTurn(
+                eList, turn, false
+            ));
+        }
+
+        Debug.Log("=== 전투 종료 ===");
     }
 
-    void Start()
+    private IEnumerator PerformTurn(
+        List<ActionCommandData> commands,
+        int turnIndex,
+        bool isPlayer)
     {
-        playerController = playerActor.GetComponent<PlayerController>();
-        enemyController = currentEnemyActor.GetComponent<EnemyController>();
+        // 커맨드 선택
+        var action = commands[turnIndex % commands.Count];
+        var perfects = action.perfectTimings;
+        int hitCount = perfects.Count;
 
-        if (playerController == null || enemyController == null)
-        {
-            Debug.LogError("⚠️ PlayerController 또는 EnemyController가 해당 액터에 없습니다.");
-            return;
-        }
-
-        player = playerController.combatant;
-        enemy = enemyController.combatant;
-
-        player = new PlayerCombatant("Player");
-        player.EquipSwordArtStyle(playerController.equippedStyle);
-        player.SelectedCommandResults = playerController.combatant.SelectedCommandResults;
-
-        enemy = new Combatant("Enemy");
-        enemy.EquipSwordArtStyle(enemyController.equippedStyle);
-        enemy.SelectedCommandResults = enemyController.combatant.SelectedCommandResults;
-
-        resetButton.onClick.AddListener(RestartAction);
-        resetButton.gameObject.SetActive(false);
-        StartCoroutine(ExecuteTurn());
-    }
-
-    public void RegisterPerfectInput()
-    {
-        if (!IsTimingWindowOpen || inputAccepted) return;
-        inputAccepted = true;
-        Debug.Log(">> 입력 감지 완료 (inputAccepted = true)");
-    }
-
-    private IEnumerator ExecuteTurn()
-    {
-        var playerResults = playerController.combatant.SelectedCommandResults;
-        var enemyResults = enemyController.combatant.SelectedCommandResults;
-
-        for (currentCommandIndex = 0; currentCommandIndex < 5; currentCommandIndex++)
-        {
-            // 🔥 각 액션마다 플래그 초기화
-            playerActionDone = false;
-            enemyActionDone = false;
-
-            CombatStatusDisplay.Instance?.ResetText();
-
-            var playerResult = playerResults[currentCommandIndex];
-            var enemyResult = enemyResults[currentCommandIndex];
-
-            // UI 표시
-            CombatStatusDisplay.Instance?.SetActionProgress(currentCommandIndex + 1, 5);
-            CombatStatusDisplay.Instance?.SetPlayerActionCommandName(playerResult.command.commandName);
-            CombatStatusDisplay.Instance?.SetEnemyActionCommandName(enemyResult.command.commandName);
-
-            // 🔥 액션 시작 시간 기록
-            float actionStartTime = Time.time;
-
-            // ⏱ 동시에 실행
-            StartCoroutine(ExecutePlayerAction(playerResult, enemyResult));
-            StartCoroutine(ExecuteEnemyAction(enemyResult, playerResult));
-
-            // 두 코루틴이 끝날 때까지 대기
-            yield return new WaitUntil(() => playerActionDone && enemyActionDone);
-
-            // 💥 중단 판정
-            TryInterrupt(playerResult, enemyResult);
-            TryInterrupt(enemyResult, playerResult);
-
-            // 🔥 최소 액션 시간 보장 (수정됨)
-            float actionElapsed = Time.time - actionStartTime;
-            float minActionDuration = config.InputWindowSeconds;
-            if (actionElapsed < minActionDuration)
-            {
-                yield return new WaitForSeconds(minActionDuration - actionElapsed);
-            }
-
-            // 다음 액션 전 잠깐 대기
-            yield return new WaitForSeconds(0.5f);
-        }
-
-        resetButton.gameObject.SetActive(true);
-        Debug.Log("전투 종료");
-    }
-
-    private IEnumerator ExecutePlayerAction(CombatantCommandResult playerResult, CombatantCommandResult enemyResult)
-    {
-        var action = playerResult.command;
-        if (action.hitCount == 0)
-        {
-            Debug.Log($"[Player] 히트 타이밍 없음 - 입력 스킵");
-            playerActionDone = true; // 🔥 플래그 설정 추가
-            yield break;
-        }
-        if (playerResult.wasInterrupted)
-        {
-            Debug.Log("⛔ 액션 중단: 이 커맨드는 더 이상 진행되지 않습니다.");
-            playerActionDone = true; // 🔥 플래그 설정 추가
-            yield break;
-        }
-
-        for (int i = 0; i < action.hitCount; i++)
-        {
-            yield return StartCoroutine(HandleHitTimingInput(true, playerResult, i));
-        }
-        playerActionDone = true;
-    }
-
-    private IEnumerator ExecuteEnemyAction(CombatantCommandResult enemyResult, CombatantCommandResult playerResult)
-    {
-        var action = enemyResult.command;
-        if (action.hitCount == 0)
-        {
-            Debug.Log($"[Enemy] 히트 타이밍 없음 - 입력 스킵");
-            enemyActionDone = true; // 🔥 플래그 설정 추가
-            yield break;
-        }
-
-        if (enemyResult.wasInterrupted)
-        {
-            Debug.Log("⛔ 액션 중단: 이 커맨드는 더 이상 진행되지 않습니다.");
-            enemyActionDone = true; // 🔥 플래그 설정 추가
-            yield break;
-        }
-
-        for (int i = 0; i < action.hitCount; i++)
-        {
-            yield return StartCoroutine(HandleHitTimingInput(false, enemyResult, i));
-        }
-        enemyActionDone = true;
-    }
-
-    private IEnumerator HandleHitTimingInput(bool isPlayer, CombatantCommandResult commandResult, int hitIndex)
-    {
-        var action = commandResult.command;        
-
-        // 히트가 없으면 스킵
-        if (action.hitCount == 0)
-        {
-            Debug.Log($"[{(isPlayer ? "Player" : "Enemy")}] 히트 수가 0이므로 타이밍 입력 스킵");
-            yield break;
-        }
-
-        // 타이밍 윈도우 준비
-        var timing = action.perfectTimings[hitIndex];        
-        float startTime = Time.time;
-        float perfectStart = timing.start;
-        float perfectEnd = timing.start + timing.duration;
+        float windowStart = Time.time;
         float window = config.InputWindowSeconds;
+        float cooldown = config.ActionInputCooldown;
 
-        inputAccepted = false;
-        float elapsed = 0f;
+        int nextHitIndex = 0;
+        float nextAllowedInputTime = windowStart;
+        bool[] results = new bool[hitCount];
 
-        // UI 표시
-        if (isPlayer)
+        Debug.Log($"{(isPlayer ? "[P]" : "[E]")} 액션: {action.commandName}, 히트 수: {hitCount}");
+
+        // 윈도우 루프
+        while (Time.time - windowStart < window)
         {
-            CombatStatusDisplay.Instance?.ShowPlayerStatus("");
-            CombatStatusDisplay.Instance?.ShowPlayerTimingStart();
-        }
+            float elapsed = Time.time - windowStart;
 
-        else
-        {
-            CombatStatusDisplay.Instance?.ShowEnemyStatus("");
-            CombatStatusDisplay.Instance?.ShowEnemyTimingStart();            
-        }
-
-        // 플레이어 처리
-        OpenTimingWindow();
-        bool startShown = false;
-        bool endShown = false;
-
-        while (elapsed < window && IsTimingWindowOpen)
-        {
-            CombatStatusDisplay.Instance?.ShowPlayerStatus("");
-            CombatStatusDisplay.Instance?.ShowEnemyStatus("");
-            // 입력 처리
-            
-            CombatStatusDisplay.Instance?.SetPlayerTimingInfoText(
-                $"[Hit {hitIndex + 1}/{action.hitCount}] " +
-                $"Perfect: 0.00 ~ {timing.duration:F2}s | " +
-                $"Elapsed: {elapsed:F2}s"
-            );
-
-            if (!startShown && elapsed >= perfectStart)
+            if (!isPlayer)
             {
-                if(isPlayer)CombatStatusDisplay.Instance?.ShowPlayerTimingPerfectStart();
-                else CombatStatusDisplay.Instance?.ShowEnemyTimingPerfectStart();
-                startShown = true;
-            }
-
-            if (!endShown && elapsed >= perfectEnd)
-            {
-                if(isPlayer)CombatStatusDisplay.Instance?.ShowPlayerTimingPerfectEnd();
-                else CombatStatusDisplay.Instance?.ShowEnemyTimingPerfectEnd();
-                endShown = true;
-            }
-
-            if (isPlayer && inputAccepted)
-            {
-                // 버튼을 눌렀을 때 즉시 성공/실패 처리
-                bool success = elapsed >= perfectStart && elapsed <= perfectEnd;
-                commandResult.hitResults[hitIndex].isPerfect = success;
-
-                if (success)
+                // AI 판정
+                if (nextHitIndex < hitCount && elapsed >= perfects[nextHitIndex].start)
                 {
-                    Debug.Log($"[Player Perfect] 히트 {hitIndex} 성공");
-                    CombatStatusDisplay.Instance?.ShowPlayerStatus("완벽 타이밍 성공!");
+                    bool success = Random.value < config.NpcActionPerfectRate;
+                    results[nextHitIndex] = success;
+                    Debug.Log($"[E Hit {nextHitIndex + 1}] {(success ? "완벽 성공" : "완벽 실패")} ({elapsed:F2}s)");
+                    nextHitIndex++;
                 }
-                else
-                {
-                    Debug.Log($"[Player Fail] 히트 {hitIndex} 실패");
-                    CombatStatusDisplay.Instance?.ShowPlayerStatus("완벽 타이밍 실패...");
-                }
-
-                CloseTimingWindow();
-                break;
-            }
-
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        
-
-        // 입력이 없었을 경우
-        if (!inputAccepted)
-        {
-            commandResult.hitResults[hitIndex].isPerfect = false;
-            CombatStatusDisplay.Instance?.ShowPlayerStatus("입력 없음 (실패)");
-        }
-        CloseTimingWindow();
-        CombatStatusDisplay.Instance?.ShowPlayerTimingEnd();
-
-        
-
-
-        // 적(AI) 처리
-        if (!isPlayer)
-        {
-            CombatStatusDisplay.Instance?.SetEnemyTimingInfoText(
-                $"[Hit {hitIndex + 1}/{action.hitCount}] " +
-                $"Perfect: {perfectStart:F2} ~ {perfectEnd:F2}s"
-            );
-
-            // 타이밍 중심에서 판정
-            yield return new WaitForSeconds(timing.duration * 0.5f);
-
-            bool aiPerfect = Random.value < config.npcActionPerfectRate;
-            commandResult.hitResults[hitIndex].isPerfect = aiPerfect;
-
-            if (aiPerfect)
-            {
-                CombatStatusDisplay.Instance?.ShowEnemyStatus("완벽 타이밍 성공!");
-                Debug.Log($"[Enemy Perfect] 히트 {hitIndex} 성공");
             }
             else
             {
-                CombatStatusDisplay.Instance?.ShowEnemyStatus("완벽 타이밍 실패...");
-                Debug.Log($"[Enemy Fail] 히트 {hitIndex} 실패");
+                // 플레이어 입력 판정
+                if (lastInputTime >= nextAllowedInputTime
+                    && lastInputTime - windowStart < window
+                    && nextHitIndex < hitCount)
+                {
+                    float t = lastInputTime - windowStart;
+                    var pt = perfects[nextHitIndex];
+                    bool success = t >= pt.start && t <= pt.start + pt.duration;
+                    results[nextHitIndex] = success;
+
+                    if (success)
+                    {
+                        Debug.Log($"[P Hit {nextHitIndex + 1}] 완벽 성공 ({t:F2}s)");
+                        nextAllowedInputTime = lastInputTime;
+                    }
+                    else
+                    {
+                        Debug.Log($"[P Hit {nextHitIndex + 1}] 타이밍 실패 ({t:F2}s)");
+                        nextAllowedInputTime = lastInputTime + cooldown;
+                    }
+
+                    nextHitIndex++;
+                }
             }
 
-            CombatStatusDisplay.Instance?.ShowEnemyTimingEnd();
-
-            // 나머지 타이밍 대기
-            yield return new WaitForSeconds(timing.duration * 0.5f);
-
-            
-
-            yield break;
+            yield return null;
         }
 
-        // 다음 히트까지 기다리기
-        if (hitIndex + 1 < action.perfectTimings.Length)
+        // 윈도우 종료 후 결과 정리
+        /*
+        for (int i = 0; i < hitCount; i++)
         {
-            float nextStart = action.perfectTimings[hitIndex + 1].start;
-            float waitTime = Mathf.Max(0f, nextStart - elapsed);
-            yield return new WaitForSeconds(waitTime);
+            if (!results[i])
+                Debug.Log($"[{(isPlayer ? "P" : "E")} Hit {i + 1}] 입력 없음 또는 실패");
         }
+        */
 
-        // 🔥 타이밍 창 시작까지 대기
-        if (perfectStart > 0)
-        {
-            yield return new WaitForSeconds(perfectStart);
-        }
-
-        float timingStartTime = Time.time; // 실제 타이밍 윈도우 시작 시간        
-    }
-
-    private void TryInterrupt(CombatantCommandResult attacker, CombatantCommandResult defender)
-    {
-        if (!attacker.command || !defender.command) return;
-
-        bool attackerPerfect = attacker.hitResults[currentHitIndex].isPerfect;
-        if (!attackerPerfect) return;
-
-        if (ShouldInterrupt(attacker.command, defender.command))
-        {
-            defender.wasInterrupted = true;
-            Debug.Log($"[Interrupt] {defender.command.commandName} 커맨드가 중단되었습니다.");
-        }
-    }
-
-    private bool ShouldInterrupt(ActionCommandData attacker, ActionCommandData defender)
-    {
-        return attacker.canInterruptTarget && defender.canBeInterrupted;
+        yield return null;
     }
 }

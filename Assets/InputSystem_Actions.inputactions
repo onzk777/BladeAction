@@ -996,7 +996,7 @@
             "id": "71c2a50c-0f93-42c6-909a-6df53d64500b",
             "actions": [
                 {
-                    "name": "TimingInput",
+                    "name": "PerfectInput",
                     "type": "Button",
                     "id": "9d3e3091-cb45-4614-845a-2a050cd16a59",
                     "expectedControlType": "",
@@ -1013,7 +1013,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "TimingInput",
+                    "action": "PerfectInput",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
