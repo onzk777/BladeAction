@@ -79,6 +79,8 @@ public class CombatManager : MonoBehaviour
 
         float windowStart = Time.time;
         float window = config.InputWindowSeconds;
+        
+        Debug.Log($"[Turn Start] {(isPlayer ? "Player" : "Enemy")} at {windowStart:F2}s, window = {window:F2}s"); // 윈도우 시작 시각
         float cooldown = config.ActionInputCooldown;
 
         int nextHitIndex = 0;
@@ -133,14 +135,9 @@ public class CombatManager : MonoBehaviour
             yield return null;
         }
 
-        // 윈도우 종료 후 결과 정리
-        /*
-        for (int i = 0; i < hitCount; i++)
-        {
-            if (!results[i])
-                Debug.Log($"[{(isPlayer ? "P" : "E")} Hit {i + 1}] 입력 없음 또는 실패");
-        }
-        */
+        float windowEnd = Time.time;
+        Debug.Log($"[Turn End]   {(isPlayer ? "Player" : "Enemy")} at {windowEnd:F2}s, elapsed = {windowEnd - windowStart:F2}s");
+
 
         yield return null;
     }

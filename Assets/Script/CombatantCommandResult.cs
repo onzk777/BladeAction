@@ -14,9 +14,10 @@ public class CombatantCommandResult
     public CombatantCommandResult(ActionCommandData cmd)
     {
         Command = cmd;
-        hitResults = new List<HitResult>(cmd.hitCount);
-        for (int i = 0; i < cmd.hitCount; i++)
-            hitResults.Add(new HitResult());
+        if (cmd == null) throw new ArgumentNullException(nameof(cmd)); // cmd가 null인 경우 예외 발생
+        hitResults = new List<HitResult>(cmd.hitCount); // hitCount에 따라 초기화
+        for (int i = 0; i < cmd.hitCount; i++) // hitCount만큼 HitResult 객체를 생성
+            hitResults.Add(new HitResult()); // HitResult 객체를 리스트에 추가
     }
 
     /// <summary>

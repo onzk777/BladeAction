@@ -47,7 +47,9 @@ public class TimingInputHandler : MonoBehaviour
 
     private void OnTimingInput(InputAction.CallbackContext ctx)
     {
-        //Debug.Log("[TimingInputHandler] PerfectInput 입력 감지");
+#if UNITY_EDITOR
+        Debug.Log("[TimingInputHandler] PerfectInput 입력 감지");
+#endif
         OnPerfectInput?.Invoke();
     }
 }
