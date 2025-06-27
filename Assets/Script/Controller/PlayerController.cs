@@ -3,10 +3,12 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(PlayerInput))]
-public class PlayerController : MonoBehaviour
+public class PlayerController : MonoBehaviour, ICombatController
 {
-    [SerializeField] private SwordArtStyleData equippedStyle;
     private PlayerCombatant combatant;
+    public Combatant Combatant => combatant;
+    [SerializeField] private SwordArtStyleData equippedStyle;
+    
     private int currentCommandIndex = 0;
 
     [Header("테스트 모드 설정")]
@@ -16,7 +18,6 @@ public class PlayerController : MonoBehaviour
     [Tooltip("테스트 모드에서 사용할 커맨드 인덱스")]
     [SerializeField] private int testCommandIndex = 0;
 
-    public PlayerCombatant Combatant => combatant;
     public int CommandCount => combatant.AvailableCommands.Count;
 
     void Awake()
@@ -65,4 +66,15 @@ public class PlayerController : MonoBehaviour
         var cmd = GetSelectedCommand();
         CombatStatusDisplay.Instance?.SetPlayerActionCommandName(cmd?.commandName);
     }
+    public void ReceiveCommandResult(CombatantCommandResult result)
+    {
+        // 1) 판정 결과를 UI에 보여줍니다.
+        int perfects = result.GetPerfectHitCount();
+        int total = result.HitCount;
+        CombatStatusDisplay.Instance?.ShowPlayerResult(perfects, total);
+
+        // 2) 필요하면 애니메이션 트리거, 사운드 재생 등 후속 연출
+        //    e.g., animator.SetTrigger(perfects == total ? "PerfectCombo" : "Hit");
+    }
+
 }

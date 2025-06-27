@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using static CombatantCommandResult;
 
 public class CombatantCommandResult
 {
@@ -33,5 +34,17 @@ public class CombatantCommandResult
     public class HitResult
     {
         public bool IsPerfect { get; set; } = false;
+    }
+
+    /// 전체 히트 횟수
+    public int HitCount => hitResults.Count;
+
+    /// 완벽 입력(성공) 히트 횟수
+    public int GetPerfectHitCount()
+    {
+        int count = 0;
+        foreach (var hit in hitResults)
+            if (hit.IsPerfect) count++;
+        return count;
     }
 }

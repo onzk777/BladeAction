@@ -151,6 +151,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   equippedStyle: {fileID: 11400000, guid: 1b844bdf3947de140b680e74e35a23ae, type: 2}
+  useTestMode: 0
+  testCommandIndex: 0
 --- !u!4 &172118090
 Transform:
   m_ObjectHideFlags: 0
@@ -939,6 +941,8 @@ MonoBehaviour:
   enemyTimingInfoText: {fileID: 1601086918}
   enemyTimingStatusText: {fileID: 1425157446}
   enemyInputResultText: {fileID: 1027463410}
+  playerResultText: {fileID: 0}
+  enemyResultText: {fileID: 0}
 --- !u!4 &845563261
 Transform:
   m_ObjectHideFlags: 0
@@ -1778,18 +1782,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerController: {fileID: 172118089}
   enemyController: {fileID: 1314355068}
-  config: {fileID: 11400000, guid: 55a8c8dc4f5dc4448b62989e05413068, type: 2}
-  resetButton: {fileID: 1203882104}
   timingInputHandler: {fileID: 172118092}
-  testTurnCount: 3
-  playerTestCommands:
-  - {fileID: 11400000, guid: cc26d0dec98fd48428c7a2912352bea5, type: 2}
-  - {fileID: 11400000, guid: 3fa22c8ab83a6fb4e950144c78ab90dd, type: 2}
-  - {fileID: 11400000, guid: cc26d0dec98fd48428c7a2912352bea5, type: 2}
-  enemyTestCommands:
-  - {fileID: 11400000, guid: 115c3a9049bd2db429926a94074c6897, type: 2}
-  - {fileID: 11400000, guid: 115c3a9049bd2db429926a94074c6897, type: 2}
-  - {fileID: 11400000, guid: 115c3a9049bd2db429926a94074c6897, type: 2}
+  globalConfig: {fileID: 11400000, guid: 55a8c8dc4f5dc4448b62989e05413068, type: 2}
 --- !u!4 &1216331094
 Transform:
   m_ObjectHideFlags: 0
@@ -1864,6 +1858,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   equippedStyle: {fileID: 11400000, guid: 0b9381922b6f4064c9fa76ce99959125, type: 2}
+  useTestMode: 0
+  testCommandIndex: 0
 --- !u!1 &1425157444
 GameObject:
   m_ObjectHideFlags: 0

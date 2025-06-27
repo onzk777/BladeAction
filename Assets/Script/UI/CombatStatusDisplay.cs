@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class CombatStatusDisplay : MonoBehaviour
 {
-    public static CombatStatusDisplay Instance;
+    public static CombatStatusDisplay Instance { get; private set; }
 
     [Header("Progress & Labels")]
     [Tooltip("액션 진행도 표시 텍스트")]
@@ -98,4 +98,23 @@ public class CombatStatusDisplay : MonoBehaviour
 
     public void ShowEnemyPerfectInputResult(string result)
         => enemyInputResultText.text = result;
+
+    /////////////////////////////////////////////////////////////////////////////////
+    public void ShowPlayerResult(int perfectHitCount, int totalHits)
+    {
+        // 예시: UI 텍스트에 “완벽 입력: X / Y” 같은 문구를 띄웁니다.
+        playerResultText.text = $"플레이어: 완벽 {perfectHitCount} / {totalHits}";
+        // 필요하다면 애니메이션, VFX, 사운드 등 추가
+    }
+
+    /// <summary>
+    /// 적의 히트 판정 결과를 (필요하다면) 화면에 보여 줍니다.
+    /// </summary>
+    public void ShowEnemyResult(int perfectHitCount, int totalHits)
+    {
+        enemyResultText.text = $"적: 완벽 {perfectHitCount} / {totalHits}";
+    }
+
+    [SerializeField] private TextMeshProUGUI playerResultText;
+    [SerializeField] private TextMeshProUGUI enemyResultText;
 }

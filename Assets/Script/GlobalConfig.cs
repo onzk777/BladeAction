@@ -7,8 +7,12 @@ public class GlobalConfig : ScriptableObject
 {
     [Header("Timing Settings")]
     [Tooltip("플레이어/AI가 입력 윈도우 동안 기다리는 시간(초)")]
-    [SerializeField] private float inputWindowSeconds = 3f;
-    public float InputWindowSeconds => inputWindowSeconds;
+    [SerializeField] private float turnDurationSeconds = 3f;
+    public float TurnDurationSeconds => turnDurationSeconds;
+    [SerializeField] private float inputBufferStartSeconds = 3f;
+    public float InputBufferStartSeconds => inputBufferStartSeconds;
+    [SerializeField] private float inputBufferEndSeconds = 3f;
+    public float InputBufferEndSeconds => inputBufferEndSeconds;
 
     [Header("AI Settings")]
     [Tooltip("AI가 완벽 입력 타이밍을 성공할 확률(0~1)")]
