@@ -11,5 +11,6 @@ public interface ICombatController
     /// 해당 컨트롤러가 처리하도록 호출합니다.
     /// </summary>
     /// <param name="result">커맨드 실행 결과 객체</param>
-    void ReceiveCommandResult(CombatantCommandResult result);
+    void ReceiveCommandResult(CombatantCommandResult result);   // 턴 행동 결과 처리
+    void OnHitResult(int hitIndex, bool isPerfect); // 히트 결과 처리
 }

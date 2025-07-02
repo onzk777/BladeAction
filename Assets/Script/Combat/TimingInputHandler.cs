@@ -1,40 +1,41 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
+using UnityEditor.PackageManager.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(PlayerInput))]
 public class TimingInputHandler : MonoBehaviour
 {
-    public event Action OnPerfectInput;
     private InputAction perfectAction;
 
     private bool isListening = false;
     private List<PerfectTimingWindow> currentTimings;
 
-    private float timingWindowStartTime; // ÇöÀç ÅÏÀÇ ½ÃÀÛ ½Ã°£
-    private float? lastInputTime = null; // ¸¶Áö¸· ÀÔ·Â ½Ã°£
+    //private float timingWindowStartTime; // í˜„ì¬ í„´ì˜ ì‹œì‘ ì‹œê°„
+    private float? lastInputTime = null; // ë§ˆì§€ë§‰ ì…ë ¥ ì‹œê°„
 
-    
+    private float nextAllowedInputTime = 0f;
 
     private void Awake()
     {
-        // PlayerInput ÄÄÆ÷³ÍÆ® È®º¸
+        // PlayerInput ì»´í¬ë„ŒíŠ¸ í™•ë³´
         var playerInput = GetComponent<PlayerInput>();
         if (playerInput == null)
         {
-            Debug.LogError("[TimingInputHandler] PlayerInput ÄÄÆ÷³ÍÆ®¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù.");
+            Debug.LogError("[TimingInputHandler] PlayerInput ì»´í¬ë„ŒíŠ¸ë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
             return;
         }
 
-        // ¾×¼Ç¸Ê "Combat" ³» PerfectInput ¾×¼ÇÀ» °¡Á®¿È
+        // ì•¡ì…˜ë§µ "Combat" ë‚´ PerfectInput ì•¡ì…˜ì„ ê°€ì ¸ì˜´
         playerInput.SwitchCurrentActionMap("Combat");
         perfectAction = playerInput.actions["PerfectInput"];
         if (perfectAction == null)
         {
-            Debug.LogError("[TimingInputHandler] 'PerfectInput' ¾×¼ÇÀ» Ã£À» ¼ö ¾ø½À´Ï´Ù.");
+            Debug.LogError("[TimingInputHandler] 'PerfectInput' ì•¡ì…˜ì„ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
         }
     }
+
 
     private void OnEnable()
     {
@@ -59,48 +60,153 @@ public class TimingInputHandler : MonoBehaviour
     {
         isListening = true;
         lastInputTime = null;
-        timingWindowStartTime = Time.time;
     }
 
     public void EndListening()
     {
         isListening = false;
     }
-
+    private bool ShouldIgnoreInput()
+    {
+        if (!isListening) return true;   // ì…ë ¥ ë¦¬ìŠ¤ë‹ ì¤‘ì´ ì•„ë‹ ê²½ìš° ë¬´ì‹œ
+        if (IsInBufferPeriod()) // ë²„í¼ êµ¬ê°„ì— ìˆëŠ” ê²½ìš° ì…ë ¥ ë¬´ì‹œ
+        {
+            Debug.Log($"[OnTimingInput] ë²„í¼ êµ¬ê°„ â†’ ì…ë ¥ ë¬´ì‹œ");
+            return true;
+        }
+        if (Time.time < nextAllowedInputTime)
+        {
+            Debug.Log("[OnTimingInput] ì¿¨ë‹¤ìš´ ì¤‘! ì…ë ¥ ë¬´ì‹œ");
+            return true;
+        }
+        return false;
+    }
     private void OnTimingInput(InputAction.CallbackContext ctx)
     {
-        if (!isListening) return;
-        lastInputTime = Time.time;
+        Debug.Log($"[OnTimingInput] Handler InstanceID: {this.GetInstanceID()} CombatManager.CombatStartTime={CombatManager.CombatStartTime}");
+        Debug.Log($"[OnTimingInput] fired! isListening={isListening}");
+        Debug.Log($"[OnTimingInput] Time: {Time.time}, lastInputTime: {lastInputTime}, CombatStartTime: {CombatManager.CombatStartTime}");
 
-#if UNITY_EDITOR
-        Debug.Log("[TimingInputHandler] PerfectInput ÀÔ·Â °¨Áö");
-        Debug.Log($"[TimingInput] ÀÔ·Â °¨ÁöµÊ: {lastInputTime}");
-#endif
-        OnPerfectInput?.Invoke();
+        if (ShouldIgnoreInput()) return;
+        
+        lastInputTime = Time.time;
+        bool isPerfect = HasPerfectInput(currentTiming);
+
+        if (!CombatManager.Instance.windowPrompted)
+        {
+            Debug.Log("ìœˆë„ìš° ì—´ë¦¬ê¸° ì „ â†’ ì¿¨ë‹¤ìš´ë§Œ ì ìš©, íŒì • X");
+            if (!isPerfect)
+            {
+                nextAllowedInputTime = Time.time + GlobalConfig.Instance.ActionInputCooldown;
+                Debug.Log($"ì¿¨ë‹¤ìš´ ë°œë™! {GlobalConfig.Instance.ActionInputCooldown}ì´ˆ");
+            }
+            return; // â— ResolveInput í˜¸ì¶œ ê¸ˆì§€!
+        }
+
+        /*
+        if (!isPerfect)
+        {
+            nextAllowedInputTime = Time.time + GlobalConfig.Instance.ActionInputCooldown;
+            Debug.Log($"ìœˆë„ìš° ë°– ì…ë ¥ â†’ ì¿¨ë‹¤ìš´ ì ìš©! {GlobalConfig.Instance.ActionInputCooldown}ì´ˆ");
+        }
+        */
+        bool isPlayer = CombatManager.Instance.CurrentController is PlayerController;
+        CombatManager.Instance.ResolveInput(
+            isPlayer,
+            isPerfect,
+            CombatManager.Instance.CurrentHit,
+            CombatManager.Instance.CurrentController,
+            CombatManager.Instance.CurrentResult
+        );
+
+        //if (isPerfect) EndListening(); // ì¤‘ë³µ ì…ë ¥ ë°©ì§€ ìœ„í•´ ì¦‰ì‹œ ë¦¬ìŠ¤ë„ˆ ì¢…ë£Œ
     }
 
     public bool EvaluateInput(PerfectTimingWindow timing)
     {
-        // ÃÖ±Ù ÀÔ·Â ½Ã°£ÀÌ timing ±¸°£ ¾È¿¡ µé¾î°¡´ÂÁö È®ÀÎ
+        // ìµœê·¼ ì…ë ¥ ì‹œê°„ì´ timing êµ¬ê°„ ì•ˆì— ë“¤ì–´ê°€ëŠ”ì§€ í™•ì¸
         if (!lastInputTime.HasValue) return false;
 
-        float relativeTime = lastInputTime.Value - timingWindowStartTime;
+        float relativeTime = lastInputTime.Value - CombatManager.CombatStartTime;
         return timing.Contains(relativeTime);
     }
+
+    public bool HasPerfectInput(PerfectTimingWindow timing)
+    {
+        if (timing == null)
+        {
+            Debug.LogError("[HasPerfectInput] timing is null!");
+            return false;
+        }
+        if (!lastInputTime.HasValue)
+        {
+            Debug.Log("[HasPerfectInput] lastInputTime ì—†ìŒ");
+            return false;
+        }
+        if (CombatManager.CombatStartTime == 0f)
+        {
+            Debug.LogError("[HasPerfectInput] CombatManager.CombatStartTime is 0!");
+            return false;
+        }
+        
+        float relativeTime = lastInputTime.Value - CombatManager.CombatStartTime;
+        bool isIn = timing.Contains(relativeTime);
+
+        Debug.Log($"[HasPerfectInput] CombatManager.CombatStartTime={CombatManager.CombatStartTime}");
+        Debug.Log($"[HasPerfectInput] TURN-relative={relativeTime}, Window=({timing.start}~{timing.start + timing.duration}) â†’ Contains={isIn}");
+
+        return isIn;
+    }
+
 
     private List<PerfectTimingWindow> loadedTimings = new List<PerfectTimingWindow>();
     public void LoadTimingWindows(List<PerfectTimingWindow> timings)
     {
+        currentTimings = timings;
         loadedTimings = timings;
-        lastInputTime = -1f; // ÃÊ±âÈ­
+        lastInputTime = -1f; // ì´ˆê¸°í™”
     }
 
     private PerfectTimingWindow currentTiming;
 
     public void RegisterHitTiming(PerfectTimingWindow timing)
     {
+        Debug.Log($"[RegisterHitTiming] Handler InstanceID: {this.GetInstanceID()} CombatManager.CombatStartTime={CombatManager.CombatStartTime}");
+        Debug.Log($"[RegisterHitTiming] Timing: {timing.start}~{timing.start + timing.duration}, CombatManager.CombatStartTime={CombatManager.CombatStartTime}");
+        Debug.Log($"[PerfectTimingWindow] start={timing.start} duration={timing.duration}");
+
         currentTiming = timing;
-        lastInputTime = -1f; // ÃÊ±âÈ­
     }
+
+    public void NotifyWindowClosed(bool isPlayer)
+    {
+        if (!CombatManager.Instance.CurrentHitResultShown)
+        {
+            Debug.Log("ìœˆë„ìš° ì¢…ë£Œ â†’ ì…ë ¥ ì—†ìŒ, ì‹¤íŒ¨ ì²˜ë¦¬");
+            CombatManager.Instance.ResolveInput(
+                isPlayer,
+                false,
+                CombatManager.Instance.CurrentHit,
+                CombatManager.Instance.CurrentController,
+                CombatManager.Instance.CurrentResult
+            );
+            CombatManager.MarkCurrentHitResultShown();
+            EndListening();
+        }        
+    }
+
+    private bool IsInBufferPeriod()
+    {
+        float relativeTime = Time.time - CombatManager.CombatStartTime;
+
+        float turnDuration = GlobalConfig.Instance.TurnDurationSeconds;
+
+        bool inStartBuffer = relativeTime <= GlobalConfig.Instance.InputBufferStartSeconds;
+        bool inEndBuffer = relativeTime >= (turnDuration - GlobalConfig.Instance.InputBufferEndSeconds);
+
+        return inStartBuffer || inEndBuffer;
+    }
+
+    //public float CombatManager.CombatStartTime { get; set; }
 
 }

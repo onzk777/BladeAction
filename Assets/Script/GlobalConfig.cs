@@ -5,6 +5,26 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "GlobalConfig", menuName = "Combat/GlobalConfig", order = 0)]
 public class GlobalConfig : ScriptableObject
 {
+    private static GlobalConfig _instance;
+
+    public static GlobalConfig Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                // Resources 폴더에 GlobalConfig.asset 이 있어야 함!
+                _instance = Resources.Load<GlobalConfig>("GlobalConfig");
+                if (_instance == null)
+                {
+                    Debug.LogError("[GlobalConfig] Resources/GlobalConfig.asset 을 찾을 수 없습니다!");
+                }
+            }
+            return _instance;
+        }
+    }
+
+
     [Header("Timing Settings")]
     [Tooltip("플레이어/AI가 입력 윈도우 동안 기다리는 시간(초)")]
     [SerializeField] private float turnDurationSeconds = 3f;

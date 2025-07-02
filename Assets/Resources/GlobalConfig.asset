@@ -12,6 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9e2a1f770c3bb2c46becfb724f99779f, type: 3}
   m_Name: GlobalConfig
   m_EditorClassIdentifier: 
-  inputWindowSeconds: 5
-  npcActionPerfectRate: 0.3
-  ActionInputCooldown: 0.5
+  turnDurationSeconds: 5
+  inputBufferStartSeconds: 0.5
+  inputBufferEndSeconds: 0.5
+  npcActionPerfectRate: 0.5
+  actionInputCooldown: 5

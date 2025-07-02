@@ -45,11 +45,14 @@ public class EnemyController : MonoBehaviour, ICombatController
 
     public void ReceiveCommandResult(CombatantCommandResult result)
     {
-        // 1) 디버그 로그
-        Debug.Log($"[Enemy] 히트 성공: {result.GetPerfectHitCount()}/{result.HitCount}");
-
-        // 2) 후속 연출: 적 반격 애니메이션, 이펙트 등
-        //    e.g., enemyAnimator.SetTrigger("OnHit");
+        for (int i = 0; i < result.HitCount; i++)
+        {
+            bool isPerfect = result.HitResults[i].IsPerfect;  // 또는 hitResults[i].IsPerfect
+            CombatStatusDisplay.Instance.ShowEnemyTurnResult(i + 1, isPerfect);
+        }
     }
-
+    public void OnHitResult(int hitIndex, bool isPerfect)
+    {
+        CombatStatusDisplay.Instance.ShowEnemyHitResult(hitIndex, isPerfect);
+    }
 }
