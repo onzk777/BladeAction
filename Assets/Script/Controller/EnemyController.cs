@@ -16,7 +16,7 @@ public class EnemyController : MonoBehaviour, ICombatController
 
     void Awake()
     {
-        combatant = new EnemyCombatant("Enemy");
+        combatant = new EnemyCombatant("Enemy", this);
         combatant.EquipSwordArtStyle(equippedStyle);
     }
 
@@ -38,7 +38,7 @@ public class EnemyController : MonoBehaviour, ICombatController
         }
         return combatant.AvailableCommands[idx];
     }
-    public int GetSelectedIndex()
+    public int GetSelectedCommandIndex()
     {
         return testCommandIndex;
     }

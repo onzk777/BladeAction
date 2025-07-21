@@ -22,7 +22,7 @@ public class PlayerController : MonoBehaviour, ICombatController
 
     void Awake()
     {
-        combatant = new PlayerCombatant("Player");
+        combatant = new PlayerCombatant("Player", this);
         combatant.EquipSwordArtStyle(equippedStyle);
     }
 
@@ -46,7 +46,7 @@ public class PlayerController : MonoBehaviour, ICombatController
     }
 
     // 현재 턴(=currentCommandIndex)에 사용할 커맨드를 반환
-    public int GetSelectedIndex()
+    public int GetSelectedCommandIndex()
     {
         // UI 모드
         if (!useTestMode)
@@ -57,7 +57,7 @@ public class PlayerController : MonoBehaviour, ICombatController
 
     public ActionCommandData GetSelectedCommand()
     {
-        int idx = GetSelectedIndex();
+        int idx = GetSelectedCommandIndex();
         return combatant.AvailableCommands[idx];
     }
 

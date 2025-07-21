@@ -4,7 +4,7 @@ public interface ICombatController
     Combatant Combatant { get; }
 
     /// <summary>이번 턴에 실행할 커맨드의 인덱스를 반환합니다.</summary>
-    int GetSelectedIndex();
+    int GetSelectedCommandIndex();
 
     /// <summary>
     /// PerformTurn 종료 시 전달받은 히트 판정 결과를

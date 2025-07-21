@@ -1,11 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem.XR;
 
 public class EnemyCombatant : Combatant
 {
-    public EnemyCombatant(string name) : base("???")
+    private EnemyController controller; // EnemyController ÂüÁ¶
+    public EnemyCombatant(string name, EnemyController controller) : base("???")
     {
-
+        this.controller = controller;
     }
 
     public void Init(string name)
