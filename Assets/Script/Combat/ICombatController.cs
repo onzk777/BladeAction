@@ -12,5 +12,5 @@ public interface ICombatController
     /// </summary>
     /// <param name="result">커맨드 실행 결과 객체</param>
     void ReceiveCommandResult(CombatantCommandResult result);   // 턴 행동 결과 처리
-    void OnHitResult(int hitIndex, bool isPerfect); // 히트 결과 처리
+    void OnHitResult(int hitIndex, bool isPerfect); // 입력 결과 표시
 }

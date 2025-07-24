@@ -68,22 +68,19 @@ public class PlayerController : MonoBehaviour, ICombatController
     }
     public void ReceiveCommandResult(CombatantCommandResult result)
     {
-        // 1) 판정 결과를 UI에 보여줍니다.
-       
-        for (int i = 0; i < result.HitCount; i++)
-        {
-            bool isPerfect = result.HitResults[i].IsPerfect;  // 또는 hitResults[i].IsPerfect
-            CombatStatusDisplay.Instance.ShowPlayerTurnResult(i + 1, isPerfect);
-        }
-
-        // 2) 필요하면 애니메이션 트리거, 사운드 재생 등 후속 연출
-        //    e.g., animator.SetTrigger(perfects == total ? "PerfectCombo" : "Hit");
+        // 아직 쓸데없음
     }
-
     public void OnHitResult(int hitIndex, bool isPerfect)
     {
         // 히트 결과를 UI에 표시합니다.
-        CombatStatusDisplay.Instance.ShowPlayerHitResult(hitIndex, isPerfect);
+        string msg = isPerfect ? "완벽한 일격!" : "타이밍 놓침!";
+        if (isPerfect)
+        {
+            CombatStatusDisplay.Instance.ShowPlayerHitResult(hitIndex, msg);
+        }
+        else
+        {
+            CombatStatusDisplay.Instance.ShowPlayerHitResult(hitIndex, msg);
+        }
     }
-
 }

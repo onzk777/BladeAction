@@ -19,7 +19,7 @@ public class CombatStatusDisplay : MonoBehaviour
     public TextMeshProUGUI playerPromptText;
     public TextMeshProUGUI playerActionCommandName;
     [SerializeField] private Transform playerHitResultContainer;
-    [SerializeField] private Transform playerTurnResultContainer;
+    [SerializeField] private Transform TurnResultContainer;
 
 
     [Header("Enemy UI")]
@@ -27,7 +27,6 @@ public class CombatStatusDisplay : MonoBehaviour
     public TextMeshProUGUI enemyPromptText;
     public TextMeshProUGUI enemyActionCommandName;
     [SerializeField] private Transform enemyHitResultContainer;
-    [SerializeField] private Transform enemyTurnResultContainer;
 
 
     private void Awake()
@@ -61,51 +60,34 @@ public class CombatStatusDisplay : MonoBehaviour
         else enemyPromptText.text = message;
     }
 
-    public void ShowPlayerHitResult(int hitIndex, bool isPerfect)
+    public void ShowPlayerHitResult(int hitIndex, string msg)
     {
         var go = Instantiate(resultLinePrefab, playerHitResultContainer);
         go.GetComponent<TextMeshProUGUI>().text =
-            $"히트 {hitIndex+1}: {(isPerfect ? "완벽 입력!" : "실패")}";
+            $"히트 {hitIndex+1}: {msg}";
     }
     /// 적의 히트 판정 결과를 (필요하다면) 화면에 보여 줍니다.
-    public void ShowEnemyHitResult(int hitIndex, bool isPerfect)
+    public void ShowEnemyHitResult(int hitIndex, string msg)
     {
         var go = Instantiate(resultLinePrefab, enemyHitResultContainer);
         go.GetComponent<TextMeshProUGUI>().text =
-            $"히트 {hitIndex+1}: {(isPerfect ? "완벽 입력!" : "실패")}";
+            $"히트 {hitIndex + 1}: {msg}";
     }
-
-    // 턴 결과 요약 (플레이어 / 적 순서)
-    public void ShowPlayerTurnResult(int hitIndex, bool isPerfect)
+    public void ShowHitVersusResult(int hitIndex, string msg)
     {
-        /*
-        var go = Instantiate(resultLinePrefab, playerTurnResultContainer);
+        Debug.Log($"[CombatStatusDisplay] ShowHitVersusResult 호출됨: 히트 {hitIndex + 1} → {msg}");
+        // 히트 대결 결과를 화면에 보여 줍니다.
+        var go = Instantiate(resultLinePrefab, TurnResultContainer);
         go.GetComponent<TextMeshProUGUI>().text =
-            $"{hitIndex+1}: {(isPerfect ? "O" : "X")}";
-        */
-
-    }
-
-    public void ShowEnemyTurnResult(int hitIndex, bool isPerfect)
-    {
-        /*
-        var go = Instantiate(resultLinePrefab, enemyTurnResultContainer);
-        go.GetComponent<TextMeshProUGUI>().text =
-            $"{hitIndex + 1}: {(isPerfect ? "O" : "X")}";
-        */
-    }
-
-    public void ShowTurnResult(bool isPlayer)
-    {
-
+            $"히트 대결 {hitIndex + 1}: {msg}";
     }
 
     public void ClearResults()
     {
         foreach (Transform child in playerHitResultContainer) Destroy(child.gameObject);
         foreach (Transform child in enemyHitResultContainer) Destroy(child.gameObject);
-        foreach (Transform child in playerTurnResultContainer) Destroy(child.gameObject);
-        foreach (Transform child in enemyTurnResultContainer) Destroy(child.gameObject);
+        foreach (Transform child in TurnResultContainer) Destroy(child.gameObject);
+
     }
 
 

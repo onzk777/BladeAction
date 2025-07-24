@@ -45,14 +45,19 @@ public class EnemyController : MonoBehaviour, ICombatController
 
     public void ReceiveCommandResult(CombatantCommandResult result)
     {
-        for (int i = 0; i < result.HitCount; i++)
-        {
-            bool isPerfect = result.HitResults[i].IsPerfect;  // 또는 hitResults[i].IsPerfect
-            CombatStatusDisplay.Instance.ShowEnemyTurnResult(i + 1, isPerfect);
-        }
+        // 아직 쓸데 없음
     }
     public void OnHitResult(int hitIndex, bool isPerfect)
     {
-        CombatStatusDisplay.Instance.ShowEnemyHitResult(hitIndex, isPerfect);
+        // 히트 결과를 UI에 표시합니다.
+        string msg = isPerfect ? "완벽한 일격!" : "타이밍 놓침!";
+        if (isPerfect)
+        {
+            CombatStatusDisplay.Instance.ShowEnemyHitResult(hitIndex, msg);
+        }
+        else
+        {
+            CombatStatusDisplay.Instance.ShowEnemyHitResult(hitIndex, msg);
+        }
     }
 }
