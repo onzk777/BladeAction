@@ -6,13 +6,14 @@ public abstract class BaseInputHandler : MonoBehaviour
 {
     protected InputAction perfectAction; // PerfectInput 액션
     protected bool isListening = false; // 입력 리스닝 상태
-
+    public bool IsPlayer { get; private set; } = false; // 기본값 false
     protected List<PerfectTimingWindow> loadedTimings = new List<PerfectTimingWindow>(); // 로드된 타이밍 윈도우 목록
     protected List<PerfectTimingWindow> currentTimings; // 현재 턴의 타이밍 윈도우 목록
 
     protected PerfectTimingWindow currentTiming; // 현재 타격의 PerfectTimingWindow
     protected float? lastInputTime = null; // 마지막 입력 시간
     protected float nextAllowedInputTime = 0f; // 다음 입력이 허용되는 시간 (쿨타임 관련)
+    public float NextAllowedInputTime => nextAllowedInputTime; // 외부에서 접근할 수 있도록 프로퍼티로 공개
 
     protected virtual void Awake()
     {
@@ -35,9 +36,8 @@ public abstract class BaseInputHandler : MonoBehaviour
     // ⬇️ 입력 콜백 등록
     protected virtual void OnEnable()
     {
-        EnableInput();
-    }
 
+    }
     protected virtual void OnDisable()
     {
         DisableInput();
@@ -80,7 +80,7 @@ public abstract class BaseInputHandler : MonoBehaviour
     }
     public virtual bool IsInBufferPeriod() // 현재 입력이 버퍼 구간에 있는지 확인
     {
-        float relativeTime = Time.time - CombatManager.CombatStartTime;
+        float relativeTime = TurnTimer.ElapsedTime; // 현재 턴의 상대 시간
 
         float turnDuration = GlobalConfig.Instance.TurnDurationSeconds;
 
@@ -102,34 +102,20 @@ public abstract class BaseInputHandler : MonoBehaviour
         {
             Debug.Log("[HasPerfectInput] lastInputTime 없음"); return false;
         }
-        if (CombatManager.CombatStartTime == 0f) // CombatManager.CombatStartTime이 0일 경우
-        {
-            Debug.LogError("[HasPerfectInput] CombatManager.CombatStartTime is 0!"); return false;
-        }
         ////////////////////////////////////////////////////////////////////////////
 
-        float relativeTime = lastInputTime.Value - CombatManager.CombatStartTime; // 현재 턴의 상대 시간 계산
+        float relativeTime = lastInputTime.Value; // 현재 턴의 상대 시간 계산
         bool isContain = timing.Contains(relativeTime); // 입력 시간이 PerfectTimingWindow에 포함되는지 확인
 
-        Debug.Log($"[HasPerfectInput] CombatManager.CombatStartTime={CombatManager.CombatStartTime}");
-        Debug.Log($"[HasPerfectInput] TURN-relative={relativeTime}, Window=({timing.start}~{timing.start + timing.duration}) → Contains={isContain}");
+        Debug.Log($"[HasPerfectInput] input={lastInputTime.Value:F5}, window=({timing.start:F5} ~ {timing.End:F5})");
+
+        Debug.Log($"[HasPerfectInput] 결과: {isContain}");
 
         return isContain;
     }
     public virtual bool HasPerfectInput()
     // 매개변수를 받지 않는 형태로 오버로드(currentTiming 사용)
     {
-        //////////////////////////// 비정상적인 상황 체크 ////////////////////////////
-        if (!lastInputTime.HasValue) // 마지막 입력 시간이 없을 경우
-        {
-            Debug.Log("[HasPerfectInput] lastInputTime 없음"); return false;
-        }
-        if (CombatManager.CombatStartTime == 0f) // CombatManager.CombatStartTime이 0일 경우
-        {
-            Debug.LogError("[HasPerfectInput] CombatManager.CombatStartTime is 0!"); return false;
-        }
-        ////////////////////////////////////////////////////////////////////////////
-
         if (currentTiming == null)
         {
             Debug.LogError("[HasPerfectInput] currentTiming is null!");
@@ -139,53 +125,60 @@ public abstract class BaseInputHandler : MonoBehaviour
     }
     protected virtual void OnTimingInput(InputAction.CallbackContext ctx) // 입력 이벤트 핸들러
     {
-        //Debug.Log($"[OnTimingInput] Handler InstanceID: {this.GetInstanceID()} CombatManager.CombatStartTime={CombatManager.CombatStartTime}");
-        //Debug.Log($"[OnTimingInput] fired! isListening={isListening}");
-        //Debug.Log($"[OnTimingInput] Time: {Time.time}, lastInputTime: {lastInputTime}, CombatStartTime: {CombatManager.CombatStartTime}");
-        Debug.LogWarning($"[입력 감지됨] Handler={this.GetType().Name}, isListening={isListening}, Time={Time.time}, InputSource={ctx.control.device.name}");
+        Debug.LogWarning($"[입력 감지됨] Handler={this.GetType().Name}, isListening={isListening}, Time={Time.time}, turnStartTime={TurnTimer.GetTurnStartTime()}, InputSource={ctx.control.device.name}");
+
         CombatManager manager = FindAnyObjectByType<CombatManager>();
-        bool isAtkPerfect = manager.AttackerPerfectInput;
-        bool isDefPerfect = manager.DefenderPerfectInput;
         bool isPlayerAttacker = manager.IsPlayerAttacker;
-        Debug.Log($"[OnTimingInput] 누구?:{isPlayerAttacker} , 공격자:{isAtkPerfect} , 방어자:{isDefPerfect}");
         if (ShouldIgnoreInput()) return; // 입력 무시 여부 확인
 
-        lastInputTime = Time.time;
+        lastInputTime = TurnTimer.ElapsedTime;
         bool isPerfect = HasPerfectInput(currentTiming);
 
-        if (!CombatManager.Instance.windowPrompted) // 윈도우가 열리지 않은 상태이면
+        if (CombatManager.Instance.windowPrompted) // 입력 윈도우가 열린 상태라면
         {
-            Debug.Log("윈도우 열리기 전 → 쿨다운만 적용, 판정 X");
-            if (!isPerfect) // 완벽 입력이 아니면 쿨다운 적용
-            {
-                nextAllowedInputTime = Time.time + GlobalConfig.Instance.ActionInputCooldown;
-                Debug.Log($"쿨다운 발동! {GlobalConfig.Instance.ActionInputCooldown}초");
-            }
-            return; // ❗ ResolveInput 호출 금지!
+            Debug.Log("윈도우가 열림, 입력 시 쿨다운 일괄 적용 (판정에 따라 차등)");
+            float cooldown = isPerfect
+            ? GlobalConfig.Instance.ActionInputCooldown_Perfect
+            : GlobalConfig.Instance.ActionInputCooldown_Default;
+
+            nextAllowedInputTime = TurnTimer.ElapsedTime + cooldown;
+            Debug.Log($"쿨다운 발동! {GlobalConfig.Instance.ActionInputCooldown_Default}초");
         }
         CombatManager.Instance.OnInputReceivedFromHandler(this);
     }
     private bool ShouldIgnoreInput() // 입력을 무시해야 하는지 확인
     {
-        if (!isListening) return true;   // 입력 리스닝 중이 아닐 경우 무시
-        if (IsInBufferPeriod()) // 버퍼 구간에 있는 경우 입력 무시
+        Debug.Log($"[TurnTimer] ElapsedTime={TurnTimer.ElapsedTime}, lastInputTime={lastInputTime}, diff={TurnTimer.ElapsedTime - lastInputTime}, BUFFER={IsInBufferPeriod()}");
+        if (!isListening)
         {
-            Debug.Log($"[OnTimingInput] 버퍼 구간 → 입력 무시");
+            Debug.LogWarning($"[IgnoreInput] Handler={this.GetType().Name}, 리스닝 상태 아님");
             return true;
         }
-        if (Time.time < nextAllowedInputTime)
+        if (IsInBufferPeriod()) // 버퍼 구간에 있는 경우 입력 무시
         {
-            Debug.Log("[OnTimingInput] 쿨다운 중! 입력 무시");
+            Debug.Log($"[IgnoreInput] 버퍼 구간 → 입력 무시");
+            return true;
+        }
+        if (TurnTimer.ElapsedTime < nextAllowedInputTime)
+        {
+            Debug.Log($"[IgnoreInput] 입력 쿨다운 중! TurnTimer.ElapsedTime:{TurnTimer.ElapsedTime}, 다음 입력 가능:{nextAllowedInputTime}");
             return true;
         }
         return false;
     }
-
+    public float GetLastInputTime()
+    {
+        return lastInputTime ?? float.MaxValue; // 입력 안했으면 무조건 느린 것으로
+    }
     public abstract void RegisterHitTiming(PerfectTimingWindow timing); // 현재 턴의 PerfectTimingWindow 등록
-    public abstract void NotifyWindowClosed(bool isPlayer); // 윈도우가 닫혔을 때 알림
+    public abstract void NotifyWindowClosed(bool isPlayer);
+
     public virtual void ResetInputState()
     {
         lastInputTime = null;
     }
-
+    public void SetIsPlayer(bool isPlayer)
+    {
+        IsPlayer = isPlayer;
+    }
 }

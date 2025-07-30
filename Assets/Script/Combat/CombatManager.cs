@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Timers;
+using Unity.VisualScripting;
 using Unity.VisualScripting.FullSerializer;
 using UnityEngine;
 using UnityEngine.InputSystem.XR;
@@ -12,10 +14,12 @@ public class CombatManager : MonoBehaviour
     [SerializeField] private PlayerController playerController; // 플레이어 컨트롤러
     [SerializeField] private EnemyController enemyController; // 적 컨트롤러
     [SerializeField] private AttackerInputHandler attackerInputHandler; // 공격자 타이밍 입력 핸들러
-    [SerializeField] private DefenseInputHandler defenseInputHandler; // 방어자 타이밍 입력 핸들러
+    [SerializeField] private DefenderInputHandler defenderInputHandler; // 방어자 타이밍 입력 핸들러
     private bool isPlayerAttacker; // 현재 턴이 플레이어인지 여부
     private bool? attackerPerfectInput = null;
     private bool? defenderPerfectInput = null;
+    private float? attackerInputTime;
+    private float? defenderInputTime;
     public bool IsPlayerAttacker
     {
         get { return isPlayerAttacker; }
@@ -40,7 +44,9 @@ public class CombatManager : MonoBehaviour
 
     // 현재 히트 컨텍스트 전역화
     public int CurrentHit { get; private set; } // 현재 히트 인덱스. (연타 공격일 경우 체크용)
-    public bool CurrentHitResultShown { get; private set; } = false; // 히트 결과가 표시되었는지 여부
+    public bool CurrentAttackResultShown { get; private set; } = false; // 히트 결과가 표시되었는지 여부
+    public bool CurrentDefenseResultShown { get; private set; } = false; // 히트 결과가 표시되었는지 여부
+    private bool CurrentClashResultShown = false; // 현재 클래시 결과가 표시되었는지 여부
     public bool windowPrompted { get; private set; } = false; // 히트 윈도우가 열렸는지 여부
     public ICombatController CurrentController { get; private set; } // player/enemy 컨트롤러의 인터페이스
     public CombatantCommandResult CurrentResult { get; private set; } // 현재 커맨드 결과
@@ -88,27 +94,29 @@ public class CombatManager : MonoBehaviour
         bool isCombatOver = false; // 테스트용, 전투 완료 여부
         while (!isCombatOver)
         {
-            yield return new WaitForSeconds(0.2f); // 첫 턴 시작 전에 살짝 대기
-            CombatStartTime = Time.time;            
+            CombatStartTime = Time.time;
+            yield return new WaitForSeconds(0.2f); // 첫 턴 시작 전에 살짝 
             yield return StartCoroutine(PerformTurn(playerController));
             yield return new WaitForSeconds(3.0f); // 테스트 용 결과 확인 대기 시간
             yield return StartCoroutine(PerformTurn(enemyController));
             yield return new WaitForSeconds(3.0f); // 테스트 용 결과 확인 대기 시간
         }
-
         Debug.Log("전투 종료!");
     }
 
     private IEnumerator PerformTurn(ICombatController controller)
     {
-        Debug.Log($"[PerformTurn] 시작 - CombatStartTime: {CombatStartTime}");
+        Debug.Log($"[턴 시작] PerformTurn 호출, currentCommandIndex 초기화");
+
         // 초기화        
         Combatant actor = controller.Combatant; // 현재 턴을 수행하는 Combatant
         int selectedCommandIndex = controller.GetSelectedCommandIndex(); // 선택된 커맨드 인덱스
         ActionCommandData command = actor.AvailableCommands[selectedCommandIndex];
         isPlayerAttacker = (controller.Combatant == playerController.Combatant) ? true : false; // 플레이어 여부      
         CombatantCommandResult result = new CombatantCommandResult(command); // 커맨드 결과 객체 생성
-        
+        attackerInputHandler.SetIsPlayer(isPlayerAttacker);
+        defenderInputHandler.SetIsPlayer(!isPlayerAttacker);
+
         if (isPlayerAttacker)
         {
             attackerInputHandler.EnableInput(); // 공격자 입력 리스닝 시작
@@ -116,12 +124,12 @@ public class CombatManager : MonoBehaviour
         }            
         else 
         {
-            defenseInputHandler.EnableInput(); // 방어자 입력 리스닝 시작
+            defenderInputHandler.EnableInput(); // 방어자 입력 리스닝 시작
             Debug.Log("[CombatManager] 방어자 입력 허용됨");
         }
 
         // 턴 시간 및 히트 카운터 초기화
-        float elapsed = 0f; // 경과 시간 초기화
+        TurnTimer.Reset(); // 턴 시작 시각 초기화        
         float turnDuration = globalConfig.TurnDurationSeconds; // 턴 지속 시간 설정에서 읽어오기
         int hitCount = command.hitCount; // 커맨드의 히트 카운트(연타 공격 여부 및 횟수)
 
@@ -140,27 +148,35 @@ public class CombatManager : MonoBehaviour
         }
 
         CombatStatusDisplay.Instance.ShowCommandStart(isPlayerAttacker, command.commandName); // 3. 커맨드 시작 표시
-
         CombatStatusDisplay.Instance.ShowInputPrompt(isPlayerAttacker, "입력 대기"); // 5. 입력 프롬프트 표시
                                                                                  // 2. 타이밍 윈도우 등록 및 입력 수신 시작
         attackerInputHandler.LoadTimingWindows(command.perfectTimings); // 커맨드의 완벽 타이밍 윈도우를 로드        
-        defenseInputHandler.LoadFromOpponentCommand(command); // 적의 커맨드 데이터를 방어자 핸들러에 로드
-        // 4. 메인 루프: 시간이 남아있고, 처리할 히트가 남았으면 반복
-        windowPrompted = false; // 히트 윈도우가 열렸는지 여부
+        defenderInputHandler.LoadFromOpponentCommand(command); // 적의 커맨드 데이터를 방어자 핸들러에 로드
 
+        attackerPerfectInput = null;
+        defenderPerfectInput = null;
+        attackerInputTime = null;
+        defenderInputTime = null;
+        CurrentAttackResultShown = false;
+        CurrentDefenseResultShown = false;
+        CurrentClashResultShown = false;
+        windowPrompted = false;
+        bool hasLoggedBlockedReason = false; // PerformTurn 지역 변수로 선언
+        float turnDurationBuffer = 0.02f;
         // 5. 메인 루프 시작
-        while (elapsed < turnDuration)
+        while (TurnTimer.ElapsedTime < turnDuration + turnDurationBuffer)
         {
-            elapsed += Time.deltaTime;
+            float elapsed = TurnTimer.ElapsedTime; // 현재 경과 시간
+            Debug.Log($"[디버그] Hit={CurrentHit}, windowPrompted={windowPrompted}, elapsed={elapsed:F3}");
+            Debug.Log($"[히트={CurrentHit}] 조건 점검 → elapsed={elapsed}, windowPrompted={windowPrompted}, clashShown={CurrentClashResultShown}, atkResult={CurrentAttackResultShown}, defResult={CurrentDefenseResultShown}");
+
             CombatStatusDisplay.Instance?.updateTurnInfo(turnDuration - elapsed);
-
-
-
             if (CheckInterruptCondition())
             {
                 Debug.Log("턴이 중단되었습니다.");
                 break;
             }
+            // 초기화
 
             if (CurrentHit < hitCount)  // 현재 히트가 유효한 경우
             {   
@@ -170,86 +186,150 @@ public class CombatManager : MonoBehaviour
                 float perfectWindowStart = perfectWindow.start;
                 float perfectWindowEnd = perfectWindow.start + perfectWindow.duration;
                 float inputAvailableEnd = GetInputDeadline();
+                float aiInputTime = perfectWindowStart + perfectWindow.duration * globalConfig.NpcInputDifficulty; // AI 방어 시도 시간 (예시: 윈도우 시작 70% 지점)
+                bool aiDefenseSuccess = Random.value < GlobalConfig.Instance.NpcDefensePerfectRate; // AI 방어 성공 여부
+                bool aiAttackSuccess = Random.value < globalConfig.NpcActionPerfectRate; // AI 공격 성공 여부
 
-                Debug.Log($"[{actor.Name}] 현재 히트: {CurrentHit + 1}/{hitCount}, 윈도우: {perfectWindowStart} ~ {perfectWindowEnd}");
+                Debug.Log($"[UI표시:지금이닷!] 히트 {CurrentHit + 1}, elapsed={elapsed:F5}, 타이밍창=({perfectWindow.start:F5} ~ {perfectWindow.End:F5})");
 
                 // 윈도우 오픈: prompt 한 번만 띄우기
                 if (!windowPrompted && elapsed >= inputAvailableStart)
                 {
                     Debug.Log($"[PerformTurn] 히트 {CurrentHit} 오픈");
-                    windowPrompted = true;
-                    CurrentHitResultShown = false; // 히트 결과가 아직 표시되지 않았음
+                    windowPrompted = true; // 히트 윈도우가 열렸음을 설정
+                    CurrentAttackResultShown = false;
+                    CurrentDefenseResultShown = false;
+                    CurrentClashResultShown = false;
+                    attackerInputHandler.ResetInputState(); // 👈 히트마다 입력 기록 초기화
+                    defenderInputHandler.ResetInputState(); // 👈 히트마다 입력 기록 초기화
                     CombatStatusDisplay.Instance.ShowInputPrompt(isPlayerAttacker, "입력 가능!");
                     CurrentController = controller;
                     CurrentResult = result;
                     attackerInputHandler.RegisterHitTiming(perfectWindow);
+                    defenderInputHandler.RegisterHitTiming(perfectWindow);
                 }
 
-                if (isPlayerAttacker)
+                if (!CurrentAttackResultShown && elapsed >= perfectWindowStart) // 히트 윈도우 시작 시점
                 {
-                    if (elapsed >= perfectWindowStart && elapsed < perfectWindowEnd && !CurrentHitResultShown)
-                        CombatStatusDisplay.Instance.ShowInputPrompt(isPlayerAttacker, "지금이닷!"); // 강조 애니메이션 등
-                    
-                    // 실패 fallback 처리
-                    if (windowPrompted && elapsed >= perfectWindowEnd && !CurrentHitResultShown) // 히트 윈도우가 닫히고 입력이 없을 때
+                    if (attackerInputHandler.IsPlayer)
                     {
-                        CombatStatusDisplay.Instance.ShowInputPrompt(isPlayerAttacker, "안눌러...?");
-                        Debug.Log($"[PerformTurn] 히트 {CurrentHit} fallback");
-                        attackerInputHandler.NotifyWindowClosed(isPlayerAttacker); // 공격자 입력 실패 처리
-
-                        // AI 방어자 처리
-                        bool aiDefenseSuccess = Random.value < GlobalConfig.Instance.NpcDefensePerfectRate; // AI 방어 성공 여부
-                        ResolveInput(aiDefenseSuccess); // AI 방어 결과 처리
-                    }
-                    
-                    if (elapsed >= perfectWindowEnd && elapsed < inputAvailableEnd && !CurrentHitResultShown)
-                    {
-                        CombatStatusDisplay.Instance.ShowInputPrompt(isPlayerAttacker, "늦었지만 가능...");
-                    }
-                    
-                }
-                else
-                {
-                    // AI 공격자 처리
-                    if (windowPrompted && elapsed >= perfectWindowStart && !CurrentHitResultShown)
-                    {
-                        CombatStatusDisplay.Instance.ShowInputPrompt(isPlayerAttacker, "지금이닷!");
-                        bool aiAttackSuccess = Random.value < globalConfig.NpcActionPerfectRate;
-                        // 예시: AI 확률 기반 완벽 입력
-                        if (elapsed >= (perfectWindowStart + ((perfectWindowEnd-perfectWindowStart)*0.7f)))
+                        // 플레이어 입력 대기 UI 표시
+                        if (elapsed < perfectWindowEnd)
                         {
-                            ResolveInput(aiAttackSuccess);
+                            CombatStatusDisplay.Instance.ShowInputPrompt(true, "지금이닷!");
+                            Debug.Log($"[UI표시:막아!] 히트 {CurrentHit + 1}, elapsed={elapsed:F5}, 타이밍창=({perfectWindow.start:F5} ~ {perfectWindow.End:F5})");
                         }
-                        
+                        else if (elapsed >= perfectWindowEnd)
+                        {
+                            Debug.Log($"[PerformTurn] 히트 {CurrentHit} fallback");
+                            attackerInputHandler.NotifyWindowClosed(true); // 공격자 입력 실패 처리
+                        }
                     }
-                    //플레이어 방어자 입력 처리
-                    if (elapsed >= perfectWindowStart && elapsed < perfectWindowEnd && !CurrentHitResultShown)
+                    else // AI 공격자 처리
                     {
-                        CombatStatusDisplay.Instance.ShowInputPrompt(isPlayerAttacker, "막아!");
-                        Debug.Log($"[PerformTurn] 방어자 입력 대기 중: {perfectWindowStart} ~ {perfectWindowEnd}, isPlayerAttacker={isPlayerAttacker}");
+                        if (elapsed >= aiInputTime)
+                        {
+                            ResolveInput(attackerInputHandler, aiAttackSuccess);
+                        }
                     }
-                    if (windowPrompted && elapsed >= perfectWindowEnd && !CurrentHitResultShown)
-                        defenseInputHandler.NotifyWindowClosed(isPlayerAttacker); // 방어자(플레이어) 입력 실패 처리
+                }
+                if (!CurrentDefenseResultShown && elapsed >= perfectWindowStart)
+                {
+                    if (defenderInputHandler.IsPlayer)
+                    {
+                        // 플레이어 입력 대기 UI 표시
+                        if (elapsed < perfectWindowEnd)
+                        {                            
+                            CombatStatusDisplay.Instance.ShowInputPrompt(false, "막아!");
+                            Debug.Log($"[UI표시:막아!] 히트 {CurrentHit + 1}, elapsed={elapsed:F5}, 타이밍창=({perfectWindow.start:F5} ~ {perfectWindow.End:F5})");
+                        }
+                        else
+                        {
+                            defenderInputHandler.NotifyWindowClosed(true);
+                            CurrentDefenseResultShown = true;
+                        }
+                    }
+                    else // AI 방어자 처리
+                    {
+                        if (elapsed >= aiInputTime)
+                        {
+                            ResolveInput(defenderInputHandler, aiDefenseSuccess);
+                            CurrentDefenseResultShown = true;
+                        }
+                    }
+                }
+                if(isPlayerAttacker && CurrentAttackResultShown)
+                {
+                    CombatStatusDisplay.Instance.ShowInputPrompt(isPlayerAttacker, "V");
+                }
+                else if (!isPlayerAttacker && CurrentDefenseResultShown)
+                {
+                    CombatStatusDisplay.Instance.ShowInputPrompt(isPlayerAttacker, "V");
+                }
+                
+
+                if (elapsed >= perfectWindowEnd && windowPrompted && CurrentAttackResultShown && CurrentDefenseResultShown && !CurrentClashResultShown)
+                {
+
+                    ///////////////////////// 판정 구간 진입 /////////////////////////
+                    Debug.Log("[판정 구간 진입] 판정 결과 표시 중...");
+                    bool atkPerfect = attackerPerfectInput ?? false;
+                    float atkTime = attackerInputTime ?? float.MaxValue;
+
+                    bool defPerfect = defenderPerfectInput ?? false;
+                    float defTime = defenderInputTime ?? float.MaxValue;
+
+                    /*
+                    bool atkPerfect = attackerInputHandler.HasPerfectInput();
+                    float atkTime = attackerInputHandler.GetLastInputTime();
+                    bool defPerfect = defenderInputHandler.HasPerfectInput();
+                    float defTime = defenderInputHandler.GetLastInputTime();
+                    */
+
+                    // 방어 커맨드 여부 설정
+                    bool guard = true; // 이건 해당 히트가 방어 커맨드인 경우만 true로 처리하면 됨.
+
+                    var ivr = new InputVersusResult(atkPerfect, atkTime, defPerfect, defTime, guard); // 입력 결과 생성
+                    var resultVersus = ivr.GetResult(atkPerfect, atkTime, defPerfect, defTime, guard); // 입력 결과 생성
+
+                    ivr.OnHitVersusResult(CurrentHit, resultVersus); // 히트 결과 UI에 표시
+                    //////////////////////// 판정 구간 종료 /////////////////////////
+                    Debug.Log("<==[판정 정보]==>");
+                    Debug.Log($"[판정 정보]공격자 완벽 입력 여부: {atkPerfect}, 입력 시간: {atkTime}");
+                    Debug.Log($"[판정 정보]방어자 완벽 입력 여부: {defPerfect}, 입력 시간: {defTime}");
+                    Debug.Log($"[판정 정보]방어 커맨드 여부: {guard}");
+                    Debug.Log($"[판정 정보]InputVersusResult 생성됨: new InputVersusResult({atkPerfect}, {atkTime}, {defPerfect}, {defTime}, {guard})");
+
+                    CurrentClashResultShown = true; // 판정 결과가 표시되었음을 설정
+                    Debug.Log("[판정 구간 종료] 판정 결과 표시 완료");
+                }
+
+                if (elapsed >= perfectWindowEnd && windowPrompted && CurrentAttackResultShown && CurrentDefenseResultShown && !CurrentClashResultShown)
+                {
+                    Debug.Log($"[히트 전환 조건 통과] Hit={CurrentHit}, 결과 표시됨: 공격자={CurrentAttackResultShown}, 방어자={CurrentDefenseResultShown}, Clash={CurrentClashResultShown}");
+                }
+                else if (!hasLoggedBlockedReason)
+                {
+                    Debug.Log($"[히트 전환 BLOCKED] 조건 미충족 - 공격자={CurrentAttackResultShown}, 방어자={CurrentDefenseResultShown}, Clash={CurrentClashResultShown}, WindowEnd={perfectWindowEnd}, Elapsed={elapsed}");
+                    hasLoggedBlockedReason = true;
 
                 }
-                float currentWindowEndTime = command.perfectTimings[CurrentHit].start + command.perfectTimings[CurrentHit].duration;
+
                 // 히트 전환
-                if (elapsed >= currentWindowEndTime && windowPrompted)
+                if (elapsed >= perfectWindowEnd && windowPrompted & CurrentClashResultShown)
                 {
-                    Debug.Log($"[PerformTurn] 히트 {CurrentHit} 완료 → 전환");
-                    
-                    /*
-                    if(!CurrentHitResultShown)
-                    {
-                        ResolveInput(false); // 입력이 없으면 실패 처리
-                    }
-                    */
+                    Debug.Log($"[PerformTurn] isPlayerAttacker:{isPlayerAttacker}, 히트 {CurrentHit} 완료 → 전환, perfectWindowEnd:{perfectWindowEnd}, CurrentClashResultShown:{CurrentClashResultShown}");
+
                     CombatStatusDisplay.Instance.ShowInputPrompt(isPlayerAttacker, "");
-                    CurrentHitResultShown = false; // 히트 결과 표시 초기화
+                    CurrentAttackResultShown = false; // 히트 결과 표시 초기화
+                    CurrentDefenseResultShown = false; // 히트 결과 표시 초기화
+                    CurrentClashResultShown = false; // 판정 결과 표시 초기화
+
+                    Debug.LogWarning($"[DEBUG] 히트 {CurrentHit} 완료 조건 만족 - windowPrompted false로 전환됨");
                     windowPrompted = false;
                     CurrentHit++;
                 }
-            }            
+            }
             yield return null;
         }
           
@@ -258,93 +338,83 @@ public class CombatManager : MonoBehaviour
         if(isPlayerAttacker)
             attackerInputHandler.DisableInput(); // 플레이어 입력 핸들러 비활성화
         else
-            defenseInputHandler.DisableInput(); // 적 입력 핸들러 비활성화
+            defenderInputHandler.DisableInput(); // 적 입력 핸들러 비활성화
 
         attackerInputHandler.ResetInputState();
-        defenseInputHandler.ResetInputState();
+        defenderInputHandler.ResetInputState();
     }
 
     public void OnInputReceivedFromHandler(BaseInputHandler handler)
     {
         bool isPerfect = handler.HasPerfectInput();
+        Debug.Log($"[CombatManager] OnInputReceivedFromHandler: handler={handler.GetType().Name}, isPerfect={isPerfect}");
+
         if (handler == attackerInputHandler)
         {
             attackerPerfectInput = isPerfect; // 플레이어 공격자 입력 처리
+            Debug.Log($"[CombatManager] 공격자 입력 수신: {isPerfect}");
+            if (!CurrentAttackResultShown)
+            {
+                ResolveInput(handler, isPerfect);
+            }
         }
-        else if (handler == defenseInputHandler)
+        else if (handler == defenderInputHandler)
         {
             defenderPerfectInput = isPerfect; // 방어자 입력 처리
-        }
-        else
-        {
-            Debug.LogWarning($"[CombatManager] 알 수 없는 입력 핸들러: {handler.GetType().Name}");
-        }
-        Debug.Log($"[CombatManager] 입력 발생: {(isPlayerAttacker ? "공격자" : "방어자")}, 성공 여부: {isPerfect}");
-        if (attackerPerfectInput.HasValue)
-        {
-            Debug.Log("[CombatManager] 양쪽 입력 수신 완료, ResolveInput 호출");
-            ResolveInput(attackerPerfectInput.Value); // 주도권자는 공격자이므로 공격자 기준 전달
+            Debug.Log($"[CombatManager] 방어자 입력 수신: {isPerfect}");
+            if (!CurrentDefenseResultShown)
+            {
+                ResolveInput(handler, isPerfect);
+            }
         }
     }
 
     // 플레이어 또는 적이 입력을 성공적으로 처리했을 때 호출 (TimingInputHandler에서 호출됨)
-    public void ResolveInput(bool isPerfect)
+    public void ResolveInput(BaseInputHandler handler, bool isPerfect)
     {
         Debug.Log($"[ResolveInput] 호출됨! isPerfect={isPerfect}");
 
-        if (CurrentHitResultShown) 
-        { 
-            Debug.Log("[ResolveInput] 이미 표시됨 → 리턴");
-            return; 
-        }
+        if (handler == attackerInputHandler && CurrentAttackResultShown) return;
+        if (handler == defenderInputHandler && CurrentDefenseResultShown) return;
         if (!attackerPerfectInput.HasValue) attackerPerfectInput = false;
         if (!defenderPerfectInput.HasValue) defenderPerfectInput = false;
 
         bool atk = attackerPerfectInput.Value;
         bool def = defenderPerfectInput.Value;
-        bool isGuard = true; // 우선 방어자라고 간주
-
+        
         CurrentResult.SetHitResult(CurrentHit, (bool)attackerPerfectInput); // 공격자만 저장. 용도 애매함.
 
-        var result = InputVersusResult.GetResult(atk, def, isGuard); // 입력 결과 생성
-        if(isPlayerAttacker)
+        // 컨트롤러에 결과 전달
+        if (handler == attackerInputHandler) // 공격자 입장(핸들러)
         {
-            playerController.OnHitResult(CurrentHit, isPerfect); // 플레이어 컨트롤러에 결과 전달
-        }
-        else
-        {
-            enemyController.OnHitResult(CurrentHit, isPerfect); // 적 컨트롤러에 결과 전달
+            attackerInputTime = attackerInputHandler.GetLastInputTime();  // ✅ 공격자 입력 시간 저장
+            if (attackerInputHandler.IsPlayer) // 공격자 : 플레이어
+                playerController.OnHitResult(CurrentHit, isPerfect);
+            
+            else // 공격자 : AI
+                enemyController.OnHitResult(CurrentHit, isPerfect);             
         }
         
-        OnHitVersusResult(CurrentHit, result.resultType); // 플레이어 컨트롤러에 결과 전달        
+        if (handler == defenderInputHandler) // 방어자 입장(핸들러)
+        {
+            defenderInputTime = defenderInputHandler.GetLastInputTime();  // ✅ 방어자 입력 시간 저장
+            if (defenderInputHandler.IsPlayer)
+                playerController.OnHitResult(CurrentHit, isPerfect);
+            else
+                enemyController.OnHitResult(CurrentHit, isPerfect);
+        }
+
+        // 초기화
         attackerPerfectInput = null;
         defenderPerfectInput = null;
-        CurrentHitResultShown = true; // 히트 결과가 표시되었음을 설정
         
-    }
-    public void OnHitVersusResult(int hitIndex, InputVersusResult.ResultType resultType)
-    {
-        // 히트 결과를 UI에 표시합니다.
-        switch (resultType)
+        if(handler == attackerInputHandler)
         {
-            case InputVersusResult.ResultType.Hit:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "적중!");
-                break;
-            case InputVersusResult.ResultType.Parry:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "쳐냈다!");
-                break;
-            case InputVersusResult.ResultType.Deflect:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "완벽하게 쳐냈다!");
-                break;
-            case InputVersusResult.ResultType.Guard:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "막아냈다!");
-                break;
-            case InputVersusResult.ResultType.GuardBreak:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "가드 브레이크!");
-                break;
-            case InputVersusResult.ResultType.PerfectAttack:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "완벽한 일격!");
-                break;
+            CurrentAttackResultShown = true; // 히트 결과가 표시되었음을 설정            
+        }
+        else if(handler == defenderInputHandler)
+        {
+            CurrentDefenseResultShown = true; // 방어자 결과가 표시되었음을 설정            
         }
     }
 
@@ -353,13 +423,9 @@ public class CombatManager : MonoBehaviour
         return InterruptManager.IsInterrupted();        
     }
 
-    public static void SetCurrentHitResultShown(bool currentHitResultShown)
-    {
-        CombatManager.Instance.CurrentHitResultShown = currentHitResultShown;
-    }
-
     public void Update()
     {
-        Debug.Log($"[CurrentHitResultShown]: {CurrentHitResultShown}");
+        CombatStatusDisplay.Instance?.SetPlayerActionInputCooldown(attackerInputHandler.NextAllowedInputTime - Time.time);
+        Debug.Log($"[windowPrompted]:{windowPrompted}");
     }
 }

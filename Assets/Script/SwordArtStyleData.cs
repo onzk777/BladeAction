@@ -12,6 +12,15 @@ public class SwordArtStyleData : ScriptableObject
     [Tooltip("이 스타일에서 사용할 커맨드를 순서대로 나열")]
     [SerializeField]
     private List<ActionCommandData> commandSet = new List<ActionCommandData>();
+    public List<ActionCommandData> CommandSet
+    {
+        get => commandSet;
+        set
+        {
+            commandSet = value;
+            commandSet.RemoveAll(item => item == null);
+        }
+    }
 
     public IReadOnlyList<ActionCommandData> ActionCommands => commandSet.AsReadOnly();
 

@@ -6,17 +6,22 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour, ICombatController
 {
     private PlayerCombatant combatant;
-    public Combatant Combatant => combatant;
-    [SerializeField] private SwordArtStyleData equippedStyle;
-    
-    private int currentCommandIndex = 0;
+    public Combatant Combatant => combatant;    
+    private int currentCommandIndex;
 
     [Header("테스트 모드 설정")]
     [Tooltip("테스트 모드 ON/OFF")]
-    [SerializeField] private bool useTestMode = false;
+    [SerializeField] private bool useTestMode = true;
 
     [Tooltip("테스트 모드에서 사용할 커맨드 인덱스")]
-    [SerializeField] private int testCommandIndex = 0;
+    [SerializeField] private int testCommandIndex;
+    [SerializeField] private SwordArtStyleData equippedStyle;
+    public SwordArtStyleData EquippedStyle => equippedStyle;
+    public int TestCommandIndex
+    {
+        get => testCommandIndex;
+        set => testCommandIndex = value;
+    }
 
     public int CommandCount => combatant.AvailableCommands.Count;
 

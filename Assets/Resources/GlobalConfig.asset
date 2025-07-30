@@ -13,7 +13,10 @@ MonoBehaviour:
   m_Name: GlobalConfig
   m_EditorClassIdentifier: 
   turnDurationSeconds: 5
-  inputBufferStartSeconds: 0.5
-  inputBufferEndSeconds: 0.5
-  npcActionPerfectRate: 0.5
-  actionInputCooldown: 5
+  inputBufferStartSeconds: 0
+  inputBufferEndSeconds: 0
+  npcActionPerfectRate: 0.383
+  npcDefensePerfectRate: 0.645
+  npcInputDifficulty: 0.5
+  actionInputCooldown_Default: 0
+  actionInputCooldown_Perfect: 0

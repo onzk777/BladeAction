@@ -18,6 +18,7 @@ public class CombatStatusDisplay : MonoBehaviour
     public TextMeshProUGUI playerName;
     public TextMeshProUGUI playerPromptText;
     public TextMeshProUGUI playerActionCommandName;
+    public TextMeshProUGUI playerActionInputCooldown;
     [SerializeField] private Transform playerHitResultContainer;
     [SerializeField] private Transform TurnResultContainer;
 
@@ -26,6 +27,7 @@ public class CombatStatusDisplay : MonoBehaviour
     public TextMeshProUGUI enemyName;
     public TextMeshProUGUI enemyPromptText;
     public TextMeshProUGUI enemyActionCommandName;
+    public TextMeshProUGUI enemyActionInputCooldown;
     [SerializeField] private Transform enemyHitResultContainer;
 
 
@@ -34,7 +36,7 @@ public class CombatStatusDisplay : MonoBehaviour
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
     }
-    
+
     public void whosTurnText(bool isPlayer)
     {
         actionProgress.text = isPlayer ? "플레이어의 턴" : "적의 턴";
@@ -46,8 +48,24 @@ public class CombatStatusDisplay : MonoBehaviour
     public void SetPlayerActionCommandName(string commandName)
         => playerActionCommandName.text = $"[액션] {commandName}";
 
+    public void SetEnemyActionCommandName(string commandName)
+        => enemyActionCommandName.text = $"[액션] {commandName}";
+
+    public void SetPlayerActionInputCooldown(float cooldown)
+    {
+        if(cooldown <= 0f)
+        {
+            playerActionInputCooldown.text = "입력 가능!";            
+        }
+        else
+        {
+            playerActionInputCooldown.text = $"입력 대기: {cooldown.ToString("F2")}초";
+        }
+    }
+
+
     /////////////////////////////////////////////////////////////////////////////////
-    
+
     public void ShowCommandStart(bool isPlayer, string name)
     {
         if(isPlayer) playerActionCommandName.text = $"[액션 시작] {name}";
@@ -89,6 +107,7 @@ public class CombatStatusDisplay : MonoBehaviour
         foreach (Transform child in TurnResultContainer) Destroy(child.gameObject);
 
     }
+
 
 
 }

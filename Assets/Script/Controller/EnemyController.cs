@@ -2,13 +2,21 @@
 
 public class EnemyController : MonoBehaviour, ICombatController
 {
-    [SerializeField] private SwordArtStyleData equippedStyle;
     private EnemyCombatant combatant;
     public Combatant Combatant => combatant;
 
     [Header("테스트 모드 설정")]
-    [SerializeField] private bool useTestMode = false;
-    [SerializeField][Min(0)] private int testCommandIndex = 0;
+    [SerializeField] private bool useTestMode = true;
+
+    [SerializeField] private int testCommandIndex;
+    [SerializeField] private SwordArtStyleData equippedStyle;
+    public SwordArtStyleData EquippedStyle => equippedStyle;
+    public int TestCommandIndex
+    {
+        get => testCommandIndex;
+        set => testCommandIndex = value;
+    }
+
 
     // 외부에서 combatant에 접근할 수 있도록 프로퍼티로 공개
 

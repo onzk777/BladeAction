@@ -1,16 +1,23 @@
-public interface ICombatController
+ï»¿public interface ICombatController
 {
-    /// <summary>ÇØ´ç ÄÁÆ®·Ñ·¯°¡ ¼ÒÀ¯ÇÑ ÀüÅõÀÚ(Combatant)¸¦ ¹İÈ¯ÇÕ´Ï´Ù.</summary>
+    /// <summary>í•´ë‹¹ ì»¨íŠ¸ë¡¤ëŸ¬ê°€ ì†Œìœ í•œ ì „íˆ¬ì(Combatant)ë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.</summary>
     Combatant Combatant { get; }
 
-    /// <summary>ÀÌ¹ø ÅÏ¿¡ ½ÇÇàÇÒ Ä¿¸ÇµåÀÇ ÀÎµ¦½º¸¦ ¹İÈ¯ÇÕ´Ï´Ù.</summary>
+    /// <summary>ì´ë²ˆ í„´ì— ì‹¤í–‰í•  ì»¤ë§¨ë“œì˜ ì¸ë±ìŠ¤ë¥¼ ë°˜í™˜í•©ë‹ˆë‹¤.</summary>
     int GetSelectedCommandIndex();
 
     /// <summary>
-    /// PerformTurn Á¾·á ½Ã Àü´Ş¹ŞÀº È÷Æ® ÆÇÁ¤ °á°ú¸¦
-    /// ÇØ´ç ÄÁÆ®·Ñ·¯°¡ Ã³¸®ÇÏµµ·Ï È£ÃâÇÕ´Ï´Ù.
+    /// PerformTurn ì¢…ë£Œ ì‹œ ì „ë‹¬ë°›ì€ íˆíŠ¸ íŒì • ê²°ê³¼ë¥¼
+    /// í•´ë‹¹ ì»¨íŠ¸ë¡¤ëŸ¬ê°€ ì²˜ë¦¬í•˜ë„ë¡ í˜¸ì¶œí•©ë‹ˆë‹¤.
     /// </summary>
-    /// <param name="result">Ä¿¸Çµå ½ÇÇà °á°ú °´Ã¼</param>
-    void ReceiveCommandResult(CombatantCommandResult result);   // ÅÏ Çàµ¿ °á°ú Ã³¸®
-    void OnHitResult(int hitIndex, bool isPerfect); // ÀÔ·Â °á°ú Ç¥½Ã
+    /// <param name="result">ì»¤ë§¨ë“œ ì‹¤í–‰ ê²°ê³¼ ê°ì²´</param>
+    void ReceiveCommandResult(CombatantCommandResult result);   // í„´ í–‰ë™ ê²°ê³¼ ì²˜ë¦¬
+    void OnHitResult(int hitIndex, bool isPerfect); // ì…ë ¥ ê²°ê³¼ í‘œì‹œ
+
+    // âœ… ì•„ë˜ëŠ” ì—ë””í„°ì—ì„œ ë“œë¡­ë‹¤ìš´ í…ŒìŠ¤íŠ¸ ê¸°ëŠ¥ì„ ìœ„í•œ ì¶”ê°€ í”„ë¡œí¼í‹°
+    /// <summary>í˜„ì¬ ì¥ì°© ì¤‘ì¸ ì†Œë“œ ì•„íŠ¸ ìŠ¤íƒ€ì¼ì„ ë°˜í™˜í•©ë‹ˆë‹¤.</summary>
+    SwordArtStyleData EquippedStyle { get; }
+
+    /// <summary>í…ŒìŠ¤íŠ¸ìš©ìœ¼ë¡œ ì„ íƒëœ ì»¤ë§¨ë“œ ì¸ë±ìŠ¤ë¥¼ ê°€ì ¸ì˜¤ê±°ë‚˜ ì„¤ì •í•©ë‹ˆë‹¤.</summary>
+    int TestCommandIndex { get; set; }
 }
