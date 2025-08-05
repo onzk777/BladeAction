@@ -2,6 +2,8 @@
 
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
+//using UnityEngine.UIElements;
 
 public class CombatStatusDisplay : MonoBehaviour
 {
@@ -12,11 +14,10 @@ public class CombatStatusDisplay : MonoBehaviour
     public TextMeshProUGUI actionProgress;
     public TextMeshProUGUI turnLabel;
     [SerializeField] private GameObject resultLinePrefab; // TextMeshProUGUI prefab
-
+    public TextMeshProUGUI inputPromptText;
 
     [Header("Player UI")]
     public TextMeshProUGUI playerName;
-    public TextMeshProUGUI playerPromptText;
     public TextMeshProUGUI playerActionCommandName;
     public TextMeshProUGUI playerActionInputCooldown;
     [SerializeField] private Transform playerHitResultContainer;
@@ -25,7 +26,6 @@ public class CombatStatusDisplay : MonoBehaviour
 
     [Header("Enemy UI")]
     public TextMeshProUGUI enemyName;
-    public TextMeshProUGUI enemyPromptText;
     public TextMeshProUGUI enemyActionCommandName;
     public TextMeshProUGUI enemyActionInputCooldown;
     [SerializeField] private Transform enemyHitResultContainer;
@@ -39,7 +39,20 @@ public class CombatStatusDisplay : MonoBehaviour
 
     public void whosTurnText(bool isPlayer)
     {
-        actionProgress.text = isPlayer ? "플레이어의 턴" : "적의 턴";
+        actionProgress.text = isPlayer ? "플레이어 공격 턴" : "적 공격 턴";
+        Image img_PlayerContainer = playerHitResultContainer.GetComponent<Image>();
+        Image img_EnemyContainer = enemyHitResultContainer.GetComponent<Image>();
+        if (isPlayer)
+        {
+            img_PlayerContainer.color = Color.green; // 플레이어 턴은 초록색
+            img_EnemyContainer.color = Color.white; // 적 턴은 흰색
+        }
+        else
+        {
+            img_PlayerContainer.color = Color.white; // 플레이어 턴은 흰색
+            img_EnemyContainer.color = Color.red; // 적 턴은 빨간색
+        }
+
     }
     public void updateTurnInfo(float turnTimer)
     {
@@ -72,10 +85,9 @@ public class CombatStatusDisplay : MonoBehaviour
         else enemyActionCommandName.text = $"[액션 시작] {name}";
     }
 
-    public void ShowInputPrompt(bool isPlayer, string message)
+    public void ShowInputPrompt(string message)
     {
-        if (isPlayer) playerPromptText.text = message;
-        else enemyPromptText.text = message;
+        inputPromptText.text = message;
     }
 
     public void ShowPlayerHitResult(int hitIndex, string msg)

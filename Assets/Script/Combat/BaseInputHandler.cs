@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -123,14 +124,15 @@ public abstract class BaseInputHandler : MonoBehaviour
         }
         return HasPerfectInput(currentTiming); // currentTiming 을 매개변수에 전달하여 오버로드된 메서드 호출
     }
+    // 입력 이벤트 핸들러
     protected virtual void OnTimingInput(InputAction.CallbackContext ctx) // 입력 이벤트 핸들러
     {
-        Debug.LogWarning($"[입력 감지됨] Handler={this.GetType().Name}, isListening={isListening}, Time={Time.time}, turnStartTime={TurnTimer.GetTurnStartTime()}, InputSource={ctx.control.device.name}");
+        Debug.LogWarning($"[OnTimingInput:입력 감지됨] Handler={this.GetType().Name}, isListening={isListening}, Time={Time.time}, turnStartTime={TurnTimer.GetTurnStartTime()}, InputSource={ctx.control.device.name}");
 
         CombatManager manager = FindAnyObjectByType<CombatManager>();
         bool isPlayerAttacker = manager.IsPlayerAttacker;
         if (ShouldIgnoreInput()) return; // 입력 무시 여부 확인
-
+        Debug.Log("[OnTimingInput] ShouldIgnoreInput 통과함. 판정 루틴 진입 중.");
         lastInputTime = TurnTimer.ElapsedTime;
         bool isPerfect = HasPerfectInput(currentTiming);
 
@@ -146,6 +148,25 @@ public abstract class BaseInputHandler : MonoBehaviour
         }
         CombatManager.Instance.OnInputReceivedFromHandler(this);
     }
+    // AI 입력 기록 메서드
+    public void RecordAIInput(float inputTime, bool isPerfect)
+    {
+        lastInputTime = inputTime;
+
+        if (CombatManager.Instance.windowPrompted)
+        {
+            float cooldown = isPerfect
+                ? GlobalConfig.Instance.ActionInputCooldown_Perfect
+                : GlobalConfig.Instance.ActionInputCooldown_Default;
+
+            nextAllowedInputTime = TurnTimer.ElapsedTime + cooldown;
+            Debug.Log($"[AI 입력 기록] isPerfect={isPerfect}, inputTime={inputTime}, cooldown={cooldown}");
+        }
+        // AI 입력이 기록되면 CombatManager에 알림
+        CombatManager.Instance.OnInputReceivedFromHandler(this);
+    }
+
+
     private bool ShouldIgnoreInput() // 입력을 무시해야 하는지 확인
     {
         Debug.Log($"[TurnTimer] ElapsedTime={TurnTimer.ElapsedTime}, lastInputTime={lastInputTime}, diff={TurnTimer.ElapsedTime - lastInputTime}, BUFFER={IsInBufferPeriod()}");
@@ -161,7 +182,7 @@ public abstract class BaseInputHandler : MonoBehaviour
         }
         if (TurnTimer.ElapsedTime < nextAllowedInputTime)
         {
-            Debug.Log($"[IgnoreInput] 입력 쿨다운 중! TurnTimer.ElapsedTime:{TurnTimer.ElapsedTime}, 다음 입력 가능:{nextAllowedInputTime}");
+            Debug.Log($"[IgnoreInput] 입력 쿨다운! ElapsedTime:{TurnTimer.ElapsedTime}, 다음 입력 가능:{nextAllowedInputTime}");
             return true;
         }
         return false;
@@ -181,4 +202,11 @@ public abstract class BaseInputHandler : MonoBehaviour
     {
         IsPlayer = isPlayer;
     }
+
+    public void ResetCooldown()
+    {
+        nextAllowedInputTime = 0f; // 쿨다운 초기화
+        Debug.Log("[BaseInputHandler] 쿨다운 초기화됨");
+    }
+
 }

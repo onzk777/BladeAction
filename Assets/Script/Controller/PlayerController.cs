@@ -12,6 +12,7 @@ public class PlayerController : MonoBehaviour, ICombatController
     [Header("테스트 모드 설정")]
     [Tooltip("테스트 모드 ON/OFF")]
     [SerializeField] private bool useTestMode = true;
+    [SerializeField] public bool useRandomAction = false;
 
     [Tooltip("테스트 모드에서 사용할 커맨드 인덱스")]
     [SerializeField] private int testCommandIndex;
@@ -22,7 +23,11 @@ public class PlayerController : MonoBehaviour, ICombatController
         get => testCommandIndex;
         set => testCommandIndex = value;
     }
-
+    // 현재 턴에 사용할 커맨드를 반환
+    public ActionCommandData GetCurrentActionCommand(int commandIndex)
+    {
+        return equippedStyle.CommandSet[commandIndex];
+    }
     public int CommandCount => combatant.AvailableCommands.Count;
 
     void Awake()
@@ -53,11 +58,21 @@ public class PlayerController : MonoBehaviour, ICombatController
     // 현재 턴(=currentCommandIndex)에 사용할 커맨드를 반환
     public int GetSelectedCommandIndex()
     {
-        // UI 모드
-        if (!useTestMode)
-            return currentCommandIndex;
-        // 테스트 모드
-        return Mathf.Clamp(testCommandIndex, 0, CommandCount - 1);
+        int index = 0;
+        if (useTestMode)
+        {
+            if (useRandomAction)
+            {
+                int len = equippedStyle.CommandSet.Count;
+                if (len == 0) return testCommandIndex; // 보호 코드
+
+                int randomIndex = UnityEngine.Random.Range(0, len);
+                index = randomIndex;
+            }
+        }
+        else
+            index = testCommandIndex;
+        return index;
     }
 
     public ActionCommandData GetSelectedCommand()
@@ -78,7 +93,7 @@ public class PlayerController : MonoBehaviour, ICombatController
     public void OnHitResult(int hitIndex, bool isPerfect)
     {
         // 히트 결과를 UI에 표시합니다.
-        string msg = isPerfect ? "완벽한 일격!" : "타이밍 놓침!";
+        string msg = isPerfect ? "Perfect!" : "Miss!";
         if (isPerfect)
         {
             CombatStatusDisplay.Instance.ShowPlayerHitResult(hitIndex, msg);
