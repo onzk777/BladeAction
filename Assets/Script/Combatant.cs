@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -8,7 +8,7 @@ public abstract class Combatant
     public SwordArtStyleData EquippedStyle { get; protected set; }
     public event Action<SwordArtStyleData> OnStyleEquipped;
     public event Action<SwordArtStyleData> OnStyleUnequipped;
-    // ½ºÅ¸ÀÏ µ¥ÀÌÅÍ·ÎºÎÅÍ °¡Á®¿Â Ä¿¸Çµå ¸ñ·Ï
+    // ìŠ¤íƒ€ì¼ ë°ì´í„°ë¡œë¶€í„° ê°€ì ¸ì˜¨ ì»¤ë§¨ë“œ ëª©ë¡
     public IReadOnlyList<ActionCommandData> AvailableCommands => _availableCommands;
     private List<ActionCommandData> _availableCommands = new List<ActionCommandData>();
 
@@ -21,10 +21,10 @@ public abstract class Combatant
 
     public void EquipSwordArtStyle(SwordArtStyleData styleData)
     {
-        _availableCommands.Clear(); // ±âÁ¸ Ä¿¸Çµå ¸ñ·Ï ÃÊ±âÈ­
+        _availableCommands.Clear(); // ê¸°ì¡´ ì»¤ë§¨ë“œ ëª©ë¡ ì´ˆê¸°í™”
         if (styleData != null)
         {
-            // ½ºÅ¸ÀÏ¿¡ ¼³Á¤µÈ ¾×¼Ç Ä¿¸Çµå¸¦ ¸®½ºÆ®·Î º¹»ç
+            // ìŠ¤íƒ€ì¼ì— ì„¤ì •ëœ ì•¡ì…˜ ì»¤ë§¨ë“œë¥¼ ë¦¬ìŠ¤íŠ¸ë¡œ ë³µì‚¬
             _availableCommands.AddRange(styleData.GetActionCommands());
         }
     

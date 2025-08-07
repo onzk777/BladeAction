@@ -1,12 +1,12 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 [System.Serializable]
 public class CommandSelection
 {
-    [Tooltip("ÇöÀç ¼±ÅÃµÈ Ä¿¸ÇµåÀÇ ÀÎµ¦½º(0 = Ã¹ ¹øÂ°)")]
+    [Tooltip("í˜„ì¬ ì„ íƒëœ ì»¤ë§¨ë“œì˜ ì¸ë±ìŠ¤(0 = ì²« ë²ˆì§¸)")]
     [Min(0)]
     public int selectedIndex;
 
-    // ¶Ç´Â, ÀÎµ¦½º ´ë½Å ½ÇÁ¦ ¸í·É ÂüÁ¶¸¦ ÀúÀå
+    // ë˜ëŠ”, ì¸ë±ìŠ¤ ëŒ€ì‹  ì‹¤ì œ ëª…ë ¹ ì°¸ì¡°ë¥¼ ì €ì¥
     // public ActionCommand selectedCommand;
 }

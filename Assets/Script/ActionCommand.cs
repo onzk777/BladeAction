@@ -1,9 +1,9 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 public enum ActionCommand
 {
     Attack_HorizontalSlash,
     Attack_VerticalSlash,
     Thrust,
     Defend,
-    SecretArt // ¿ÀÀÇ
+    SecretArt // ì˜¤ì˜
 }

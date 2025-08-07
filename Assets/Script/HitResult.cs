@@ -1,5 +1,5 @@
-public class HitResult
+ï»¿public class HitResult
 {
-    public bool IsPerfect { get; set; }     // ÀÌ È÷Æ®¿¡¼­ ¿Ïº® ÀÔ·ÂÀÌ ÀÖ¾ú´Â°¡
-    public bool HasResolved { get; set; }    // ÀÌ È÷Æ®¿¡ ´ëÇÑ ÆÇÁ¤ÀÌ ÀÌ¹Ì Ã³¸®µÇ¾ú´Â°¡
+    public bool IsPerfect { get; set; }     // ì´ íˆíŠ¸ì—ì„œ ì™„ë²½ ì…ë ¥ì´ ìˆì—ˆëŠ”ê°€
+    public bool HasResolved { get; set; }    // ì´ íˆíŠ¸ì— ëŒ€í•œ íŒì •ì´ ì´ë¯¸ ì²˜ë¦¬ë˜ì—ˆëŠ”ê°€
 }

@@ -1,15 +1,15 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "NewSwordArtStyle", menuName = "Combat/SwordArtStyle")]
 public class SwordArtStyleData : ScriptableObject
 {
-    [Header("°Ë¼ú ½ºÅ¸ÀÏ ±âº»")]
-    [Tooltip("¿¡µğÅÍ¿¡ Ç¥½ÃµÉ ½ºÅ¸ÀÏ ÀÌ¸§")]
+    [Header("ê²€ìˆ  ìŠ¤íƒ€ì¼ ê¸°ë³¸")]
+    [Tooltip("ì—ë””í„°ì— í‘œì‹œë  ìŠ¤íƒ€ì¼ ì´ë¦„")]
     public string styleName = "New Style";
 
-    [Header("»ç¿ë °¡´ÉÇÑ Ä¿¸Çµå ¸ñ·Ï")]
-    [Tooltip("ÀÌ ½ºÅ¸ÀÏ¿¡¼­ »ç¿ëÇÒ Ä¿¸Çµå¸¦ ¼ø¼­´ë·Î ³ª¿­")]
+    [Header("ì‚¬ìš© ê°€ëŠ¥í•œ ì»¤ë§¨ë“œ ëª©ë¡")]
+    [Tooltip("ì´ ìŠ¤íƒ€ì¼ì—ì„œ ì‚¬ìš©í•  ì»¤ë§¨ë“œë¥¼ ìˆœì„œëŒ€ë¡œ ë‚˜ì—´")]
     [SerializeField]
     private List<ActionCommandData> commandSet = new List<ActionCommandData>();
     public List<ActionCommandData> CommandSet

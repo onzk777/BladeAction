@@ -1,10 +1,10 @@
-using System;
+ï»¿using System;
 
 [Serializable]
 public class PerfectTimingWindow
 {
-    public float start;     // Å¸ÀÌ¹Ö ½ÃÀÛ ½ÃÁ¡ (ÃÊ)
-    public float duration;  // ¼º°ø °¡´É ±¸°£ ±æÀÌ (ÃÊ)
+    public float start;     // íƒ€ì´ë° ì‹œì‘ ì‹œì  (ì´ˆ)
+    public float duration;  // ì„±ê³µ ê°€ëŠ¥ êµ¬ê°„ ê¸¸ì´ (ì´ˆ)
 
     public float End => start + duration;
 

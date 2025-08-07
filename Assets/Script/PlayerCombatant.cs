@@ -1,12 +1,12 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerCombatant : Combatant
 {
-    public int selectedIndex = 0; // ÀÎ½ºÆåÅÍ¿¡¼­ ÁöÁ¤ÇÏ´Â Å×½ºÆ®¿ë ÀÎµ¦½º
-    public bool useTestMode;  // true¸é Å×½ºÆ® ¸ğµå·Î µ¿ÀÛ
+    public int selectedIndex = 0; // ì¸ìŠ¤í™í„°ì—ì„œ ì§€ì •í•˜ëŠ” í…ŒìŠ¤íŠ¸ìš© ì¸ë±ìŠ¤
+    public bool useTestMode;  // trueë©´ í…ŒìŠ¤íŠ¸ ëª¨ë“œë¡œ ë™ì‘
 
-    private PlayerController controller; // PlayerController ÀÎ½ºÅÏ½º ÂüÁ¶
+    private PlayerController controller; // PlayerController ì¸ìŠ¤í„´ìŠ¤ ì°¸ì¡°
     public PlayerCombatant(string name, PlayerController controller) : base(name)
     {
         this.controller = controller;

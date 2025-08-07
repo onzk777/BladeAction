@@ -1,9 +1,9 @@
-public class InterruptManager
+ï»¿public class InterruptManager
 {
     private static bool _isInterrupted = false;
 
     /// <summary>
-    /// ¿ÜºÎ¿¡¼­ ÀÎÅÍ·´Æ®¸¦ ¿äÃ»ÇÒ ¶§ È£Ãâ
+    /// ì™¸ë¶€ì—ì„œ ì¸í„°ëŸ½íŠ¸ë¥¼ ìš”ì²­í•  ë•Œ í˜¸ì¶œ
     /// </summary>
     public static void RequestInterrupt()
     {
@@ -11,7 +11,7 @@ public class InterruptManager
     }
 
     /// <summary>
-    /// ÀÎÅÍ·´Æ® ¹ß»ı ¿©ºÎ È®ÀÎ
+    /// ì¸í„°ëŸ½íŠ¸ ë°œìƒ ì—¬ë¶€ í™•ì¸
     /// </summary>
     public static bool IsInterrupted()
     {
@@ -19,7 +19,7 @@ public class InterruptManager
     }
 
     /// <summary>
-    /// ÀÎÅÍ·´Æ® »óÅÂ ÃÊ±âÈ­
+    /// ì¸í„°ëŸ½íŠ¸ ìƒíƒœ ì´ˆê¸°í™”
     /// </summary>
     public static void Reset()
     {

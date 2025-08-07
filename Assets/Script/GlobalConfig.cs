@@ -1,4 +1,4 @@
-// GlobalConfig.cs (ÀüÃ¼ ¸®ÆÑÅÍ¸µº»)
+ï»¿// GlobalConfig.cs (ì „ì²´ ë¦¬íŒ©í„°ë§ë³¸)
 
 using UnityEngine;
 
@@ -13,11 +13,11 @@ public class GlobalConfig : ScriptableObject
         {
             if (_instance == null)
             {
-                // Resources Æú´õ¿¡ GlobalConfig.asset ÀÌ ÀÖ¾î¾ß ÇÔ!
+                // Resources í´ë”ì— GlobalConfig.asset ì´ ìˆì–´ì•¼ í•¨!
                 _instance = Resources.Load<GlobalConfig>("GlobalConfig");
                 if (_instance == null)
                 {
-                    Debug.LogError("[GlobalConfig] Resources/GlobalConfig.asset À» Ã£À» ¼ö ¾ø½À´Ï´Ù!");
+                    Debug.LogError("[GlobalConfig] Resources/GlobalConfig.asset ì„ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤!");
                 }
             }
             return _instance;
@@ -26,7 +26,7 @@ public class GlobalConfig : ScriptableObject
     
 
     [Header("Timing Settings")]
-    [Tooltip("ÇÃ·¹ÀÌ¾î/AI°¡ ÀÔ·Â À©µµ¿ì µ¿¾È ±â´Ù¸®´Â ½Ã°£(ÃÊ)")]
+    [Tooltip("í”Œë ˆì´ì–´/AIê°€ ì…ë ¥ ìœˆë„ìš° ë™ì•ˆ ê¸°ë‹¤ë¦¬ëŠ” ì‹œê°„(ì´ˆ)")]
     [SerializeField] private float turnDurationSeconds = 3f;
     public float TurnDurationSeconds => turnDurationSeconds;
     [SerializeField] private float inputBufferStartSeconds = 3f;
@@ -35,7 +35,7 @@ public class GlobalConfig : ScriptableObject
     public float InputBufferEndSeconds => inputBufferEndSeconds;
 
     [Header("AI Settings")]
-    [Tooltip("AI°¡ ¿Ïº® ÀÔ·Â Å¸ÀÌ¹ÖÀ» ¼º°øÇÒ È®·ü(0~1)")]
+    [Tooltip("AIê°€ ì™„ë²½ ì…ë ¥ íƒ€ì´ë°ì„ ì„±ê³µí•  í™•ë¥ (0~1)")]
     [Range(0f, 1f)]
     [SerializeField] private float npcActionPerfectRate = 0.5f;
     [Range(0f, 1f)]
@@ -47,11 +47,11 @@ public class GlobalConfig : ScriptableObject
     public float NpcInputDifficulty => npcInputDifficulty;
 
     [Header("ActionInputCooldown")]
-    [Tooltip("¿Ïº® ÀÔ·ÂÀÌ ¾Æ´Ñ ÀÔ·ÂÀ» ÇÏ°Ô µÇ¸é ÀÌ ½Ã°£(ÃÊ)µ¿¾È ÀÔ·ÂÀÌ ¸·Èù´Ù.")]
+    [Tooltip("ì™„ë²½ ì…ë ¥ì´ ì•„ë‹Œ ì…ë ¥ì„ í•˜ê²Œ ë˜ë©´ ì´ ì‹œê°„(ì´ˆ)ë™ì•ˆ ì…ë ¥ì´ ë§‰íŒë‹¤.")]
     [SerializeField] private float actionInputCooldown_Default = 0.8f;
-    public float ActionInputCooldown_Default => actionInputCooldown_Default; // ÇÃ·¹ÀÌ¾î°¡ ÅÏ Çàµ¿ Áß ¿Ïº® Å¸°İ¿¡ ½ÇÆĞÇÑ ÀÔ·ÂÀ» ÇÏ¸é ÀÌ ½Ã°£ µ¿¾È ÀÔ·ÂÀÌ ¸·Èû
+    public float ActionInputCooldown_Default => actionInputCooldown_Default; // í”Œë ˆì´ì–´ê°€ í„´ í–‰ë™ ì¤‘ ì™„ë²½ íƒ€ê²©ì— ì‹¤íŒ¨í•œ ì…ë ¥ì„ í•˜ë©´ ì´ ì‹œê°„ ë™ì•ˆ ì…ë ¥ì´ ë§‰í˜
     [SerializeField] private float actionInputCooldown_Perfect = 0.25f;
-    public float ActionInputCooldown_Perfect => actionInputCooldown_Perfect; // ÇÃ·¹ÀÌ¾î°¡ ÅÏ Çàµ¿ Áß ¿Ïº® Å¸°İ¿¡ ½ÇÆĞÇÑ ÀÔ·ÂÀ» ÇÏ¸é ÀÌ ½Ã°£ µ¿¾È ÀÔ·ÂÀÌ ¸·Èû
+    public float ActionInputCooldown_Perfect => actionInputCooldown_Perfect; // í”Œë ˆì´ì–´ê°€ í„´ í–‰ë™ ì¤‘ ì™„ë²½ íƒ€ê²©ì— ì‹¤íŒ¨í•œ ì…ë ¥ì„ í•˜ë©´ ì´ ì‹œê°„ ë™ì•ˆ ì…ë ¥ì´ ë§‰í˜
 
-    // ÇâÈÄ ÇÊ¿äÇÑ ¼³Á¤ÀÌ ÀÖÀ¸¸é ¿©±â¿¡ Ãß°¡
+    // í–¥í›„ í•„ìš”í•œ ì„¤ì •ì´ ìˆìœ¼ë©´ ì—¬ê¸°ì— ì¶”ê°€
 }

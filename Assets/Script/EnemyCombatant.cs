@@ -1,10 +1,10 @@
-using System.Collections.Generic;
+ï»¿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem.XR;
 
 public class EnemyCombatant : Combatant
 {
-    private EnemyController controller; // EnemyController ÂüÁ¶
+    private EnemyController controller; // EnemyController ì°¸ì¡°
     public EnemyCombatant(string name, EnemyController controller) : base("???")
     {
         this.controller = controller;
@@ -12,13 +12,13 @@ public class EnemyCombatant : Combatant
 
     public void Init(string name)
     {
-        Name = name;  // Name ÇÁ·ÎÆÛÆ¼°¡ setter¸¦ Çã¿ëÇØ¾ß ÇÕ´Ï´Ù.
+        Name = name;  // Name í”„ë¡œí¼í‹°ê°€ setterë¥¼ í—ˆìš©í•´ì•¼ í•©ë‹ˆë‹¤.
     }
 
 
     public override CommandSelection ChooseCommand()
     {
-        //ÀÏ´ÜÀº ÀûÀº ¹«ÀÛÀ§·Î ¼±ÅÃÇÏµµ·Ï
+        //ì¼ë‹¨ì€ ì ì€ ë¬´ì‘ìœ„ë¡œ ì„ íƒí•˜ë„ë¡
         int idx = Random.Range(0, AvailableCommands.Count);
         return new CommandSelection { selectedIndex = idx };
     }

@@ -1,27 +1,27 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class InputVersusResult
 {
     public enum ResultType
     {
-        Hit, // ¸íÁß
-        Parry, // ¿Ïº®ÇÑ ÃÄ³»±â
-        HalfParry, // ¿Ïº®ÇÑ °ø°İ¿¡ ´ëÇÑ ºÒ¿ÏÀü ÃÄ³»±â
-        PerfectAttack, // ¿Ïº® °ø°İ
-        Guard, // ¸·¾Æ³»±â
-        GuardBreak, // ¸·¾Æ³»±â¿¡ ¿Ïº® °ø°İÀÌ °¡ÇØÁü
+        Hit, // ëª…ì¤‘
+        Parry, // ì™„ë²½í•œ ì³ë‚´ê¸°
+        HalfParry, // ì™„ë²½í•œ ê³µê²©ì— ëŒ€í•œ ë¶ˆì™„ì „ ì³ë‚´ê¸°
+        PerfectAttack, // ì™„ë²½ ê³µê²©
+        Guard, // ë§‰ì•„ë‚´ê¸°
+        GuardBreak, // ë§‰ì•„ë‚´ê¸°ì— ì™„ë²½ ê³µê²©ì´ ê°€í•´ì§
     }
 
     public ResultType resultType;
     public bool isPerfectAttack;
     public bool isPerfectDefense;
-    public float atkTime; // °ø°İ ÀÔ·Â ½Ã°£
-    public float defTime; // ¹æ¾î ÀÔ·Â ½Ã°£
+    public float atkTime; // ê³µê²© ì…ë ¥ ì‹œê°„
+    public float defTime; // ë°©ì–´ ì…ë ¥ ì‹œê°„
     public bool isGuard;
 
     public InputVersusResult(bool isPerfectAtk, float atkTime, bool isPerfectDef, float defTime, bool guard)
     {
-        resultType = ResultType.Hit; // ±âº»°ªÀº Hit
+        resultType = ResultType.Hit; // ê¸°ë³¸ê°’ì€ Hit
         isPerfectAttack = isPerfectAtk;
         isPerfectDefense = isPerfectDef;        
         this.atkTime = atkTime;
@@ -31,67 +31,67 @@ public class InputVersusResult
     public InputVersusResult(ResultType type)
     {
         resultType = type;
-        isPerfectAttack = false; // ±âº»°ªÀº false
-        isPerfectDefense = false; // ±âº»°ªÀº false
-        atkTime = 0f; // ±âº»°ªÀº 0
-        defTime = 0f; // ±âº»°ªÀº 0
-        isGuard = false; // ±âº»°ªÀº false
+        isPerfectAttack = false; // ê¸°ë³¸ê°’ì€ false
+        isPerfectDefense = false; // ê¸°ë³¸ê°’ì€ false
+        atkTime = 0f; // ê¸°ë³¸ê°’ì€ 0
+        defTime = 0f; // ê¸°ë³¸ê°’ì€ 0
+        isGuard = false; // ê¸°ë³¸ê°’ì€ false
     }
     public ResultType GetResult(bool isPerfectAtk, float atkTime, bool isPerfectDef, float defTime, bool guard)
     {
-        bool isAtkFast = atkTime < defTime; // °ø°İ ÀÔ·ÂÀÌ ¹æ¾î ÀÔ·Âº¸´Ù ºü¸¥Áö ¿©ºÎ
+        bool isAtkFast = atkTime < defTime; // ê³µê²© ì…ë ¥ì´ ë°©ì–´ ì…ë ¥ë³´ë‹¤ ë¹ ë¥¸ì§€ ì—¬ë¶€
         ResultType returnResult;
 
-        if (isPerfectAtk && isPerfectDef) // °ø¹æ ¸ğµÎ ¿Ïº® ÀÔ·Â
+        if (isPerfectAtk && isPerfectDef) // ê³µë°© ëª¨ë‘ ì™„ë²½ ì…ë ¥
         {
-            returnResult = isAtkFast ? ResultType.PerfectAttack : ResultType.HalfParry; // °ø°İÀÌ »¡¶úÀ¸¸é ¿Ïº® °ø°İ, °ø°İÀÌ ´À·ÈÀ¸¸é ºÒ¿ÏÀü ÃÄ³»±â
+            returnResult = isAtkFast ? ResultType.PerfectAttack : ResultType.HalfParry; // ê³µê²©ì´ ë¹¨ëìœ¼ë©´ ì™„ë²½ ê³µê²©, ê³µê²©ì´ ëŠë ¸ìœ¼ë©´ ë¶ˆì™„ì „ ì³ë‚´ê¸°
             return returnResult; 
         }
-        else if (!isPerfectAtk && isPerfectDef) // ¹æ¾î¸¸ ¿Ïº® ÀÔ·Â
+        else if (!isPerfectAtk && isPerfectDef) // ë°©ì–´ë§Œ ì™„ë²½ ì…ë ¥
         {
-            return ResultType.Parry; // ¿Ïº®ÇÑ ÃÄ³»±â
+            return ResultType.Parry; // ì™„ë²½í•œ ì³ë‚´ê¸°
         }
-        else if (isPerfectAtk && !isPerfectDef) // °ø°İ¸¸ ¿Ïº® ÀÔ·Â & ¸·¾Æ³»±â
+        else if (isPerfectAtk && !isPerfectDef) // ê³µê²©ë§Œ ì™„ë²½ ì…ë ¥ & ë§‰ì•„ë‚´ê¸°
         {
-            returnResult = guard ? ResultType.GuardBreak : ResultType.PerfectAttack; // ¸·¾Æ³»±â ¼º°ø ½Ã ¸·¾Æ³»±â ¹Ú»ì, ½ÇÆĞ ½Ã ¿Ïº® °ø°İ
-            return returnResult; // ¿Ïº® °ø°İÀÌ ¸·¾Æ³»±â¸¦ ¹Ú»ì³¿
+            returnResult = guard ? ResultType.GuardBreak : ResultType.PerfectAttack; // ë§‰ì•„ë‚´ê¸° ì„±ê³µ ì‹œ ë§‰ì•„ë‚´ê¸° ë°•ì‚´, ì‹¤íŒ¨ ì‹œ ì™„ë²½ ê³µê²©
+            return returnResult; // ì™„ë²½ ê³µê²©ì´ ë§‰ì•„ë‚´ê¸°ë¥¼ ë°•ì‚´ëƒ„
         }
-        else if (!isPerfectAtk && !isPerfectDef & guard) // °ø¹æ ¸ğµÎ ºÒ¿Ïº® ÀÔ·Â & ¸·¾Æ³»±â
+        else if (!isPerfectAtk && !isPerfectDef & guard) // ê³µë°© ëª¨ë‘ ë¶ˆì™„ë²½ ì…ë ¥ & ë§‰ì•„ë‚´ê¸°
         {
-            return ResultType.Guard; // ¸·¾Æ³»±â
+            return ResultType.Guard; // ë§‰ì•„ë‚´ê¸°
         }
-        else if (!isPerfectAtk && !isPerfectDef & !guard) // °ø¹æ ¸ğµÎ ºÒ¿Ïº® ÀÔ·Â
+        else if (!isPerfectAtk && !isPerfectDef & !guard) // ê³µë°© ëª¨ë‘ ë¶ˆì™„ë²½ ì…ë ¥
         {
-            return ResultType.Hit; // ¸íÁß
+            return ResultType.Hit; // ëª…ì¤‘
         }
         else
         {
             Debug.Log($"Invalid InputVersusResult parameters. isPerfectAtk={isPerfectAtk}, isPerfectDef={isPerfectDef}, guard={guard}");
-            return ResultType.Hit; // Àß¸øµÈ ÀÔ·Â Ã³¸®
+            return ResultType.Hit; // ì˜ëª»ëœ ì…ë ¥ ì²˜ë¦¬
         }
     }
     public void OnHitVersusResult(int hitIndex, InputVersusResult.ResultType resultType)
     {
-        // È÷Æ® °á°ú¸¦ UI¿¡ Ç¥½ÃÇÕ´Ï´Ù.
+        // íˆíŠ¸ ê²°ê³¼ë¥¼ UIì— í‘œì‹œí•©ë‹ˆë‹¤.
         switch (resultType)
         {
             case InputVersusResult.ResultType.Hit:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "ÀûÁß!");
+                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "ì ì¤‘!");
                 break;
             case InputVersusResult.ResultType.Parry:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "¿Ïº®ÇÏ°Ô ÃÄ³Â´Ù!");
+                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "ì™„ë²½í•˜ê²Œ ì³ëƒˆë‹¤!");
                 break;
             case InputVersusResult.ResultType.HalfParry:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "°¡±î½º·Î ÃÄ³Â´Ù...");
+                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "ê°€ê¹ŒìŠ¤ë¡œ ì³ëƒˆë‹¤...");
                 break;
             case InputVersusResult.ResultType.Guard:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "¸·¾Æ³Â´Ù!");
+                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "ë§‰ì•„ëƒˆë‹¤!");
                 break;
             case InputVersusResult.ResultType.GuardBreak:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "°¡µå ºê·¹ÀÌÅ©!");
+                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "ê°€ë“œ ë¸Œë ˆì´í¬!");
                 break;
             case InputVersusResult.ResultType.PerfectAttack:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "¿Ïº®ÇÑ ÀÏ°İ!");
+                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "ì™„ë²½í•œ ì¼ê²©!");
                 break;
         }
     }

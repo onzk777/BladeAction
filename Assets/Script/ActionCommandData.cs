@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;   
 
 
@@ -7,27 +7,27 @@ using System.Collections.Generic;
 public class ActionCommandData : ScriptableObject
 {
     public ActionCommand commandType;
-    public string commandName; // Ä¿¸Çµå ÀÌ¸§
+    public string commandName; // ì»¤ë§¨ë“œ ì´ë¦„
 
-    [Header("¿Ïº® ÀÔ·Â Å¸ÀÌ¹Ö")]
-    [Tooltip("¿Ïº® ÀÔ·Â Å¸ÀÌ¹Ö Ã¢ ¸®½ºÆ®(ºó ¸®½ºÆ® °¡´É)")]
-    public List<PerfectTimingWindow> perfectTimings     // È÷Æ®º° ¿Ïº® ÀÔ·Â Å¸ÀÌ¹Ö Ã¢
+    [Header("ì™„ë²½ ì…ë ¥ íƒ€ì´ë°")]
+    [Tooltip("ì™„ë²½ ì…ë ¥ íƒ€ì´ë° ì°½ ë¦¬ìŠ¤íŠ¸(ë¹ˆ ë¦¬ìŠ¤íŠ¸ ê°€ëŠ¥)")]
+    public List<PerfectTimingWindow> perfectTimings     // íˆíŠ¸ë³„ ì™„ë²½ ì…ë ¥ íƒ€ì´ë° ì°½
         = new List<PerfectTimingWindow>();
 
-    [Header("ÀÎÅÍ·´Æ® ¼³Á¤")]
-    [Tooltip("ÀÌ ¾×¼ÇÀÌ »ó´ë¸¦ Áß´Ü½ÃÅ³ ¼ö ÀÖ´ÂÁö")]
-    public bool canInterruptTarget = false;   // ÀÌ ¾×¼ÇÀÌ »ó´ë¸¦ Áß´Ü½ÃÅ³ ¼ö ÀÖ´Â°¡
+    [Header("ì¸í„°ëŸ½íŠ¸ ì„¤ì •")]
+    [Tooltip("ì´ ì•¡ì…˜ì´ ìƒëŒ€ë¥¼ ì¤‘ë‹¨ì‹œí‚¬ ìˆ˜ ìˆëŠ”ì§€")]
+    public bool canInterruptTarget = false;   // ì´ ì•¡ì…˜ì´ ìƒëŒ€ë¥¼ ì¤‘ë‹¨ì‹œí‚¬ ìˆ˜ ìˆëŠ”ê°€
 
-    [Tooltip("ÀÌ ¾×¼ÇÀÌ ¿ÜºÎ¿¡ ÀÇÇØ Áß´ÜµÉ ¼ö ÀÖ´ÂÁö")]
-    public bool canBeInterrupted = true;      // ÀÌ ¾×¼ÇÀº ¿ÜºÎ ¿äÀÎ¿¡ ÀÇÇØ Áß´ÜµÉ ¼ö ÀÖ´Â°¡
+    [Tooltip("ì´ ì•¡ì…˜ì´ ì™¸ë¶€ì— ì˜í•´ ì¤‘ë‹¨ë  ìˆ˜ ìˆëŠ”ì§€")]
+    public bool canBeInterrupted = true;      // ì´ ì•¡ì…˜ì€ ì™¸ë¶€ ìš”ì¸ì— ì˜í•´ ì¤‘ë‹¨ë  ìˆ˜ ìˆëŠ”ê°€
 
     /// <summary>
-    /// È÷Æ® °³¼ö (perfectTimings.Count)
-    /// ºó ¸®½ºÆ®¿©µµ 0À» ¹İÈ¯ÇÕ´Ï´Ù.
+    /// íˆíŠ¸ ê°œìˆ˜ (perfectTimings.Count)
+    /// ë¹ˆ ë¦¬ìŠ¤íŠ¸ì—¬ë„ 0ì„ ë°˜í™˜í•©ë‹ˆë‹¤.
     /// </summary>
     public int hitCount => perfectTimings?.Count ?? 0;
 
-    [Range(0, 5)] public int instantTimingFactor = 1; // 0ÀÌ¸é Âû³ª ºÒ°¡, 1~5´Â Âû³ª ÀÔ·Â ½Ã°£ °è¼ö
+    [Range(0, 5)] public int instantTimingFactor = 1; // 0ì´ë©´ ì°°ë‚˜ ë¶ˆê°€, 1~5ëŠ” ì°°ë‚˜ ì…ë ¥ ì‹œê°„ ê³„ìˆ˜
 
 
 }

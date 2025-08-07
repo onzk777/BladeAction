@@ -1,21 +1,21 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public static class TurnTimer
 {
-    private static float turnStartTime = -1f; // ÃÊ±âÈ­ ÀÌÀüÀ» ¸íÈ®È÷ ±¸ºĞ
+    private static float turnStartTime = -1f; // ì´ˆê¸°í™” ì´ì „ì„ ëª…í™•íˆ êµ¬ë¶„
     private static bool isInitialized => turnStartTime >= 0f;
 
     /// <summary>
-    /// ÅÏ ½ÃÀÛ ½Ã ÇöÀç ½Ã°£À¸·Î ±âÁØÁ¡ ÃÊ±âÈ­
+    /// í„´ ì‹œì‘ ì‹œ í˜„ì¬ ì‹œê°„ìœ¼ë¡œ ê¸°ì¤€ì  ì´ˆê¸°í™”
     /// </summary>
     public static void Reset()
     {
         turnStartTime = Time.time;
-        Debug.Log($"[TurnTimer] ÅÏ ½ÃÀÛ ½Ã°¢ ÃÊ±âÈ­: {turnStartTime:F5}");
+        Debug.Log($"[TurnTimer] í„´ ì‹œì‘ ì‹œê° ì´ˆê¸°í™”: {turnStartTime:F5}");
     }
 
     /// <summary>
-    /// ÇöÀç±îÁö °æ°úµÈ ½Ã°£ (ÃÊ)
+    /// í˜„ì¬ê¹Œì§€ ê²½ê³¼ëœ ì‹œê°„ (ì´ˆ)
     /// </summary>
     public static float ElapsedTime
     {
@@ -23,7 +23,7 @@ public static class TurnTimer
         {
             if (!isInitialized)
             {
-                Debug.LogWarning("[TurnTimer] ¾ÆÁ÷ ResetµÇÁö ¾ÊÀ½ ¡æ ElapsedTime = 0");
+                Debug.LogWarning("[TurnTimer] ì•„ì§ Resetë˜ì§€ ì•ŠìŒ â†’ ElapsedTime = 0");
                 return 0f;
             }
             return Time.time - turnStartTime;
@@ -31,7 +31,7 @@ public static class TurnTimer
     }
 
     /// <summary>
-    /// ÇöÀç ±âÁØ ½Ã°¢ ¹İÈ¯ (µğ¹ö±×¿ë)
+    /// í˜„ì¬ ê¸°ì¤€ ì‹œê° ë°˜í™˜ (ë””ë²„ê·¸ìš©)
     /// </summary>
     public static float GetTurnStartTime()
     {
