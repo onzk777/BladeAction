@@ -1,0 +1,29 @@
+skeleton.png
+size:948,430
+20250818_weapon
+bounds:0,0,100,212
+offsets:80,16,256,256
+Foot/20250821-Foot-foot-left
+bounds:106,0,13,4
+Foot/20250821-Foot-foot-right
+bounds:212,0,13,4
+Head/20250821-Head-eye1
+bounds:318,0,20,7
+Head/20250821-Head-face
+bounds:424,0,27,26
+Head/20250821-Head-mouth Copy
+bounds:530,0,8,3
+bg/20250821-bg-body
+bounds:636,0,18,18
+bg/20250821-bg-foot-left
+bounds:742,0,13,4
+bg/20250821-bg-foot-right
+bounds:848,0,13,4
+bg/20250821-bg-hand-left
+bounds:0,218,7,7
+bg/20250821-bg-hand-right
+bounds:0,218,7,7
+cloth2/Body/20250821-cloth2-Layer 4
+bounds:106,218,23,19
+hair2/Head/20250821-hair2-hair2
+bounds:212,218,39,30
