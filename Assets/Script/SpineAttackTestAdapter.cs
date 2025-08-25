@@ -98,13 +98,14 @@ public class SpineAttackTestAdapter : MonoBehaviour
             return;
         }
         
-        // ActionCommandData의 animationName 직접 사용
+        // ActionCommandData의 animationName 사용 (비어있으면 기본값 사용)
         string animName = cmd.animationName;
         
         if (string.IsNullOrEmpty(animName))
         {
-            Debug.LogWarning($"[SpineAttackTestAdapter] 커맨드 '{cmd.commandName}'에 animationName이 설정되지 않았습니다!");
-            return;
+            // 기본 애니메이션 이름 사용 (테스트용)
+            animName = "swing_double";
+            Debug.LogWarning($"[SpineAttackTestAdapter] 커맨드 '{cmd.commandName}'에 animationName이 설정되지 않아 기본값 '{animName}'을 사용합니다!");
         }
         
         // 재생 시작

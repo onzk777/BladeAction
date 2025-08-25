@@ -48,6 +48,10 @@ public class CombatManager : MonoBehaviour
     public bool CurrentDefenseResultShown { get; private set; } = false; // 히트 결과가 표시되었는지 여부
     private bool CurrentClashResultShown = false; // 현재 클래시 결과가 표시되었는지 여부
     public bool windowPrompted { get; private set; } = false; // 히트 윈도우가 열렸는지 여부
+    
+    // FloatingText 생성 상태 추적 (입력 처리 결과와 분리)
+    private bool floatingTextShown = false; // 공격자 FloatingText 생성 여부
+    private bool defenseFloatingTextShown = false; // 방어자 FloatingText 생성 여부
     public ICombatController CurrentController { get; private set; } // player/enemy 컨트롤러의 인터페이스
     public CombatantCommandResult CurrentResult { get; private set; } // 현재 커맨드 결과
     public static float CombatStartTime { get; private set; } // 전투 시작 시간 (초 단위 f.)
@@ -127,6 +131,8 @@ public class CombatManager : MonoBehaviour
         CurrentDefenseResultShown = false; // 현재 방어자 결과 표시 여부 초기화
         CurrentClashResultShown = false; // 현재 타격 판정 결과 표시 여부 초기화
         windowPrompted = false; // 히트 윈도우가 열렸는지 여부 초기화
+        floatingTextShown = false; // 공격자 FloatingText 생성 여부 초기화
+        defenseFloatingTextShown = false; // 방어자 FloatingText 생성 여부 초기화
         attackerInputHandler.ResetCooldown(); // 공격자 입력 핸들러 쿨다운 초기화
         defenderInputHandler.ResetCooldown(); // 방어자 입력 핸들러 쿨다운 초기화
         CurrentHit = 0; // 현재 히트 인덱스 초기화
@@ -159,7 +165,11 @@ public class CombatManager : MonoBehaviour
         // Spine 애니메이션 연동: 공격 턴 시작 시 애니메이션 재생
         if (isPlayerAttacker && playerController != null)
         {
-            playerController.OnAttackTurnStart();
+            playerController.OnPlayActionCommand();
+        }
+        else if (!isPlayerAttacker && enemyController != null)
+        {
+            enemyController.OnPlayActionCommand();
         }
         
         // 타이밍 윈도우 등록 및 입력 수신 시작
@@ -217,7 +227,21 @@ public class CombatManager : MonoBehaviour
                     defenderInputHandler.RegisterHitTiming(perfectWindow);
                 }
 
-                if (!CurrentAttackResultShown && elapsed >= perfectWindowStart) // 히트 윈도우 시작 시점
+                if (!floatingTextShown && elapsed >= perfectWindowStart) // 공격자 FloatingText 생성
+                {
+                    // PerfectTiming 시작 시점에 공격자에게만 FloatingText 생성
+                    if (FloatingTextManager.Instance != null)
+                    {
+                        Vector3 textPosition = GetFloatingTextPosition(isPlayerAttacker);
+                        FloatingTextManager.Instance.ShowPerfectTimingStart(textPosition, CurrentHit + 1, perfectWindow);
+                    }
+                    
+                    // FloatingText 생성 후 플래그 설정하여 중복 생성 방지
+                    floatingTextShown = true;
+                    defenseFloatingTextShown = true; // 방어자용도 생성 완료로 표시 (중복 방지)
+                }
+                
+                if (!CurrentAttackResultShown && elapsed >= perfectWindowStart) // 공격자 입력 처리
                 {
                     if (attackerInputHandler.IsPlayer)
                     {
@@ -237,11 +261,13 @@ public class CombatManager : MonoBehaviour
                     {
                         if (elapsed >= aiInputTime)
                         {
-                            attackerInputHandler.RecordAIInput(aiInputTime, aiAttackSuccess); // AI 입력 기록                            
+                            attackerInputHandler.RecordAIInput(aiInputTime, aiAttackSuccess); // AI 입력 기록
+                            // AI 애니메이션은 이미 Perfect Window 시작 시점에 재생됨
                         }
                     }
                 }
-                if (!CurrentDefenseResultShown && elapsed >= perfectWindowStart)
+                
+                if (!CurrentDefenseResultShown && elapsed >= perfectWindowStart) // 방어자 입력 처리
                 {
                     if (defenderInputHandler.IsPlayer)
                     {
@@ -254,7 +280,6 @@ public class CombatManager : MonoBehaviour
                         else
                         {
                             defenderInputHandler.NotifyWindowClosed(true);
-                            //CurrentDefenseResultShown = true;
                         }
                     }
                     else // AI 방어자 처리
@@ -262,7 +287,6 @@ public class CombatManager : MonoBehaviour
                         if (elapsed >= aiInputTime)
                         {
                             defenderInputHandler.RecordAIInput(aiInputTime, aiDefenseSuccess); // AI 입력 기록 
-                            //CurrentDefenseResultShown = true;
                         }
                     }
                 }
@@ -296,18 +320,34 @@ public class CombatManager : MonoBehaviour
                 }
 
                 // 히트 전환
-                if (elapsed >= perfectWindowEnd && windowPrompted & CurrentClashResultShown)
+                if (elapsed >= perfectWindowEnd && windowPrompted && CurrentClashResultShown)
                 {
+                    // PerfectTiming 종료 시점에 FloatingText 생성
+                    if (FloatingTextManager.Instance != null)
+                    {
+                        Vector3 textPosition = GetFloatingTextPosition(isPlayerAttacker);
+                        FloatingTextManager.Instance.ShowPerfectTimingEnd(textPosition, CurrentHit + 1, perfectWindow);
+                    }
+                    
                     Debug.Log($"[PerformTurn] isPlayerAttacker:{isPlayerAttacker}, 히트 {CurrentHit} 완료 → 전환, perfectWindowEnd:{perfectWindowEnd}, CurrentClashResultShown:{CurrentClashResultShown}");
 
                     CombatStatusDisplay.Instance.ShowInputPrompt("");
                     CurrentAttackResultShown = false; // 히트 결과 표시 초기화
                     CurrentDefenseResultShown = false; // 히트 결과 표시 초기화
                     CurrentClashResultShown = false; // 판정 결과 표시 초기화
+                    floatingTextShown = false; // FloatingText 생성 상태 초기화
+                    defenseFloatingTextShown = false; // 방어자 FloatingText 생성 상태 초기화
 
                     Debug.LogWarning($"[DEBUG] 히트 {CurrentHit} 완료 조건 만족 - windowPrompted false로 전환됨");
                     windowPrompted = false;
                     CurrentHit++;
+                    
+                    // 모든 히트가 완료되었는지 확인 (5초 턴 지속 시간은 보장)
+                    if (CurrentHit >= hitCount)
+                    {
+                        Debug.Log($"[PerformTurn] 모든 히트 완료! CurrentHit={CurrentHit}, hitCount={hitCount} - 추가 입력 차단, 5초 턴 지속 시간 대기");
+                        // break 제거: 턴은 5초까지 지속되어야 함
+                    }
                 }
             }
             yield return null;
@@ -323,9 +363,116 @@ public class CombatManager : MonoBehaviour
         attackerInputHandler.ResetInputState();
         defenderInputHandler.ResetInputState();
     }
+    
+    /// <summary>
+    /// FloatingText 위치 계산 (2D 프로젝트용)
+    /// </summary>
+    /// <param name="isPlayerAttacker">플레이어가 공격자인지 여부</param>
+    /// <returns>FloatingText가 표시될 월드 위치</returns>
+    private Vector3 GetFloatingTextPosition(bool isPlayerAttacker)
+    {
+        Vector3 basePosition;
+        
+        // 1. 캐릭터 위치를 기준으로 설정
+        if (isPlayerAttacker)
+        {
+            // 플레이어가 공격자인 경우: 플레이어 위치 근처
+            if (playerController != null)
+            {
+                basePosition = playerController.transform.position;
+                Debug.Log($"[FloatingText 위치] 플레이어 공격자 기준 위치: {basePosition}");
+            }
+            else
+            {
+                basePosition = Vector3.zero;
+                Debug.LogWarning("[FloatingText 위치] playerController가 null입니다!");
+            }
+        }
+        else
+        {
+            // AI가 공격자인 경우: AI 위치 근처
+            if (enemyController != null)
+            {
+                basePosition = enemyController.transform.position;
+                Debug.Log($"[FloatingText 위치] AI 공격자 기준 위치: {basePosition}");
+            }
+            else
+            {
+                // AI 컨트롤러가 null인 경우 대체 방법 시도
+                basePosition = GetAIPositionFallback();
+                Debug.LogWarning("[FloatingText 위치] enemyController가 null입니다! 대체 위치 사용: " + basePosition);
+            }
+        }
+        
+        // 2. 캐릭터 위쪽에 오프셋 추가 (기존 2f에서 1.5f로 감소)
+        Vector3 finalPosition = basePosition + Vector3.up * 1.5f;
+        Debug.Log($"[FloatingText 위치] 오프셋 적용 후: {finalPosition}");
+        
+        // 3. 화면 밖으로 나가지 않도록 제한
+        if (Camera.main != null)
+        {
+            Vector3 screenPos = Camera.main.WorldToScreenPoint(finalPosition);
+            
+            // 화면 경계 내로 제한 (여백 100픽셀)
+            screenPos.x = Mathf.Clamp(screenPos.x, 100, Screen.width - 100);
+            screenPos.y = Mathf.Clamp(screenPos.y, 100, Screen.height - 100);
+            
+            // 다시 월드 좌표로 변환
+            finalPosition = Camera.main.ScreenToWorldPoint(screenPos);
+            
+            Debug.Log($"[FloatingText 위치] 화면 경계 제한 후: {finalPosition}");
+        }
+        
+        Debug.Log($"[FloatingText 위치] 최종 위치: {finalPosition}");
+        return finalPosition;
+    }
+    
+    /// <summary>
+    /// AI 위치를 가져오는 대체 방법
+    /// </summary>
+    /// <returns>AI의 대략적인 위치</returns>
+    private Vector3 GetAIPositionFallback()
+    {
+        // 1. 씬에서 EnemyController를 찾아보기
+        EnemyController[] enemyControllers = FindObjectsOfType<EnemyController>();
+        if (enemyControllers.Length > 0)
+        {
+            Debug.Log($"[FloatingText 위치] FindObjectsOfType으로 AI 위치 찾음: {enemyControllers[0].transform.position}");
+            return enemyControllers[0].transform.position;
+        }
+        
+        // 2. "Enemy" 태그를 가진 GameObject 찾기
+        GameObject enemyObject = GameObject.FindGameObjectWithTag("Enemy");
+        if (enemyObject != null)
+        {
+            Debug.Log($"[FloatingText 위치] Enemy 태그로 AI 위치 찾음: {enemyObject.transform.position}");
+            return enemyObject.transform.position;
+        }
+        
+        // 3. 플레이어 반대편에 대략적인 위치 설정
+        if (playerController != null)
+        {
+            Vector3 playerPos = playerController.transform.position;
+            Vector3 fallbackPos = new Vector3(-playerPos.x, playerPos.y, playerPos.z);
+            Debug.Log($"[FloatingText 위치] 플레이어 반대편 대체 위치 사용: {fallbackPos}");
+            return fallbackPos;
+        }
+        
+        // 4. 최후의 수단: 화면 중앙
+        Vector3 centerPos = Camera.main != null ? Camera.main.transform.position : Vector3.zero;
+        Debug.Log($"[FloatingText 위치] 화면 중앙 대체 위치 사용: {centerPos}");
+        return centerPos;
+    }
 
     public void OnInputReceivedFromHandler(BaseInputHandler handler)
     {
+        // 모든 히트가 완료된 경우 입력 무시
+        if (CurrentHit >= CurrentResult?.HitCount)
+        {
+            Debug.Log($"[CombatManager] 모든 히트 완료! CurrentHit={CurrentHit}, HitCount={CurrentResult?.HitCount} - 입력 무시");
+            return;
+        }
+
         bool isPerfect = handler.HasPerfectInput();
         Debug.Log($"[CombatManager] OnInputReceivedFromHandler: handler={handler.GetType().Name}, isPerfect={isPerfect}");
 

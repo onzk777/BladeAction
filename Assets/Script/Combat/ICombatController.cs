@@ -20,4 +20,20 @@
 
     /// <summary>테스트용으로 선택된 커맨드 인덱스를 가져오거나 설정합니다.</summary>
     int TestCommandIndex { get; set; }
+    
+    // ✅ 애니메이션 재생 관련 메서드 (정규 Feature)
+    /// <summary>공격 커맨드 실행 시 호출 - Spine 애니메이션 재생</summary>
+    void OnPlayActionCommand();
+    
+    /// <summary>공격이 차단되었을 때 호출 - 차단 애니메이션 재생</summary>
+    void OnInterrupted();
+    
+    /// <summary>쳐내기 성공 시 호출 - 쳐내기 애니메이션 재생</summary>
+    void OnSuccessParry();
+    
+    /// <summary>피격 시 호출 - 피격 애니메이션 재생</summary>
+    void OnBeHitted();
+    
+    /// <summary>방어 시 호출 - 방어 애니메이션 재생</summary>
+    void OnPlayDefence();
 }

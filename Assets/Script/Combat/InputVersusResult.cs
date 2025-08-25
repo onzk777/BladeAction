@@ -44,7 +44,8 @@ public class InputVersusResult
 
         if (isPerfectAtk && isPerfectDef) // 공방 모두 완벽 입력
         {
-            returnResult = isAtkFast ? ResultType.PerfectAttack : ResultType.HalfParry; // 공격이 빨랐으면 완벽 공격, 공격이 느렸으면 불완전 쳐내기
+            // 입력 순서 무관하게 방어자가 쳐내기만 성공하면 방어 성공
+            returnResult = ResultType.HalfParry; // 방어자가 완벽 입력 성공 시 항상 불완전 쳐내기
             return returnResult; 
         }
         else if (!isPerfectAtk && isPerfectDef) // 방어만 완벽 입력

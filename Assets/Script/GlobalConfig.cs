@@ -41,6 +41,7 @@ public class GlobalConfig : ScriptableObject
     [Range(0f, 1f)]
     [SerializeField] private float npcDefensePerfectRate = 0.5f;
     [Range(0f, 1f)]
+    [Tooltip("AI의 완벽 입력 시점. 숫자가 클 수록 늦음.")]
     [SerializeField] private float npcInputDifficulty = 0.5f;
     public float NpcActionPerfectRate => npcActionPerfectRate;
     public float NpcDefensePerfectRate => npcDefensePerfectRate;
@@ -50,8 +51,9 @@ public class GlobalConfig : ScriptableObject
     [Tooltip("완벽 입력이 아닌 입력을 하게 되면 이 시간(초)동안 입력이 막힌다.")]
     [SerializeField] private float actionInputCooldown_Default = 0.8f;
     public float ActionInputCooldown_Default => actionInputCooldown_Default; // 플레이어가 턴 행동 중 완벽 타격에 실패한 입력을 하면 이 시간 동안 입력이 막힘
+    [Tooltip("완벽 입력을 성공하면 이 시간(초)동안 입력이 막힌다.")]
     [SerializeField] private float actionInputCooldown_Perfect = 0.25f;
-    public float ActionInputCooldown_Perfect => actionInputCooldown_Perfect; // 플레이어가 턴 행동 중 완벽 타격에 실패한 입력을 하면 이 시간 동안 입력이 막힘
+    public float ActionInputCooldown_Perfect => actionInputCooldown_Perfect; // 플레이어가 턴 행동 중 완벽 타격에 성공한 입력을 하면 이 시간 동안 입력이 막힘
 
     // 향후 필요한 설정이 있으면 여기에 추가
 }

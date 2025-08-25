@@ -65,6 +65,10 @@ public class EnemyController : MonoBehaviour, ICombatController
                 int randomIndex = UnityEngine.Random.Range(0, len);
                 index = randomIndex;
             }
+            else
+            {
+                index = testCommandIndex;
+            }
         }
         else
             index = testCommandIndex;
@@ -87,5 +91,70 @@ public class EnemyController : MonoBehaviour, ICombatController
         {
             CombatStatusDisplay.Instance.ShowEnemyHitResult(hitIndex, msg);
         }
+    }
+    
+    // ✅ 애니메이션 재생 관련 메서드 구현 (정규 Feature)
+    /// <summary>
+    /// 공격 커맨드 실행 시 호출 - Spine 애니메이션 재생
+    /// </summary>
+    public void OnPlayActionCommand()
+    {
+        var selectedCommand = GetCurrentActionCommand(GetSelectedCommandIndex());
+        if (selectedCommand != null)
+        {
+            Debug.Log($"[EnemyController] AI 공격 커맨드 실행 - 커맨드: {selectedCommand.commandName}");
+            
+            // Spine 애니메이션 재생 (같은 GameObject에서 컴포넌트 찾기)
+            var spineAdapter = GetComponent<SpineAttackTestAdapter>();
+            if (spineAdapter != null)
+            {
+                spineAdapter.PlayForCommand(selectedCommand);
+                Debug.Log($"[EnemyController] AI Spine 애니메이션 재생 시작: {selectedCommand.commandName}");
+            }
+            else
+            {
+                Debug.LogWarning("[EnemyController] AI Spine 어댑터가 연결되지 않았습니다!");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[EnemyController] AI 공격 커맨드 실행 실패: 선택된 커맨드가 null");
+        }
+    }
+    
+    /// <summary>
+    /// 공격이 차단되었을 때 호출 - 차단 애니메이션 재생
+    /// </summary>
+    public void OnInterrupted()
+    {
+        Debug.Log("[EnemyController] AI 공격 차단 애니메이션");
+        // TODO: AI 공격 차단 애니메이션 구현
+    }
+    
+    /// <summary>
+    /// 쳐내기 성공 시 호출 - 쳐내기 애니메이션 재생
+    /// </summary>
+    public void OnSuccessParry()
+    {
+        Debug.Log("[EnemyController] AI 쳐내기 성공 애니메이션");
+        // TODO: AI 쳐내기 성공 애니메이션 구현
+    }
+    
+    /// <summary>
+    /// 피격 시 호출 - 피격 애니메이션 재생
+    /// </summary>
+    public void OnBeHitted()
+    {
+        Debug.Log("[EnemyController] AI 피격 애니메이션");
+        // TODO: AI 피격 애니메이션 구현
+    }
+    
+    /// <summary>
+    /// 방어 시 호출 - 방어 애니메이션 재생
+    /// </summary>
+    public void OnPlayDefence()
+    {
+        Debug.Log("[EnemyController] AI 방어 애니메이션");
+        // TODO: AI 방어 애니메이션 구현
     }
 }
