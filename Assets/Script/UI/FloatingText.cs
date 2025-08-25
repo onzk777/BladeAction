@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections
+using System.Collections;
 
 public class FloatingText : MonoBehaviour
 {
@@ -16,6 +16,8 @@ public class FloatingText : MonoBehaviour
     
     private Vector3 startPosition; // 시작 위치 저장
     private float elapsedTime;     // 경과 시간
+    private Coroutine currentAnimation; // 현재 실행 중인 코루틴 추적
+
     private void Awake()
     {
         // 컴포넌트 자동 찾기
