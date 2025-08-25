@@ -981,7 +981,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 0
-  orthographic size: 2.1875
+  orthographic size: 6.5625
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -1070,8 +1070,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_ComponentVersion: 1
   m_AssetsPPU: 64
-  m_RefResolutionX: 320
-  m_RefResolutionY: 180
+  m_RefResolutionX: 1920
+  m_RefResolutionY: 1080
   m_CropFrame: 0
   m_GridSnapping: 0
   m_FilterMode: 0
@@ -1110,7 +1110,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   floatingTextPrefab: {fileID: 7842997289659087234, guid: 75cc68953db4c8246967b951d9508c28, type: 3}
-  floatingTextParent: {fileID: 0}
+  floatingTextParent: {fileID: 800339805}
   enableFloatingText: 1
   showDebugLogs: 1
   startText: Start
@@ -2767,8 +2767,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 75, y: 210}
-  m_SizeDelta: {x: 332.24, y: 63.0923}
+  m_AnchoredPosition: {x: 158, y: -575}
+  m_SizeDelta: {x: 328.9466, y: 63.0923}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1514707512
 MonoBehaviour:
@@ -3207,7 +3207,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 272, y: -575}
+  m_AnchoredPosition: {x: 195, y: 210}
   m_SizeDelta: {x: 328.9466, y: 63.0923}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1752044002
