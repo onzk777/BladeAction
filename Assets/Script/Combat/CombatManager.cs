@@ -156,6 +156,12 @@ public class CombatManager : MonoBehaviour
         CombatStatusDisplay.Instance.ShowCommandStart(isPlayerAttacker, command.commandName); // 3. 커맨드 시작 표시
         CombatStatusDisplay.Instance.ShowInputPrompt("입력 대기"); // 입력 프롬프트 표시
         
+        // Spine 애니메이션 연동: 공격 턴 시작 시 애니메이션 재생
+        if (isPlayerAttacker && playerController != null)
+        {
+            playerController.OnAttackTurnStart();
+        }
+        
         // 타이밍 윈도우 등록 및 입력 수신 시작
         attackerInputHandler.LoadTimingWindows(command.perfectTimings); // 커맨드의 완벽 타이밍 윈도우를 로드        
         defenderInputHandler.LoadFromOpponentCommand(command); // 적의 커맨드 데이터를 방어자 핸들러에 로드
@@ -354,7 +360,15 @@ public class CombatManager : MonoBehaviour
         bool atk = attackerPerfectInput.Value;
         bool def = defenderPerfectInput.Value;
         
-        CurrentResult.SetHitResult(CurrentHit, (bool)attackerPerfectInput); // 공격자만 저장. 용도 애매함.
+        // 안전한 범위 체크 추가
+        if (CurrentResult != null && CurrentHit >= 0 && CurrentHit < CurrentResult.HitCount)
+        {
+            CurrentResult.SetHitResult(CurrentHit, (bool)attackerPerfectInput);
+        }
+        else
+        {
+            Debug.LogWarning($"[CombatManager] SetHitResult 실패: CurrentHit={CurrentHit}, HitCount={CurrentResult?.HitCount ?? 0}");
+        }
 
         // 컨트롤러에 결과 전달
         if (handler == attackerInputHandler) // 공격자 입장(핸들러)

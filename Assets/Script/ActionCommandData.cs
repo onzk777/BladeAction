@@ -9,6 +9,10 @@ public class ActionCommandData : ScriptableObject
     public ActionCommand commandType;
     public string commandName; // 커맨드 이름
 
+    [Header("Spine 애니메이션 설정")]
+    [Tooltip("이 커맨드에서 재생할 Spine 애니메이션 이름")]
+    public string animationName = ""; // Spine 애니메이션 이름
+
     [Header("완벽 입력 타이밍")]
     [Tooltip("완벽 입력 타이밍 창 리스트(빈 리스트 가능)")]
     public List<PerfectTimingWindow> perfectTimings     // 히트별 완벽 입력 타이밍 창

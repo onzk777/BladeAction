@@ -371,8 +371,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   useTestMode: 1
   useRandomAction: 0
-  testCommandIndex: 4
-  equippedStyle: {fileID: 11400000, guid: 1b844bdf3947de140b680e74e35a23ae, type: 2}
+  testCommandIndex: 1
+  equippedStyle: {fileID: 11400000, guid: 0b9381922b6f4064c9fa76ce99959125, type: 2}
+  spineAdapter: {fileID: 0}
 --- !u!4 &172118090
 Transform:
   m_ObjectHideFlags: 0

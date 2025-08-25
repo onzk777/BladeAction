@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   commandType: 0
   commandName: "\uAE38\uAC70\uB9AC \uAC80\uC220 - \uB0B4\uB824\uCC0D\uAE30"
+  animationName: swing_double
   perfectTimings:
-  - start: 1.5
-    duration: 1
-  isMultiHit: 0
+  - start: 0.2
+    duration: 0.16
+  canInterruptTarget: 0
+  canBeInterrupted: 1
   instantTimingFactor: 1
-  perfectTimeStart: 1
-  perfectTimeRange: 1

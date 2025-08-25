@@ -15,27 +15,25 @@ public class FloatingText : MonoBehaviour
     [SerializeField] private CanvasGroup canvasGroup;       // 알파 페이드용
     
     private Vector3 startPosition; // 시작 위치 저장
-    private float elapsedTime;     // 경과 시간
+    private float elapsedTime;    // 경과 시간
     private Coroutine currentAnimation; // 현재 실행 중인 코루틴 추적
 
     private void Awake()
     {
-        // 컴포넌트 자동 찾기
-        if (textComponent == null)
-            textComponent = GetComponentInChildren<TextMeshProUGUI>();
-        if (canvasGroup == null)
-            canvasGroup = GetComponent<CanvasGroup>();
+        // 컴포넌트 자동 찾기 (null 체크 개선)
+        textComponent ??= GetComponentInChildren<TextMeshProUGUI>();
+        canvasGroup ??= GetComponent<CanvasGroup>();
         
         // 필수 컴포넌트 확인
         if (textComponent == null)
         {
-            Debug.LogError("FloatingText: TextMeshProUGUI 컴포넌트를 찾을 수 없습니다!");
+            Debug.LogError($"[{nameof(FloatingText)}] TextMeshProUGUI 컴포넌트를 찾을 수 없습니다!", this);
             enabled = false; // 스크립트 비활성화
             return;
         }
         if (canvasGroup == null)
         {
-            Debug.LogError("FloatingText: CanvasGroup 컴포넌트를 찾을 수 없습니다!");
+            Debug.LogError($"[{nameof(FloatingText)}] CanvasGroup 컴포넌트를 찾을 수 없습니다!", this);
             enabled = false;
             return;
         }
@@ -43,6 +41,13 @@ public class FloatingText : MonoBehaviour
 
     public void Initialize(string text, Vector3 worldPosition)
     {
+        // 입력 유효성 검사
+        if (string.IsNullOrEmpty(text))
+        {
+            Debug.LogWarning($"[{nameof(FloatingText)}] 빈 텍스트로 초기화를 시도했습니다.", this);
+            return;
+        }
+
         // 기존 애니메이션 중단
         if (currentAnimation != null)
         {
@@ -53,7 +58,7 @@ public class FloatingText : MonoBehaviour
         // 컴포넌트 상태 확인
         if (textComponent == null || canvasGroup == null)
         {
-            Debug.LogError("FloatingText: 필수 컴포넌트가 없습니다!");
+            Debug.LogError($"[{nameof(FloatingText)}] 필수 컴포넌트가 없습니다!", this);
             return;
         }
 
@@ -82,9 +87,10 @@ public class FloatingText : MonoBehaviour
             // 진행률 계산 (0~1)
             float progress = elapsedTime / lifetime;
             
-            // 위로 상승
-            float newY = startPosition.y + (riseSpeed * elapsedTime);
-            transform.position = new Vector3(startPosition.x, newY, startPosition.z);
+            // 위로 상승 (Vector3 연산 최적화)
+            Vector3 currentPosition = transform.position;
+            currentPosition.y = startPosition.y + (riseSpeed * elapsedTime);
+            transform.position = currentPosition;
             
             // 알파 페이드 아웃
             canvasGroup.alpha = 1f - progress;
@@ -94,5 +100,15 @@ public class FloatingText : MonoBehaviour
         
         // 애니메이션 완료 후 비활성화
         gameObject.SetActive(false);
+    }
+
+    private void OnDisable()
+    {
+        // 컴포넌트 비활성화 시 코루틴 정리
+        if (currentAnimation != null)
+        {
+            StopCoroutine(currentAnimation);
+            currentAnimation = null;
+        }
     }
 }
