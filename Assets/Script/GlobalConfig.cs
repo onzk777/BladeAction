@@ -47,6 +47,17 @@ public class GlobalConfig : ScriptableObject
     public float NpcDefensePerfectRate => npcDefensePerfectRate;
     public float NpcInputDifficulty => npcInputDifficulty;
 
+    [Header("자세 포인트 시스템")]
+    [Tooltip("플레이어와 AI가 보유할 수 있는 최대 자세 포인트")]
+    [SerializeField] private float posturePointsMax = 100f;
+    [Tooltip("쳐내기 당했을 때 감소하는 자세 포인트")]
+    [SerializeField] private float posturePointsLossOnParry = 25f;
+    [Tooltip("중단 발생 후 대기 시간(초)")]
+    [SerializeField] private float interruptWaitSec = 1.5f;
+    public float PosturePointsMax => posturePointsMax;
+    public float PosturePointsLossOnParry => posturePointsLossOnParry;
+    public float InterruptWaitSec => interruptWaitSec;
+
     [Header("ActionInputCooldown")]
     [Tooltip("완벽 입력이 아닌 입력을 하게 되면 이 시간(초)동안 입력이 막힌다.")]
     [SerializeField] private float actionInputCooldown_Default = 0.8f;

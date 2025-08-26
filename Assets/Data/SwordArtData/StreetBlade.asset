@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: StreetBlade
   m_EditorClassIdentifier: 
   styleName: "\uAE38\uAC70\uB9AC \uBB34\uD22C"
+  spineAnimationAsset: {fileID: 11400000, guid: 1e5f33ca03c197e4b97b4663d5a0aa28, type: 2}
   commandSet:
   - {fileID: 11400000, guid: bd75beddf6505054d8da78bffbcbdacd, type: 2}
   - {fileID: 11400000, guid: 92995628130dcd249ab4c6af6ca3d804, type: 2}

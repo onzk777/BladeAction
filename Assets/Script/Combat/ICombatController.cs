@@ -5,6 +5,7 @@
 
     /// <summary>이번 턴에 실행할 커맨드의 인덱스를 반환합니다.</summary>
     int GetSelectedCommandIndex();
+    ActionCommandData GetSelectedCommand();
 
     /// <summary>
     /// PerformTurn 종료 시 전달받은 히트 판정 결과를
@@ -22,10 +23,14 @@
     int TestCommandIndex { get; set; }
     
     // ✅ 애니메이션 재생 관련 메서드 (정규 Feature)
-    /// <summary>공격 커맨드 실행 시 호출 - Spine 애니메이션 재생</summary>
+    /// <summary>
+    /// 공격 커맨드 애니메이션 재생
+    /// </summary>
     void OnPlayActionCommand();
     
-    /// <summary>공격이 차단되었을 때 호출 - 차단 애니메이션 재생</summary>
+    /// <summary>
+    /// 중단 애니메이션 재생
+    /// </summary>
     void OnInterrupted();
     
     /// <summary>쳐내기 성공 시 호출 - 쳐내기 애니메이션 재생</summary>

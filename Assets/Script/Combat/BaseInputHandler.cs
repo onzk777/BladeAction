@@ -15,6 +15,9 @@ public abstract class BaseInputHandler : MonoBehaviour
     protected float? lastInputTime = null; // 마지막 입력 시간
     protected float nextAllowedInputTime = 0f; // 다음 입력이 허용되는 시간 (쿨타임 관련)
     public float NextAllowedInputTime => nextAllowedInputTime; // 외부에서 접근할 수 있도록 프로퍼티로 공개
+    
+    // AI 입력의 완벽 입력 여부를 저장하는 필드
+    protected bool? aiInputIsPerfect = null;
 
     protected virtual void Awake()
     {
@@ -105,10 +108,18 @@ public abstract class BaseInputHandler : MonoBehaviour
         }
         ////////////////////////////////////////////////////////////////////////////
 
+        // AI 입력의 경우 전달받은 isPerfect 값을 우선적으로 사용
+        if (!IsPlayer && aiInputIsPerfect.HasValue)
+        {
+            Debug.Log($"[HasPerfectInput] AI 입력 - 전달받은 값 사용: {aiInputIsPerfect.Value}");
+            return aiInputIsPerfect.Value;
+        }
+
+        // 플레이어 입력의 경우 기존 로직 사용 (타이밍 윈도우 내에 있는지 확인)
         float relativeTime = lastInputTime.Value; // 현재 턴의 상대 시간 계산
         bool isContain = timing.Contains(relativeTime); // 입력 시간이 PerfectTimingWindow에 포함되는지 확인
 
-        Debug.Log($"[HasPerfectInput] input={lastInputTime.Value:F5}, window=({timing.start:F5} ~ {timing.End:F5})");
+        Debug.Log($"[HasPerfectInput] 플레이어 입력 - input={lastInputTime.Value:F5}, window=({timing.start:F5} ~ {timing.End:F5})");
 
         Debug.Log($"[HasPerfectInput] 결과: {isContain}");
 
@@ -152,6 +163,7 @@ public abstract class BaseInputHandler : MonoBehaviour
     public void RecordAIInput(float inputTime, bool isPerfect)
     {
         lastInputTime = inputTime;
+        aiInputIsPerfect = isPerfect; // AI 입력의 완벽 입력 여부를 저장
 
         if (CombatManager.Instance.windowPrompted)
         {
@@ -197,6 +209,7 @@ public abstract class BaseInputHandler : MonoBehaviour
     public virtual void ResetInputState()
     {
         lastInputTime = null;
+        aiInputIsPerfect = null; // AI 입력 완벽 입력 여부도 초기화
     }
     public void SetIsPlayer(bool isPlayer)
     {

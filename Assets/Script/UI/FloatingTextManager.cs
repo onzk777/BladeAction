@@ -115,7 +115,7 @@ public class FloatingTextManager : MonoBehaviour
             Debug.LogWarning($"{logPrefix} 부모가 설정되지 않음! Canvas를 찾아서 자동 설정 시도");
             
             // 자동으로 Canvas 찾기
-            Canvas[] canvases = FindObjectsOfType<Canvas>();
+            Canvas[] canvases = FindObjectsByType<Canvas>(FindObjectsSortMode.None);
             if (canvases.Length > 0)
             {
                 Canvas targetCanvas = canvases[0]; // 첫 번째 Canvas 사용
@@ -227,7 +227,7 @@ public class FloatingTextManager : MonoBehaviour
             
             // 방법 2: 다음 프레임에서 확인 후 DestroyImmediate
             yield return null;
-            if (floatingText.gameObject != null)
+            if (floatingText != null && floatingText.gameObject != null)
             {
                 Debug.LogError($"{logPrefix} Destroy 실패, DestroyImmediate로 강제 제거: {floatingText.gameObject.name}");
                 DestroyImmediate(floatingText.gameObject);
@@ -238,7 +238,13 @@ public class FloatingTextManager : MonoBehaviour
         if (activeFloatingTexts.Contains(floatingText))
         {
             activeFloatingTexts.Remove(floatingText);
-            Debug.Log($"{logPrefix} 리스트에서 정리됨: {floatingText?.gameObject?.name ?? "Unknown"}");
+            // null 체크를 더 엄격하게
+            string objectName = "Unknown";
+            if (floatingText != null && floatingText.gameObject != null)
+            {
+                objectName = floatingText.gameObject.name;
+            }
+            Debug.Log($"{logPrefix} 리스트에서 정리됨: {objectName}");
         }
     }
     

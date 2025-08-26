@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using Spine.Unity;
 
 public class EnemyController : MonoBehaviour, ICombatController
 {
@@ -32,6 +33,39 @@ public class EnemyController : MonoBehaviour, ICombatController
     {
         combatant = new EnemyCombatant("Enemy", this);
         combatant.EquipSwordArtStyle(equippedStyle);
+        
+        // 유파 장착 후 Spine 애니메이션 애셋 연결
+        ConnectSpineAnimationAsset();
+    }
+    
+    /// <summary>
+    /// 장착된 유파의 Spine 애니메이션 애셋을 SkeletonAnimation 컴포넌트에 연결
+    /// </summary>
+    private void ConnectSpineAnimationAsset()
+    {
+        if (equippedStyle == null)
+        {
+            Debug.LogWarning("[EnemyController] 장착된 유파가 없어서 Spine 애니메이션 애셋을 연결할 수 없습니다.");
+            return;
+        }
+        
+        var spineAnimation = GetComponent<SkeletonAnimation>();
+        if (spineAnimation == null)
+        {
+            Debug.LogWarning("[EnemyController] SkeletonAnimation 컴포넌트를 찾을 수 없습니다.");
+            return;
+        }
+        
+        var spineAsset = equippedStyle.SpineAnimationAsset;
+        if (spineAsset == null)
+        {
+            Debug.LogWarning($"[EnemyController] 유파 '{equippedStyle.styleName}'에 Spine 애니메이션 애셋이 설정되지 않았습니다.");
+            return;
+        }
+        
+        // Spine 애니메이션 애셋 연결
+        spineAnimation.skeletonDataAsset = spineAsset;
+        Debug.Log($"[EnemyController] Spine 애니메이션 애셋 연결 완료: {spineAsset.name} (유파: {equippedStyle.styleName})");
     }
 
     // (AI 로직에서 호출) 현재 커맨드를 반환
@@ -75,6 +109,12 @@ public class EnemyController : MonoBehaviour, ICombatController
         return index;
     }
 
+    public ActionCommandData GetSelectedCommand()
+    {
+        int idx = GetSelectedCommandIndex();
+        return combatant.AvailableCommands[idx];
+    }
+
     public void ReceiveCommandResult(CombatantCommandResult result)
     {
         // 아직 쓸데 없음
@@ -95,40 +135,70 @@ public class EnemyController : MonoBehaviour, ICombatController
     
     // ✅ 애니메이션 재생 관련 메서드 구현 (정규 Feature)
     /// <summary>
-    /// 공격 커맨드 실행 시 호출 - Spine 애니메이션 재생
+    /// 공격 커맨드 애니메이션 재생
     /// </summary>
     public void OnPlayActionCommand()
     {
-        var selectedCommand = GetCurrentActionCommand(GetSelectedCommandIndex());
-        if (selectedCommand != null)
+        Debug.Log("[EnemyController] OnPlayActionCommand 호출됨");
+        
+        var spineAnimation = GetComponent<SkeletonAnimation>();
+        if (spineAnimation == null)
         {
-            Debug.Log($"[EnemyController] AI 공격 커맨드 실행 - 커맨드: {selectedCommand.commandName}");
-            
-            // Spine 애니메이션 재생 (같은 GameObject에서 컴포넌트 찾기)
-            var spineAdapter = GetComponent<SpineAttackTestAdapter>();
-            if (spineAdapter != null)
-            {
-                spineAdapter.PlayForCommand(selectedCommand);
-                Debug.Log($"[EnemyController] AI Spine 애니메이션 재생 시작: {selectedCommand.commandName}");
-            }
-            else
-            {
-                Debug.LogWarning("[EnemyController] AI Spine 어댑터가 연결되지 않았습니다!");
-            }
+            Debug.LogError("[EnemyController] SkeletonAnimation 컴포넌트를 찾을 수 없습니다.");
+            return;
         }
-        else
+        
+        Debug.Log($"[EnemyController] SkeletonAnimation 컴포넌트 찾음: {spineAnimation.name}");
+        
+        if (equippedStyle == null)
         {
-            Debug.LogWarning("[EnemyController] AI 공격 커맨드 실행 실패: 선택된 커맨드가 null");
+            Debug.LogError("[EnemyController] equippedStyle이 null입니다.");
+            return;
+        }
+        
+        Debug.Log($"[EnemyController] 유파 정보: {equippedStyle.styleName}");
+        
+        var command = GetSelectedCommand(); // 테스트 설정을 반영한 커맨드 사용
+        if (command == null)
+        {
+            Debug.LogError("[EnemyController] 선택된 커맨드가 null입니다.");
+            return;
+        }
+        
+        Debug.Log($"[EnemyController] 선택된 커맨드: {command.commandName}");
+        
+        if (string.IsNullOrEmpty(command.animationName))
+        {
+            Debug.LogError($"[EnemyController] 커맨드 '{command.commandName}'의 animationName이 설정되지 않았습니다.");
+            return;
+        }
+        
+        Debug.Log($"[EnemyController] 애니메이션 이름: {command.animationName}");
+        
+        // Spine 애니메이션 재생
+        try
+        {
+            spineAnimation.AnimationState.SetAnimation(0, command.animationName, false);
+            Debug.Log($"[EnemyController] 공격 애니메이션 재생 성공: {command.animationName}");
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[EnemyController] 애니메이션 재생 실패: {e.Message}");
         }
     }
     
     /// <summary>
-    /// 공격이 차단되었을 때 호출 - 차단 애니메이션 재생
+    /// 중단 애니메이션 재생
     /// </summary>
     public void OnInterrupted()
     {
-        Debug.Log("[EnemyController] AI 공격 차단 애니메이션");
-        // TODO: AI 공격 차단 애니메이션 구현
+        var spineAnimation = GetComponent<SkeletonAnimation>();
+        if (spineAnimation != null)
+        {
+            // 중단 애니메이션 재생
+            spineAnimation.AnimationState.SetAnimation(0, AnimationNameTable.INTERRUPTED, false);
+            Debug.Log("[EnemyController] 중단 애니메이션 재생");
+        }
     }
     
     /// <summary>

@@ -49,6 +49,9 @@ public class CombatManager : MonoBehaviour
     private bool CurrentClashResultShown = false; // 현재 클래시 결과가 표시되었는지 여부
     public bool windowPrompted { get; private set; } = false; // 히트 윈도우가 열렸는지 여부
     
+    // 중단 상태 추적
+    private bool isInterrupted = false; // 현재 턴에서 중단이 발생했는지 여부
+    
     // FloatingText 생성 상태 추적 (입력 처리 결과와 분리)
     private bool floatingTextShown = false; // 공격자 FloatingText 생성 여부
     private bool defenseFloatingTextShown = false; // 방어자 FloatingText 생성 여부
@@ -122,7 +125,7 @@ public class CombatManager : MonoBehaviour
         defenderInputHandler.SetIsPlayer(!isPlayerAttacker); // 방어자 입력 핸들러 설정
         TurnTimer.Reset(); // 턴 시작 시각 초기화        
         float turnDuration = globalConfig.TurnDurationSeconds; // 턴 지속 시간 설정에서 읽어오기
-        int hitCount = command.hitCount; // 커맨드의 히트 카운트(연타 공격 여부 및 횟수)
+        int hitCount = command.hitCount; // 커맨드의 히트 카운트(연타 공격일 경우 체크용)
         attackerPerfectInput = null; // 공격자 완벽 입력 여부 초기화
         defenderPerfectInput = null; // 방어자 완벽 입력 여부 초기화
         attackerInputTime = null; // 공격자 입력 시간 초기화
@@ -138,6 +141,11 @@ public class CombatManager : MonoBehaviour
         CurrentHit = 0; // 현재 히트 인덱스 초기화
         CurrentController = controller; // 현재 컨트롤러 설정
         CurrentResult = result; // 현재 커맨드 결과 설정
+        
+        // 자세 포인트 회복 및 중단 상태 초기화
+        actor.ResetPosturePoints(); // 공격 턴 시작 시 자세 포인트 회복
+        isInterrupted = false; // 중단 상태 초기화
+        
         CombatStatusDisplay.Instance.ClearResults(); // 결과 표시 초기화        
         CombatStatusDisplay.Instance.whosTurnText(isPlayerAttacker); // 현재 턴 표시
 
@@ -188,6 +196,14 @@ public class CombatManager : MonoBehaviour
             Debug.Log($"[히트={CurrentHit}] 조건 점검 → elapsed={elapsed}, windowPrompted={windowPrompted}, clashShown={CurrentClashResultShown}, atkResult={CurrentAttackResultShown}, defResult={CurrentDefenseResultShown}");
 
             CombatStatusDisplay.Instance?.updateTurnInfo(turnDuration - elapsed);
+            
+            // 중단 발생 시 턴 조기 종료
+            if (isInterrupted)
+            {
+                Debug.LogWarning("[PerformTurn] 중단 발생으로 턴이 조기 종료됩니다.");
+                break;
+            }
+            
             if (CheckInterruptCondition())
             {
                 Debug.Log("턴이 중단되었습니다.");
@@ -563,11 +579,28 @@ public class CombatManager : MonoBehaviour
         bool defPerfect = defenderPerfectInput ?? false;
         float defTime = defenderInputTime ?? float.MaxValue;
 
-        // 방어 커맨드 여부 설정
-        bool guard = true; // 이건 해당 히트가 방어 커맨드인 경우만 true로 처리하면 됨.
+        // 방어 커맨드 여부 설정 - 실제 막기 상태 사용
+        bool guard = defenderInputHandler.IsGuardActive;
 
         var ivr = new InputVersusResult(atkPerfect, atkTime, defPerfect, defTime, guard); // 입력 결과 생성
         var resultVersus = ivr.GetResult(atkPerfect, atkTime, defPerfect, defTime, guard); // 입력 결과 생성
+
+        // 쳐내기 판정 시 공격자 자세 포인트 감소
+        if (resultVersus == InputVersusResult.ResultType.Parry || resultVersus == InputVersusResult.ResultType.HalfParry)
+        {
+            // 현재 공격자 Combatant 찾기
+            Combatant attacker = isPlayerAttacker ? playerCombatant : enemyCombatant;
+            
+            // 자세 포인트 감소
+            attacker.LosePosturePoints(GlobalConfig.Instance.PosturePointsLossOnParry);
+            
+            // 중단 발생 확인
+            if (attacker.IsInterrupted)
+            {
+                Debug.LogWarning($"[CombatManager] {attacker.Name}의 공격이 중단되었습니다!");
+                TriggerInterrupt();
+            }
+        }
 
         ivr.OnHitVersusResult(CurrentHit, resultVersus); // 히트 결과 UI에 표시
                                                          //////////////////////// 판정 구간 종료 /////////////////////////
@@ -582,6 +615,28 @@ public class CombatManager : MonoBehaviour
         defenderPerfectInput = null;
         Debug.Log("[판정 구간 종료] 판정 결과 표시 및 초기화 완료");
     }
+    
+    /// <summary>
+    /// 중단 발생 시 처리
+    /// </summary>
+    private void TriggerInterrupt()
+    {
+        // 중단 상태 설정
+        isInterrupted = true;
+        
+        // 중단 애니메이션 재생
+        if (isPlayerAttacker && playerController != null)
+        {
+            playerController.OnInterrupted();
+        }
+        else if (!isPlayerAttacker && enemyController != null)
+        {
+            enemyController.OnInterrupted();
+        }
+        
+        Debug.LogWarning("[CombatManager] 중단 발생! 턴이 조기 종료됩니다.");
+    }
+    
     private bool CheckInterruptCondition()
     {
         return InterruptManager.IsInterrupted();        
