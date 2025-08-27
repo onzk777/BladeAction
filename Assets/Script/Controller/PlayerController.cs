@@ -9,6 +9,7 @@ public class PlayerController : MonoBehaviour, ICombatController
     private PlayerCombatant combatant;
     public Combatant Combatant => combatant;    
     private int currentCommandIndex;
+    // Skeleton Mecanim의 Animator 컴포넌트 참조
 
     [Header("테스트 모드 설정")]
     [Tooltip("테스트 모드 ON/OFF")]
@@ -21,7 +22,9 @@ public class PlayerController : MonoBehaviour, ICombatController
     public SwordArtStyleData EquippedStyle => equippedStyle;
     
     [Header("Spine 애니메이션 연동")]
-    // SpineAttackTestAdapter는 같은 GameObject에 직접 추가됨
+    // Skeleton Mecanim을 통한 Unity Animator 기반 애니메이션 제어
+    [Tooltip("CombatAnimation 오브젝트 (SkeletonMecanim 컴포넌트가 포함된 하위 오브젝트)")]
+    [SerializeField] private GameObject combatAnimationObject;
     
     public int TestCommandIndex
     {
@@ -41,16 +44,16 @@ public class PlayerController : MonoBehaviour, ICombatController
         combatant = new PlayerCombatant("Player", this);
         combatant.EquipSwordArtStyle(equippedStyle);
         
-        // 유파 장착 후 Spine 애니메이션 애셋 연결
-        ConnectSpineAnimationAsset();
+        // 유파 장착 후 Spine 애니메이션 애셋을 Skeleton Mecanim에 연결
+        SetupSkeletonMecanim();
     }
     
     /// <summary>
-    /// 장착된 유파의 Spine 애니메이션 애셋을 SkeletonAnimation 컴포넌트에 연결
+    /// 장착된 유파의 Spine 애니메이션 애셋을 SkeletonMecanim 컴포넌트에 연결
     /// </summary>
-    private void ConnectSpineAnimationAsset()
+    private void SetupSkeletonMecanim()
     {
-        Debug.Log("[PlayerController] ConnectSpineAnimationAsset 시작");
+        Debug.Log("[PlayerController] SetupSkeletonMecanim 시작");
         
         if (equippedStyle == null)
         {
@@ -60,14 +63,24 @@ public class PlayerController : MonoBehaviour, ICombatController
         
         Debug.Log($"[PlayerController] 유파 정보: {equippedStyle.styleName}");
         
-        var spineAnimation = GetComponent<SkeletonAnimation>();
-        if (spineAnimation == null)
+        // Inspector에서 연결된 CombatAnimation 오브젝트 확인
+        if (combatAnimationObject == null)
         {
-            Debug.LogError("[PlayerController] SkeletonAnimation 컴포넌트를 찾을 수 없습니다. 컴포넌트를 추가해주세요.");
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트가 Inspector에서 연결되지 않았습니다. PlayerController의 Combat Animation Object 필드에 연결해주세요.");
             return;
         }
         
-        Debug.Log($"[PlayerController] SkeletonAnimation 컴포넌트 찾음: {spineAnimation.name}");
+        Debug.Log($"[PlayerController] CombatAnimation 오브젝트 찾음: {combatAnimationObject.name}");
+        
+        // SkeletonMecanim 컴포넌트 찾기
+        var skeletonMecanim = combatAnimationObject.GetComponent<SkeletonMecanim>();
+        if (skeletonMecanim == null)
+        {
+            Debug.LogError("[PlayerController] SkeletonMecanim 컴포넌트를 찾을 수 없습니다. CombatAnimation 오브젝트에 SkeletonMecanim 컴포넌트를 추가해주세요.");
+            return;
+        }
+        
+        Debug.Log($"[PlayerController] SkeletonMecanim 컴포넌트 찾음: {skeletonMecanim.name}");
         
         var spineAsset = equippedStyle.SpineAnimationAsset;
         if (spineAsset == null)
@@ -78,14 +91,14 @@ public class PlayerController : MonoBehaviour, ICombatController
         
         Debug.Log($"[PlayerController] Spine 애셋 찾음: {spineAsset.name}");
         
-        // Spine 애니메이션 애셋 연결
-        spineAnimation.skeletonDataAsset = spineAsset;
+        // SkeletonMecanim에 Spine 애니메이션 애셋 연결
+        skeletonMecanim.skeletonDataAsset = spineAsset;
         Debug.Log($"[PlayerController] Spine 애니메이션 애셋 연결 완료: {spineAsset.name} (유파: {equippedStyle.styleName})");
         
         // 연결 후 상태 확인
-        if (spineAnimation.skeletonDataAsset != null)
+        if (skeletonMecanim.skeletonDataAsset != null)
         {
-            Debug.Log($"[PlayerController] 연결 확인됨: {spineAnimation.skeletonDataAsset.name}");
+            Debug.Log($"[PlayerController] 연결 확인됨: {skeletonMecanim.skeletonDataAsset.name}");
         }
         else
         {
@@ -149,56 +162,36 @@ public class PlayerController : MonoBehaviour, ICombatController
     }
     
     /// <summary>
-    /// 공격 커맨드 실행 시 호출 - Spine 애니메이션 재생
+    /// 공격 커맨드 실행 시 호출 - Skeleton Mecanim을 통한 애니메이션 제어
     /// </summary>
     public void OnPlayActionCommand()
     {
         Debug.Log("[PlayerController] OnPlayActionCommand 호출됨");
         
-        var spineAnimation = GetComponent<SkeletonAnimation>();
-        if (spineAnimation == null)
+        // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
+        if (combatAnimationObject == null)
         {
-            Debug.LogError("[PlayerController] SkeletonAnimation 컴포넌트를 찾을 수 없습니다.");
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
             return;
         }
         
-        Debug.Log($"[PlayerController] SkeletonAnimation 컴포넌트 찾음: {spineAnimation.name}");
-        
-        if (equippedStyle == null)
+        var animator = combatAnimationObject.GetComponent<Animator>();
+        if (animator == null)
         {
-            Debug.LogError("[PlayerController] equippedStyle이 null입니다.");
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
             return;
         }
         
-        Debug.Log($"[PlayerController] 유파 정보: {equippedStyle.styleName}");
-        
-        var command = GetSelectedCommand(); // 테스트 설정을 반영한 커맨드 사용
-        if (command == null)
+        // 현재 애니메이션 상태가 Attack이면 추가 공격 무시
+        if (animator.GetCurrentAnimatorStateInfo(0).IsName("Attack"))
         {
-            Debug.LogError("[PlayerController] 선택된 커맨드가 null입니다.");
+            Debug.Log("[PlayerController] 이미 공격 중입니다.");
             return;
         }
         
-        Debug.Log($"[PlayerController] 선택된 커맨드: {command.commandName}");
-        
-        if (string.IsNullOrEmpty(command.animationName))
-        {
-            Debug.LogError($"[PlayerController] 커맨드 '{command.commandName}'의 animationName이 설정되지 않았습니다.");
-            return;
-        }
-        
-        Debug.Log($"[PlayerController] 애니메이션 이름: {command.animationName}");
-        
-        // Spine 애니메이션 재생
-        try
-        {
-            spineAnimation.AnimationState.SetAnimation(0, command.animationName, false);
-            Debug.Log($"[PlayerController] 공격 애니메이션 재생 성공: {command.animationName}");
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"[PlayerController] 애니메이션 재생 실패: {e.Message}");
-        }
+        // Skeleton Mecanim을 통한 공격 애니메이션 재생
+        animator.SetTrigger("Attack");
+        Debug.Log("[PlayerController] 공격 애니메이션 시작 (Skeleton Mecanim)");
     }
     
     /// <summary>
@@ -206,13 +199,23 @@ public class PlayerController : MonoBehaviour, ICombatController
     /// </summary>
     public void OnInterrupted()
     {
-        var spineAnimation = GetComponent<SkeletonAnimation>();
-        if (spineAnimation != null)
+        // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
+        if (combatAnimationObject == null)
         {
-            // 중단 애니메이션 재생
-            spineAnimation.AnimationState.SetAnimation(0, AnimationNameTable.INTERRUPTED, false);
-            Debug.Log("[PlayerController] 중단 애니메이션 재생");
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
+            return;
         }
+        
+        var animator = combatAnimationObject.GetComponent<Animator>();
+        if (animator == null)
+        {
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
+            return;
+        }
+        
+        // Skeleton Mecanim을 통한 중단 애니메이션 재생
+        animator.SetTrigger("Interrupted");
+        Debug.Log("[PlayerController] 중단 애니메이션 재생 (Skeleton Mecanim)");
     }
     
     public void ReceiveCommandResult(CombatantCommandResult result)

@@ -15,8 +15,11 @@ MonoBehaviour:
   turnDurationSeconds: 5
   inputBufferStartSeconds: 0
   inputBufferEndSeconds: 0
-  npcActionPerfectRate: 0.383
-  npcDefensePerfectRate: 0.645
-  npcInputDifficulty: 0.921
+  npcActionPerfectRate: 0
+  npcDefensePerfectRate: 0
+  npcInputDifficulty: 1
+  posturePointsMax: 100
+  posturePointsLossOnParry: 50
+  interruptWaitSec: 2
   actionInputCooldown_Default: 1
   actionInputCooldown_Perfect: 0.1

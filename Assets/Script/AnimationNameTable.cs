@@ -6,4 +6,6 @@ public static class AnimationNameTable
     public const string INTERRUPTED = "interrupted";
     public const string IDLE = "idle";
     public const string PARRYING = "parrying";
+    public const string HIT = "hit";
+    public const string GUARD = "guard";
 }
