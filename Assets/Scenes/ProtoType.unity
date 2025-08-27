@@ -371,6 +371,7 @@ MonoBehaviour:
   useRandomAction: 0
   testCommandIndex: 1
   equippedStyle: {fileID: 11400000, guid: 0b9381922b6f4064c9fa76ce99959125, type: 2}
+  combatAnimationObject: {fileID: 1666012778}
 --- !u!4 &172118090
 Transform:
   m_ObjectHideFlags: 0
@@ -1795,7 +1796,7 @@ GameObject:
   - component: {fileID: 975226832}
   - component: {fileID: 975226831}
   m_Layer: 0
-  m_Name: CombatAnimation
+  m_Name: EnemyCombatAnimation
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2658,6 +2659,7 @@ MonoBehaviour:
   useRandomAction: 0
   testCommandIndex: 1
   equippedStyle: {fileID: 11400000, guid: 0b9381922b6f4064c9fa76ce99959125, type: 2}
+  combatAnimationObject: {fileID: 975226829}
 --- !u!1 &1514707510
 GameObject:
   m_ObjectHideFlags: 0
@@ -2976,7 +2978,7 @@ GameObject:
   - component: {fileID: 1666012781}
   - component: {fileID: 1666012780}
   m_Layer: 0
-  m_Name: CombatAnimation
+  m_Name: PlayerCombatAnimation
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

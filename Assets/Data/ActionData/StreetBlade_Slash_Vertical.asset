@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4ddf5f3c783bef448b61f6bb43d2c43, type: 3}
   m_Name: StreetBlade_Slash_Vertical
   m_EditorClassIdentifier: 
-  commandType: 0
+  commandType: 1
   commandName: "\uAE38\uAC70\uB9AC \uAC80\uC220 - \uB0B4\uB824\uCC0D\uAE30"
   animationName: swing_double
   perfectTimings:

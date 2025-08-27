@@ -182,16 +182,31 @@ public class PlayerController : MonoBehaviour, ICombatController
             return;
         }
         
-        // 현재 애니메이션 상태가 Attack이면 추가 공격 무시
-        if (animator.GetCurrentAnimatorStateInfo(0).IsName("Attack"))
+        // 현재 선택된 검술 액션의 애니메이션 이름 가져오기
+        var currentCommand = GetSelectedCommand();
+        if (currentCommand == null)
         {
-            Debug.Log("[PlayerController] 이미 공격 중입니다.");
+            Debug.LogError("[PlayerController] 현재 선택된 커맨드가 없습니다.");
             return;
         }
         
-        // Skeleton Mecanim을 통한 공격 애니메이션 재생
-        animator.SetTrigger("Attack");
-        Debug.Log("[PlayerController] 공격 애니메이션 시작 (Skeleton Mecanim)");
+        string animationName = currentCommand.animationName;
+        if (string.IsNullOrEmpty(animationName))
+        {
+            Debug.LogError("[PlayerController] 현재 커맨드에 애니메이션 이름이 설정되지 않았습니다.");
+            return;
+        }
+        
+        // 현재 애니메이션 상태가 같은 액션이면 추가 실행 무시
+        if (animator.GetCurrentAnimatorStateInfo(0).IsName(animationName))
+        {
+            Debug.Log($"[PlayerController] 이미 {animationName} 애니메이션이 재생 중입니다.");
+            return;
+        }
+        
+        // Skeleton Mecanim을 통한 검술 액션 애니메이션 재생
+        animator.SetTrigger(animationName);
+        Debug.Log($"[PlayerController] {animationName} 애니메이션 시작 (Skeleton Mecanim)");
     }
     
     /// <summary>
@@ -214,7 +229,7 @@ public class PlayerController : MonoBehaviour, ICombatController
         }
         
         // Skeleton Mecanim을 통한 중단 애니메이션 재생
-        animator.SetTrigger("Interrupted");
+        animator.SetTrigger("interrupted");
         Debug.Log("[PlayerController] 중단 애니메이션 재생 (Skeleton Mecanim)");
     }
     
@@ -243,7 +258,24 @@ public class PlayerController : MonoBehaviour, ICombatController
     public void OnSuccessParry()
     {
         Debug.Log("[PlayerController] 플레이어 쳐내기 성공 애니메이션");
-        // TODO: 쳐내기 성공 애니메이션 구현
+        
+        // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
+        if (combatAnimationObject == null)
+        {
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
+            return;
+        }
+        
+        var animator = combatAnimationObject.GetComponent<Animator>();
+        if (animator == null)
+        {
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
+            return;
+        }
+        
+        // Skeleton Mecanim을 통한 쳐내기 성공 애니메이션 재생
+        animator.SetTrigger("parry");
+        Debug.Log("[PlayerController] 쳐내기 성공 애니메이션 시작 (Skeleton Mecanim)");
     }
     
     /// <summary>
@@ -252,7 +284,24 @@ public class PlayerController : MonoBehaviour, ICombatController
     public void OnBeHitted()
     {
         Debug.Log("[PlayerController] 플레이어 피격 애니메이션");
-        // TODO: 피격 애니메이션 구현
+        
+        // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
+        if (combatAnimationObject == null)
+        {
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
+            return;
+        }
+        
+        var animator = combatAnimationObject.GetComponent<Animator>();
+        if (animator == null)
+        {
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
+            return;
+        }
+        
+        // Skeleton Mecanim을 통한 피격 애니메이션 재생
+        animator.SetTrigger("hit");
+        Debug.Log("[PlayerController] 피격 애니메이션 시작 (Skeleton Mecanim)");
     }
     
     /// <summary>
@@ -261,6 +310,23 @@ public class PlayerController : MonoBehaviour, ICombatController
     public void OnPlayDefence()
     {
         Debug.Log("[PlayerController] 플레이어 방어 애니메이션");
-        // TODO: 플레이어 방어 애니메이션 구현
+        
+        // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
+        if (combatAnimationObject == null)
+        {
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
+            return;
+        }
+        
+        var animator = combatAnimationObject.GetComponent<Animator>();
+        if (animator == null)
+        {
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
+            return;
+        }
+        
+        // Skeleton Mecanim을 통한 방어 애니메이션 재생
+        animator.SetTrigger("guard");
+        Debug.Log("[PlayerController] 방어 애니메이션 시작 (Skeleton Mecanim)");
     }
 }

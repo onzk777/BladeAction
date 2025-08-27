@@ -603,7 +603,11 @@ public class CombatManager : MonoBehaviour
         }
 
         ivr.OnHitVersusResult(CurrentHit, resultVersus); // 히트 결과 UI에 표시
-                                                         //////////////////////// 판정 구간 종료 /////////////////////////
+        
+        // 판정 결과에 따른 애니메이션 호출
+        HandleClashResultAnimation(resultVersus);
+        
+        //////////////////////// 판정 구간 종료 /////////////////////////
         Debug.Log("<==[판정 정보]==>");
         Debug.Log($"[판정 정보]공격자 완벽 입력: {atkPerfect}, 입력 시간: {atkTime} / 방어자 완벽 입력: {defPerfect}, 입력 시간: {defTime}, 방어 커맨드: {guard}");
         Debug.Log($"[판정 정보]InputVersusResult 생성됨: new InputVersusResult({atkPerfect}, {atkTime}, {defPerfect}, {defTime}, {guard})");
@@ -635,6 +639,85 @@ public class CombatManager : MonoBehaviour
         }
         
         Debug.LogWarning("[CombatManager] 중단 발생! 턴이 조기 종료됩니다.");
+    }
+    
+    /// <summary>
+    /// 클래시 결과에 따른 애니메이션 처리
+    /// </summary>
+    /// <param name="resultType">판정 결과 타입</param>
+    private void HandleClashResultAnimation(InputVersusResult.ResultType resultType)
+    {
+        switch (resultType)
+        {
+            case InputVersusResult.ResultType.Hit:
+            case InputVersusResult.ResultType.PerfectAttack:
+            case InputVersusResult.ResultType.GuardBreak:
+                // 방어자가 피격된 경우 - 방어자에게 OnBeHitted 호출
+                if (isPlayerAttacker)
+                {
+                    // 플레이어가 공격자, AI가 방어자인 경우
+                    if (enemyController != null)
+                    {
+                        enemyController.OnBeHitted();
+                        Debug.Log("[CombatManager] AI 방어자 피격 애니메이션 호출");
+                    }
+                }
+                else
+                {
+                    // AI가 공격자, 플레이어가 방어자인 경우
+                    if (playerController != null)
+                    {
+                        playerController.OnBeHitted();
+                        Debug.Log("[CombatManager] 플레이어 방어자 피격 애니메이션 호출");
+                    }
+                }
+                break;
+                
+            case InputVersusResult.ResultType.Parry:
+            case InputVersusResult.ResultType.HalfParry:
+                // 방어자가 쳐내기 성공한 경우 - 방어자에게 OnSuccessParry 호출
+                if (isPlayerAttacker)
+                {
+                    // 플레이어가 공격자, AI가 방어자인 경우
+                    if (enemyController != null)
+                    {
+                        enemyController.OnSuccessParry();
+                        Debug.Log("[CombatManager] AI 방어자 쳐내기 성공 애니메이션 호출");
+                    }
+                }
+                else
+                {
+                    // AI가 공격자, 플레이어가 방어자인 경우
+                    if (playerController != null)
+                    {
+                        playerController.OnSuccessParry();
+                        Debug.Log("[CombatManager] 플레이어 방어자 쳐내기 성공 애니메이션 호출");
+                    }
+                }
+                break;
+                
+            case InputVersusResult.ResultType.Guard:
+                // 방어자가 막아낸 경우 - 방어자에게 OnPlayDefence 호출
+                if (isPlayerAttacker)
+                {
+                    // 플레이어가 공격자, AI가 방어자인 경우
+                    if (enemyController != null)
+                    {
+                        enemyController.OnPlayDefence();
+                        Debug.Log("[CombatManager] AI 방어자 방어 애니메이션 호출");
+                    }
+                }
+                else
+                {
+                    // AI가 공격자, 플레이어가 방어자인 경우
+                    if (playerController != null)
+                    {
+                        playerController.OnPlayDefence();
+                        Debug.Log("[CombatManager] 플레이어 방어자 방어 애니메이션 호출");
+                    }
+                }
+                break;
+        }
     }
     
     private bool CheckInterruptCondition()
