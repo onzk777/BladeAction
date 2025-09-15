@@ -37,6 +37,14 @@ public class EnemyController : MonoBehaviour, ICombatController
 
     // 외부에서 combatant에 접근할 수 있도록 프로퍼티로 공개
     public int CommandCount => Combatant?.AvailableCommands.Count ?? 0;
+    
+    private int currentCommandIndex;
+    
+    public void SetSelectedCommandIndex(int commandIndex)
+    {
+        currentCommandIndex = commandIndex;
+        Debug.Log($"[EnemyController] 선택된 검술 인덱스: {commandIndex}");
+    }
 
     void Awake()
     {

@@ -42,9 +42,23 @@ public class PlayerController : MonoBehaviour, ICombatController
         return equippedStyle.CommandSet[commandIndex];
     }
     public int CommandCount => Combatant?.AvailableCommands.Count ?? 0;
+    
+    public void SetSelectedCommandIndex(int commandIndex)
+    {
+        currentCommandIndex = commandIndex;
+        Debug.Log($"[PlayerController] 선택된 검술 인덱스: {commandIndex}");
+    }
 
     void Awake()
     {
+        // UI가 있으면 테스트 모드 자동 비활성화
+        var playerActionSelectUI = FindFirstObjectByType<PlayerActionSelectUI>();
+        if (playerActionSelectUI != null)
+        {
+            useTestMode = false;
+            Debug.Log("[PlayerController] UI 감지됨 - 테스트 모드 비활성화");
+        }
+        
         // CharacterManager 초기화 대기 후 유파 장착
         StartCoroutine(WaitForCharacterManagerAndSetup());
     }
@@ -147,10 +161,9 @@ public class PlayerController : MonoBehaviour, ICombatController
         UpdateCommandDisplay();
     }
 
-    // 현재 턴(=currentCommandIndex)에 사용할 커맨드를 반환
+    // 현재 턴에 사용할 커맨드를 반환
     public int GetSelectedCommandIndex()
     {
-        int index = 0;
         if (useTestMode)
         {
             if (useRandomAction)
@@ -159,16 +172,19 @@ public class PlayerController : MonoBehaviour, ICombatController
                 if (len == 0) return testCommandIndex; // 보호 코드
 
                 int randomIndex = UnityEngine.Random.Range(0, len);
-                index = randomIndex;
+                return randomIndex;
             }
             else
             {
-                index = testCommandIndex;
+                return testCommandIndex;
             }
         }
         else
-            index = testCommandIndex;
-        return index;
+        {
+            // UI에서 설정된 currentCommandIndex 사용
+            Debug.Log($"[PlayerController] GetSelectedCommandIndex 호출: currentCommandIndex = {currentCommandIndex}");
+            return currentCommandIndex;
+        }
     }
 
     public ActionCommandData GetSelectedCommand()
