@@ -6,8 +6,7 @@ using Spine.Unity;
 [RequireComponent(typeof(PlayerInput))]
 public class PlayerController : MonoBehaviour, ICombatController
 {
-    private PlayerCombatant combatant;
-    public Combatant Combatant => combatant;    
+    public Combatant Combatant => CharacterManager.Instance?.PlayerCombatant;    
     private int currentCommandIndex;
     // Skeleton Mecanim의 Animator 컴포넌트 참조
 
@@ -37,14 +36,32 @@ public class PlayerController : MonoBehaviour, ICombatController
     {
         return equippedStyle.CommandSet[commandIndex];
     }
-    public int CommandCount => combatant.AvailableCommands.Count;
+    public int CommandCount => Combatant?.AvailableCommands.Count ?? 0;
 
     void Awake()
     {
-        combatant = new PlayerCombatant("Player", this);
-        combatant.EquipSwordArtStyle(equippedStyle);
+        // CharacterManager 초기화 대기 후 유파 장착
+        StartCoroutine(WaitForCharacterManagerAndSetup());
+    }
+
+    private System.Collections.IEnumerator WaitForCharacterManagerAndSetup()
+    {
+        // CharacterManager가 초기화될 때까지 대기
+        while (CharacterManager.Instance == null)
+        {
+            yield return null;
+        }
+
+        // Combatant가 준비될 때까지 대기
+        while (Combatant == null)
+        {
+            yield return null;
+        }
+
+        // 유파 장착
+        Combatant?.EquipSwordArtStyle(equippedStyle);
         
-        // 유파 장착 후 Spine 애니메이션 애셋을 Skeleton Mecanim에 연결
+        // Spine 애니메이션 애셋을 Skeleton Mecanim에 연결
         SetupSkeletonMecanim();
     }
     
@@ -152,7 +169,7 @@ public class PlayerController : MonoBehaviour, ICombatController
     public ActionCommandData GetSelectedCommand()
     {
         int idx = GetSelectedCommandIndex();
-        return combatant.AvailableCommands[idx];
+        return Combatant?.AvailableCommands[idx];
     }
 
     private void UpdateCommandDisplay()

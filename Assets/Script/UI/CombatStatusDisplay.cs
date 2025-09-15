@@ -23,6 +23,12 @@ public class CombatStatusDisplay : MonoBehaviour
     [SerializeField] private Transform playerHitResultContainer;
     [SerializeField] private Transform TurnResultContainer;
 
+    [Header("Player Status UI")]
+    public TextMeshProUGUI playerHP;
+    public TextMeshProUGUI playerPoise;
+    public TextMeshProUGUI playerATK;
+    public TextMeshProUGUI playerDR;
+    public TextMeshProUGUI playerCrit;
 
     [Header("Enemy UI")]
     public TextMeshProUGUI enemyName;
@@ -30,11 +36,130 @@ public class CombatStatusDisplay : MonoBehaviour
     public TextMeshProUGUI enemyActionInputCooldown;
     [SerializeField] private Transform enemyHitResultContainer;
 
+    [Header("Enemy Status UI")]
+    public TextMeshProUGUI enemyHP;
+    public TextMeshProUGUI enemyPoise;
+    public TextMeshProUGUI enemyATK;
+    public TextMeshProUGUI enemyDR;
+    public TextMeshProUGUI enemyCrit;
+
 
     private void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+    }
+
+    private void Start()
+    {
+        // CharacterManager가 초기화될 때까지 대기
+        StartCoroutine(WaitForCharacterManager());
+    }
+
+    private System.Collections.IEnumerator WaitForCharacterManager()
+    {
+        // CharacterManager가 초기화될 때까지 대기
+        while (CharacterManager.Instance == null)
+        {
+            yield return null;
+        }
+
+        // CharacterManager의 데이터가 준비될 때까지 대기
+        while (CharacterManager.Instance.PlayerData == null || CharacterManager.Instance.EnemyData == null)
+        {
+            yield return null;
+        }
+
+        // UI 초기화 및 이벤트 구독
+        InitializeStatusUI();
+        SubscribeToStatusEvents();
+    }
+
+    private void InitializeStatusUI()
+    {
+        // 초기 스테이터스 표시
+        UpdatePlayerStatus();
+        UpdateEnemyStatus();
+    }
+
+    private void SubscribeToStatusEvents()
+    {
+        // 플레이어 스테이터스 이벤트 구독
+        if (CharacterManager.Instance.PlayerData != null)
+        {
+            CharacterManager.Instance.PlayerData.OnStatsChanged += OnPlayerStatsChanged;
+        }
+
+        // 적 스테이터스 이벤트 구독
+        if (CharacterManager.Instance.EnemyData != null)
+        {
+            CharacterManager.Instance.EnemyData.OnStatsChanged += OnEnemyStatsChanged;
+        }
+    }
+
+    private void OnPlayerStatsChanged(CharacterData data)
+    {
+        UpdatePlayerStatus();
+    }
+
+    private void OnEnemyStatsChanged(CharacterData data)
+    {
+        UpdateEnemyStatus();
+    }
+
+    private void UpdatePlayerStatus()
+    {
+        if (CharacterManager.Instance?.PlayerData == null) return;
+
+        var data = CharacterManager.Instance.PlayerData;
+        if (playerHP != null) playerHP.text = $"HP: {data.GetHPStatus()}";
+        if (playerPoise != null) playerPoise.text = $"Poise: {data.GetPoiseStatus()}";
+        if (playerATK != null) playerATK.text = $"ATK: {data.ATK}";
+        if (playerDR != null) playerDR.text = $"DR: {data.DR}";
+        if (playerCrit != null) playerCrit.text = $"Crit: {data.Crit}%";
+    }
+
+    private void UpdateEnemyStatus()
+    {
+        if (CharacterManager.Instance?.EnemyData == null) return;
+
+        var data = CharacterManager.Instance.EnemyData;
+        if (enemyHP != null) enemyHP.text = $"HP: {data.GetHPStatus()}";
+        if (enemyPoise != null) enemyPoise.text = $"Poise: {data.GetPoiseStatus()}";
+        if (enemyATK != null) enemyATK.text = $"ATK: {data.ATK}";
+        if (enemyDR != null) enemyDR.text = $"DR: {data.DR}";
+        if (enemyCrit != null) enemyCrit.text = $"Crit: {data.Crit}%";
+    }
+
+    [ContextMenu("Force Update Status")]
+    public void ForceUpdateStatus()
+    {
+        UpdatePlayerStatus();
+        UpdateEnemyStatus();
+    }
+
+    [ContextMenu("Test Player Take Damage")]
+    public void TestPlayerTakeDamage()
+    {
+        CharacterManager.Instance?.PlayerData?.TakeDamage(10);
+    }
+
+    [ContextMenu("Test Enemy Take Damage")]
+    public void TestEnemyTakeDamage()
+    {
+        CharacterManager.Instance?.EnemyData?.TakeDamage(10);
+    }
+
+    [ContextMenu("Test Player Lose Poise")]
+    public void TestPlayerLosePoise()
+    {
+        CharacterManager.Instance?.PlayerData?.LosePoise(25);
+    }
+
+    [ContextMenu("Test Enemy Lose Poise")]
+    public void TestEnemyLosePoise()
+    {
+        CharacterManager.Instance?.EnemyData?.LosePoise(25);
     }
 
     public void whosTurnText(bool isPlayer)

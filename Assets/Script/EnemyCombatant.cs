@@ -1,20 +1,18 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.InputSystem.XR;
 
 public class EnemyCombatant : Combatant
 {
     private EnemyController controller; // EnemyController 참조
-    public EnemyCombatant(string name, EnemyController controller) : base("???")
+    public EnemyCombatant(CharacterData data, EnemyController controller) : base(data)
     {
         this.controller = controller;
     }
 
-    public void Init(string name)
+    public void SetController(EnemyController newController)
     {
-        Name = name;  // Name 프로퍼티가 setter를 허용해야 합니다.
+        controller = newController;
     }
-
 
     public override CommandSelection ChooseCommand()
     {
@@ -22,5 +20,4 @@ public class EnemyCombatant : Combatant
         int idx = Random.Range(0, AvailableCommands.Count);
         return new CommandSelection { selectedIndex = idx };
     }
-
 }

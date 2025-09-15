@@ -3,8 +3,7 @@ using Spine.Unity;
 
 public class EnemyController : MonoBehaviour, ICombatController
 {
-    private EnemyCombatant combatant;
-    public Combatant Combatant => combatant;
+    public Combatant Combatant => CharacterManager.Instance?.EnemyCombatant;
 
     [Header("테스트 모드 설정")]
     [Tooltip("테스트 모드 ON/OFF")]
@@ -32,14 +31,32 @@ public class EnemyController : MonoBehaviour, ICombatController
     }
 
     // 외부에서 combatant에 접근할 수 있도록 프로퍼티로 공개
-    public int CommandCount => combatant.AvailableCommands.Count;
+    public int CommandCount => Combatant?.AvailableCommands.Count ?? 0;
 
     void Awake()
     {
-        combatant = new EnemyCombatant("Enemy", this);
-        combatant.EquipSwordArtStyle(equippedStyle);
+        // CharacterManager 초기화 대기 후 유파 장착
+        StartCoroutine(WaitForCharacterManagerAndSetup());
+    }
+
+    private System.Collections.IEnumerator WaitForCharacterManagerAndSetup()
+    {
+        // CharacterManager가 초기화될 때까지 대기
+        while (CharacterManager.Instance == null)
+        {
+            yield return null;
+        }
+
+        // Combatant가 준비될 때까지 대기
+        while (Combatant == null)
+        {
+            yield return null;
+        }
+
+        // 유파 장착
+        Combatant?.EquipSwordArtStyle(equippedStyle);
         
-        // 유파 장착 후 Spine 애니메이션 애셋을 Skeleton Mecanim에 연결
+        // Spine 애니메이션 애셋을 Skeleton Mecanim에 연결
         SetupSkeletonMecanim();
     }
     
@@ -94,10 +111,10 @@ public class EnemyController : MonoBehaviour, ICombatController
         else
         {
             // 도메인 모델에게 선택 로직 위임
-            var selection = combatant.ChooseCommand();
-            idx = Mathf.Clamp(selection.selectedIndex, 0, CommandCount - 1);
+            var selection = Combatant?.ChooseCommand();
+            idx = Mathf.Clamp(selection?.selectedIndex ?? 0, 0, CommandCount - 1);
         }
-        return combatant.AvailableCommands[idx];
+        return Combatant?.AvailableCommands[idx];
     }
     
     public int GetSelectedCommandIndex()
@@ -126,7 +143,7 @@ public class EnemyController : MonoBehaviour, ICombatController
     public ActionCommandData GetSelectedCommand()
     {
         int idx = GetSelectedCommandIndex();
-        return combatant.AvailableCommands[idx];
+        return Combatant?.AvailableCommands[idx];
     }
 
     public void ReceiveCommandResult(CombatantCommandResult result)

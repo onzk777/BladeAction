@@ -39,8 +39,7 @@ public class CombatManager : MonoBehaviour
     [Header("전역 설정")]
     [SerializeField] private GlobalConfig globalConfig;
 
-    private PlayerCombatant playerCombatant; // 플레이어 Combatant 인스턴스
-    private EnemyCombatant enemyCombatant; // 적 Combatant 인스턴스
+    // CharacterManager를 통해 Combatant 인스턴스 접근
 
     // 현재 히트 컨텍스트 전역화
     public int CurrentHit { get; private set; } // 현재 히트 인덱스. (연타 공격일 경우 체크용)
@@ -54,7 +53,6 @@ public class CombatManager : MonoBehaviour
     
     // FloatingText 생성 상태 추적 (입력 처리 결과와 분리)
     private bool floatingTextShown = false; // 공격자 FloatingText 생성 여부
-    private bool defenseFloatingTextShown = false; // 방어자 FloatingText 생성 여부
     public ICombatController CurrentController { get; private set; } // player/enemy 컨트롤러의 인터페이스
     public CombatantCommandResult CurrentResult { get; private set; } // 현재 커맨드 결과
     public static float CombatStartTime { get; private set; } // 전투 시작 시간 (초 단위 f.)
@@ -78,15 +76,38 @@ public class CombatManager : MonoBehaviour
 
     private void Start()
     {
-        InitializeCombatants(); // Combatant 인스턴스 초기화
-        StartCoroutine(RunCombat()); // 전투 시작 코루틴 실행
+        // CharacterManager 초기화 대기 후 Controller 연결
+        StartCoroutine(WaitForCharacterManagerAndConnect());
     }
 
-    private void InitializeCombatants() // Combatant 인스턴스 초기화
+    private System.Collections.IEnumerator WaitForCharacterManagerAndConnect()
     {
-        // 플레이어 및 적 Combatant 인스턴스 생성
-        playerCombatant = new PlayerCombatant("Player", playerController);
-        enemyCombatant = new EnemyCombatant("Enemy", enemyController);
+        // CharacterManager가 초기화될 때까지 대기
+        while (CharacterManager.Instance == null)
+        {
+            yield return null;
+        }
+
+        // Controller 연결
+        ConnectControllers();
+        
+        // 전투 시작
+        StartCoroutine(RunCombat());
+    }
+
+    private void ConnectControllers() // Controller 연결
+    {
+        // CharacterManager를 통해 Controller 연결
+        if (CharacterManager.Instance != null)
+        {
+            CharacterManager.Instance.ConnectController(CharacterType.Player, playerController);
+            CharacterManager.Instance.ConnectController(CharacterType.Enemy, enemyController);
+            Debug.Log("[CombatManager] Controller 연결 완료");
+        }
+        else
+        {
+            Debug.LogError("[CombatManager] CharacterManager.Instance가 null입니다!");
+        }
     }
 
 
@@ -119,7 +140,7 @@ public class CombatManager : MonoBehaviour
         Combatant actor = controller.Combatant; // 현재 턴을 수행하는 Combatant
         int selectedCommandIndex = controller.GetSelectedCommandIndex(); // 선택된 커맨드 인덱스
         ActionCommandData command = actor.AvailableCommands[selectedCommandIndex];
-        isPlayerAttacker = (controller.Combatant == playerController.Combatant) ? true : false; // 플레이어 여부      
+        isPlayerAttacker = (controller.Combatant == CharacterManager.Instance?.PlayerCombatant) ? true : false; // 플레이어 여부      
         CombatantCommandResult result = new CombatantCommandResult(command); // 커맨드 결과 객체 생성
         attackerInputHandler.SetIsPlayer(isPlayerAttacker); // 공격자 입력 핸들러 설정
         defenderInputHandler.SetIsPlayer(!isPlayerAttacker); // 방어자 입력 핸들러 설정
@@ -135,15 +156,14 @@ public class CombatManager : MonoBehaviour
         CurrentClashResultShown = false; // 현재 타격 판정 결과 표시 여부 초기화
         windowPrompted = false; // 히트 윈도우가 열렸는지 여부 초기화
         floatingTextShown = false; // 공격자 FloatingText 생성 여부 초기화
-        defenseFloatingTextShown = false; // 방어자 FloatingText 생성 여부 초기화
         attackerInputHandler.ResetCooldown(); // 공격자 입력 핸들러 쿨다운 초기화
         defenderInputHandler.ResetCooldown(); // 방어자 입력 핸들러 쿨다운 초기화
         CurrentHit = 0; // 현재 히트 인덱스 초기화
         CurrentController = controller; // 현재 컨트롤러 설정
         CurrentResult = result; // 현재 커맨드 결과 설정
         
-        // 자세 포인트 회복 및 중단 상태 초기화
-        actor.ResetPosturePoints(); // 공격 턴 시작 시 자세 포인트 회복
+        // Poise 회복 및 중단 상태 초기화
+        actor.ResetPoise(); // 공격 턴 시작 시 Poise 회복
         isInterrupted = false; // 중단 상태 초기화
         
         CombatStatusDisplay.Instance.ClearResults(); // 결과 표시 초기화        
@@ -254,7 +274,6 @@ public class CombatManager : MonoBehaviour
                     
                     // FloatingText 생성 후 플래그 설정하여 중복 생성 방지
                     floatingTextShown = true;
-                    defenseFloatingTextShown = true; // 방어자용도 생성 완료로 표시 (중복 방지)
                 }
                 
                 if (!CurrentAttackResultShown && elapsed >= perfectWindowStart) // 공격자 입력 처리
@@ -352,7 +371,6 @@ public class CombatManager : MonoBehaviour
                     CurrentDefenseResultShown = false; // 히트 결과 표시 초기화
                     CurrentClashResultShown = false; // 판정 결과 표시 초기화
                     floatingTextShown = false; // FloatingText 생성 상태 초기화
-                    defenseFloatingTextShown = false; // 방어자 FloatingText 생성 상태 초기화
 
                     Debug.LogWarning($"[DEBUG] 히트 {CurrentHit} 완료 조건 만족 - windowPrompted false로 전환됨");
                     windowPrompted = false;
@@ -450,7 +468,7 @@ public class CombatManager : MonoBehaviour
     private Vector3 GetAIPositionFallback()
     {
         // 1. 씬에서 EnemyController를 찾아보기
-        EnemyController[] enemyControllers = FindObjectsOfType<EnemyController>();
+        EnemyController[] enemyControllers = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
         if (enemyControllers.Length > 0)
         {
             Debug.Log($"[FloatingText 위치] FindObjectsOfType으로 AI 위치 찾음: {enemyControllers[0].transform.position}");
@@ -585,21 +603,51 @@ public class CombatManager : MonoBehaviour
         var ivr = new InputVersusResult(atkPerfect, atkTime, defPerfect, defTime, guard); // 입력 결과 생성
         var resultVersus = ivr.GetResult(atkPerfect, atkTime, defPerfect, defTime, guard); // 입력 결과 생성
 
-        // 쳐내기 판정 시 공격자 자세 포인트 감소
+        // 현재 공격자와 방어자 Combatant 찾기
+        Combatant attacker = isPlayerAttacker ? CharacterManager.Instance?.PlayerCombatant : CharacterManager.Instance?.EnemyCombatant;
+        Combatant defender = isPlayerAttacker ? CharacterManager.Instance?.EnemyCombatant : CharacterManager.Instance?.PlayerCombatant;
+
+        // 쳐내기 판정 시 공격자 Poise 감소
         if (resultVersus == InputVersusResult.ResultType.Parry || resultVersus == InputVersusResult.ResultType.HalfParry)
         {
-            // 현재 공격자 Combatant 찾기
-            Combatant attacker = isPlayerAttacker ? playerCombatant : enemyCombatant;
+            // 방어자의 ParryPoiseDamage 스탯 사용
+            int poiseDamage = defender?.ParryPoiseDamage ?? 25;
             
-            // 자세 포인트 감소
-            attacker.LosePosturePoints(GlobalConfig.Instance.PosturePointsLossOnParry);
+            // Poise 감소
+            attacker?.LosePoise(poiseDamage);
             
             // 중단 발생 확인
-            if (attacker.IsInterrupted)
+            if (attacker?.IsInterrupted == true)
             {
                 Debug.LogWarning($"[CombatManager] {attacker.Name}의 공격이 중단되었습니다!");
                 TriggerInterrupt();
             }
+        }
+        // 공격 성공 시 방어자 HP 감소
+        else if (resultVersus == InputVersusResult.ResultType.Hit || 
+                 resultVersus == InputVersusResult.ResultType.PerfectAttack || 
+                 resultVersus == InputVersusResult.ResultType.GuardBreak)
+        {
+            // 공격자의 ATK 스탯으로 기본 피해 계산
+            int baseDamage = attacker?.ATK ?? 0;
+            
+            // 완벽 공격 시 치명타 판정
+            if (resultVersus == InputVersusResult.ResultType.PerfectAttack && attacker != null)
+            {
+                if (attacker.CharacterData?.IsCriticalHit() == true)
+                {
+                    baseDamage = attacker.CharacterData.CalculateCriticalDamage(baseDamage);
+                    Debug.Log($"[CombatManager] 치명타 발생! 피해: {baseDamage}");
+                }
+            }
+            
+            // 방어자의 DR 스탯 적용하여 최종 피해 계산
+            int finalDamage = Mathf.Max(1, baseDamage - (defender?.DR ?? 0));
+            
+            // 방어자 HP 감소
+            defender?.CharacterData?.TakeDamage(finalDamage);
+            
+            Debug.Log($"[CombatManager] {defender?.Name} 피해 받음: {finalDamage} (기본 피해: {baseDamage}, DR: {defender?.DR ?? 0})");
         }
 
         ivr.OnHitVersusResult(CurrentHit, resultVersus); // 히트 결과 UI에 표시

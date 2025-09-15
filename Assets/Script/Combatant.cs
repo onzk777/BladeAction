@@ -4,68 +4,65 @@ using UnityEngine;
 
 public abstract class Combatant
 {
-    public string Name { get; protected set; }
+    public CharacterData CharacterData { get; protected set; }
+    public string Name => CharacterData?.characterName ?? "Unknown";
     public SwordArtStyleData EquippedStyle { get; protected set; }
     public event Action<SwordArtStyleData> OnStyleEquipped;
     public event Action<SwordArtStyleData> OnStyleUnequipped;
     
-    // 자세 포인트 시스템
-    public float CurrentPosturePoints { get; private set; }
-    public float MaxPosturePoints { get; private set; }
-    public bool IsInterrupted => CurrentPosturePoints <= 0f;
+    // CharacterData를 통한 스테이터스 접근
+    public int HP => CharacterData?.HP ?? 0;
+    public int MaxHP => CharacterData?.MaxHP ?? 0;
+    public int ATK => CharacterData?.ATK ?? 0;
+    public int DR => CharacterData?.DR ?? 0;
+    public int Crit => CharacterData?.Crit ?? 0;
+    public int CritRatio => CharacterData?.CritRatio ?? 100;
+    public int CurrentPoise => CharacterData?.CurrentPoise ?? 0;
+    public int MaxPoise => CharacterData?.MaxPoise ?? 0;
+    public int ParryPoiseDamage => CharacterData?.ParryPoiseDamage ?? 25;
+    public bool IsDefeated => CharacterData?.IsDefeated ?? true;
+    public bool IsInterrupted => CharacterData?.IsInterrupted ?? true;
     
     // 스타일 데이터로부터 가져온 커맨드 목록
     public IReadOnlyList<ActionCommandData> AvailableCommands => _availableCommands;
     private List<ActionCommandData> _availableCommands = new List<ActionCommandData>();
 
-    public Combatant(string name)
+    public Combatant(CharacterData characterData)
     {
-        Name = name;
-        InitializePosturePoints();
+        CharacterData = characterData;
     }
     
     /// <summary>
-    /// 자세 포인트 초기화
+    /// 공격 턴 시작 시 Poise 회복
     /// </summary>
-    private void InitializePosturePoints()
+    public void ResetPoise()
     {
-        MaxPosturePoints = GlobalConfig.Instance.PosturePointsMax;
-        CurrentPosturePoints = MaxPosturePoints;
-        Debug.Log($"[{Name}] 자세 포인트 초기화: {CurrentPosturePoints}/{MaxPosturePoints}");
+        CharacterData?.RestorePoise();
     }
     
     /// <summary>
-    /// 공격 턴 시작 시 자세 포인트 회복
+    /// 쳐내기 당했을 때 Poise 감소
     /// </summary>
-    public void ResetPosturePoints()
+    /// <param name="amount">감소할 Poise 양</param>
+    public void LosePoise(int amount)
     {
-        CurrentPosturePoints = MaxPosturePoints;
-        Debug.Log($"[{Name}] 자세 포인트 회복: {CurrentPosturePoints}/{MaxPosturePoints}");
+        CharacterData?.LosePoise(amount);
     }
     
     /// <summary>
-    /// 쳐내기 당했을 때 자세 포인트 감소
+    /// 현재 Poise 상태를 문자열로 반환
     /// </summary>
-    /// <param name="amount">감소할 자세 포인트 양</param>
-    public void LosePosturePoints(float amount)
+    public string GetPoiseStatus()
     {
-        float oldPosture = CurrentPosturePoints;
-        CurrentPosturePoints = Mathf.Max(0f, CurrentPosturePoints - amount);
-        
-        Debug.Log($"[{Name}] 자세 포인트 감소: {oldPosture} → {CurrentPosturePoints} (감소량: {amount})");
-        
-        if (IsInterrupted)
-        {
-            Debug.LogWarning($"[{Name}] 자세 포인트 소진! 중단 발생!");
-        }
+        return CharacterData?.GetPoiseStatus() ?? "0/0";
     }
     
     /// <summary>
-    /// 현재 자세 포인트 상태를 문자열로 반환
+    /// 현재 HP 상태를 문자열로 반환
     /// </summary>
-    public string GetPostureStatus()
+    public string GetHPStatus()
     {
-        return $"{CurrentPosturePoints:F0}/{MaxPosturePoints:F0}";
+        return CharacterData?.GetHPStatus() ?? "0/0";
     }
 
     public abstract CommandSelection ChooseCommand();
