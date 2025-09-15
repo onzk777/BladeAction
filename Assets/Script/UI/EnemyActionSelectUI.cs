@@ -1,41 +1,45 @@
 using UnityEngine;
 using System.Collections.Generic;
+using TMPro;
 
 public class EnemyActionSelectUI : MonoBehaviour
 {
     [Header("UI References")]
     public Transform actionButtonContainer;
     public GameObject actionButtonPrefab;
-    
+
     [Header("Enemy Reference")]
     public EnemyController enemyController;
-    
+
     private List<ActionButton> actionButtons = new List<ActionButton>();
     private bool isInitialized = false;
-    
+
     private void Awake()
     {
-        // EnemyController 자동 찾기
         if (enemyController == null)
         {
             enemyController = FindFirstObjectByType<EnemyController>();
+            if (enemyController != null)
+            {
+                Debug.Log("[EnemyActionSelectUI] EnemyController 자동 연결 완료");
+            }
         }
     }
-    
+
     private void Start()
     {
         Initialize();
     }
-    
+
     public void Initialize()
     {
         if (isInitialized) return;
-        
+
         CreateActionButtons();
         DisableButtonInteraction();
         isInitialized = true;
     }
-    
+
     private void CreateActionButtons()
     {
         // 기존 버튼들 정리
@@ -43,7 +47,7 @@ public class EnemyActionSelectUI : MonoBehaviour
         {
             if (button != null)
             {
-                DestroyImmediate(button.gameObject);
+                Destroy(button.gameObject);
             }
         }
         actionButtons.Clear();
@@ -54,7 +58,31 @@ public class EnemyActionSelectUI : MonoBehaviour
             return;
         }
         
-        // 에너미의 실제 검술 데이터 사용
+        // useTestMode가 true면 테스트용 단일 버튼 생성
+        if (enemyController.UseTestMode)
+        {
+            CreateTestModeButton();
+        }
+        else
+        {
+            CreateNormalModeButtons();
+        }
+    }
+
+    private void CreateTestModeButton()
+    {
+        ActionCommandData commandData = null;
+        if (enemyController.EquippedStyle != null && 
+            ((ICombatController)enemyController).TestCommandIndex < enemyController.EquippedStyle.CommandSet.Count)
+        {
+            commandData = enemyController.EquippedStyle.CommandSet[((ICombatController)enemyController).TestCommandIndex];
+        }
+        
+        CreateActionButton(0, commandData);
+    }
+
+    private void CreateNormalModeButtons()
+    {
         if (enemyController.EquippedStyle != null)
         {
             var commandSet = enemyController.EquippedStyle.CommandSet;
@@ -67,7 +95,6 @@ public class EnemyActionSelectUI : MonoBehaviour
         }
         else
         {
-            // 임시로 기본 검술들 생성 (데이터가 없을 때)
             for (int i = 0; i < 5; i++)
             {
                 CreateActionButton(i, null);
@@ -92,11 +119,9 @@ public class EnemyActionSelectUI : MonoBehaviour
         }
         
         actionButton.Initialize(commandData, index);
-        actionButton.SetInteractable(false); // 에너미 버튼은 비활성화
-        
         actionButtons.Add(actionButton);
     }
-    
+
     private void DisableButtonInteraction()
     {
         foreach (var button in actionButtons)
@@ -107,30 +132,10 @@ public class EnemyActionSelectUI : MonoBehaviour
             }
         }
     }
-    
-    public void ShowEnemyAction(int actionIndex)
+
+    public void RefreshButtons()
     {
-        if (actionIndex >= 0 && actionIndex < actionButtons.Count)
-        {
-            // 선택된 버튼 하이라이트
-            for (int i = 0; i < actionButtons.Count; i++)
-            {
-                if (actionButtons[i] != null)
-                {
-                    actionButtons[i].SetFocused(i == actionIndex);
-                }
-            }
-        }
-    }
-    
-    public void ResetFocus()
-    {
-        foreach (var button in actionButtons)
-        {
-            if (button != null)
-            {
-                button.SetFocused(false);
-            }
-        }
+        CreateActionButtons();
+        DisableButtonInteraction();
     }
 }

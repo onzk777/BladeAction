@@ -89,6 +89,17 @@ public class CombatManager : MonoBehaviour
 
     private void Start()
     {
+        // EventSystem 상태 확인
+        var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+        if (eventSystem == null)
+        {
+            Debug.LogError("[CombatManager] Start에서 EventSystem이 없습니다!");
+        }
+        else
+        {
+            Debug.Log($"[CombatManager] Start에서 EventSystem 활성화 상태: {eventSystem.enabled}");
+        }
+        
         // 전투 결과 초기화
         battleResult = new BattleResult();
         battleResult.InitializeBattle();
@@ -186,6 +197,19 @@ public class CombatManager : MonoBehaviour
         Debug.Log($"[RunCombat] HandlerInstance: {attackerInputHandler.GetInstanceID()}");
         Debug.Log($"[RunCombat] timingInputHandler InstanceID: {attackerInputHandler.GetInstanceID()}");
         ////////////////////////////////////////////////////////////////
+
+        // 전투 시작 시 첫 번째 검술 버튼에 포커스 설정
+        var playerActionSelectUI = FindFirstObjectByType<PlayerActionSelectUI>();
+        if (playerActionSelectUI != null)
+        {
+            Debug.Log("[CombatManager] PlayerActionSelectUI 찾음 - 초기화 후 포커스 설정 시도");
+            playerActionSelectUI.Initialize(); // 먼저 초기화
+            playerActionSelectUI.SetFocusToFirstButton();
+        }
+        else
+        {
+            Debug.LogWarning("[CombatManager] PlayerActionSelectUI를 찾을 수 없습니다!");
+        }
 
         while (!isBattleEnded)
         {
@@ -303,8 +327,6 @@ public class CombatManager : MonoBehaviour
         while (TurnTimer.ElapsedTime < turnDuration + turnDurationBuffer)
         {
             float elapsed = TurnTimer.ElapsedTime; // 현재 경과 시간
-            Debug.Log($"[디버그] Hit={CurrentHit}, windowPrompted={windowPrompted}, elapsed={elapsed:F3}");
-            Debug.Log($"[히트={CurrentHit}] 조건 점검 → elapsed={elapsed}, windowPrompted={windowPrompted}, clashShown={CurrentClashResultShown}, atkResult={CurrentAttackResultShown}, defResult={CurrentDefenseResultShown}");
 
             CombatStatusDisplay.Instance?.updateTurnInfo(turnDuration - elapsed);
             
@@ -1279,7 +1301,19 @@ public class CombatManager : MonoBehaviour
     /// </summary>
     public void RestartBattle()
     {
+        Debug.Log("[CombatManager] 재시작 버튼 클릭됨!");
         Debug.Log("[CombatManager] 전투 다시 시작 요청");
+        
+        // EventSystem 상태 확인
+        var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+        if (eventSystem == null)
+        {
+            Debug.LogError("[CombatManager] EventSystem이 없습니다!");
+        }
+        else
+        {
+            Debug.Log($"[CombatManager] EventSystem 활성화 상태: {eventSystem.enabled}");
+        }
         
         // 1. 전투 상태 초기화
         isBattleEnded = false;
@@ -1337,7 +1371,6 @@ public class CombatManager : MonoBehaviour
     public void Update()
     {
         CombatStatusDisplay.Instance?.SetPlayerActionInputCooldown(attackerInputHandler.NextAllowedInputTime - Time.time);
-        Debug.Log($"[windowPrompted]:{windowPrompted}");
     }
     
     /// <summary>

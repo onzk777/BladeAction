@@ -28,6 +28,8 @@ public class EnemyController : MonoBehaviour, ICombatController
         get => testCommandIndex;
         set => testCommandIndex = value;
     }
+    
+    public bool UseTestMode => useTestMode;
 
     // 현재 턴에 사용할 커맨드를 반환
     public ActionCommandData GetCurrentActionCommand(int commandIndex)

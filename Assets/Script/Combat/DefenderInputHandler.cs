@@ -108,7 +108,6 @@ public class DefenderInputHandler : BaseInputHandler
             {
                 isGuardActive = true;
                 PlayGuardAnimation();
-                Debug.Log($"[DefenderInputHandler] 막기 활성화! 홀드 시간: {Time.time - guardHoldStartTime:F2}초");
             }
         }
         else if (!isGuardInputHeld && isGuardActive)
@@ -116,7 +115,6 @@ public class DefenderInputHandler : BaseInputHandler
             // 막기 입력이 해제되면 막기 비활성화
             isGuardActive = false;
             StopGuardAnimation();
-            Debug.Log("[DefenderInputHandler] 막기 비활성화");
         }
     }
     

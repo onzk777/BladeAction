@@ -46,19 +46,79 @@ public class PlayerController : MonoBehaviour, ICombatController
     public void SetSelectedCommandIndex(int commandIndex)
     {
         currentCommandIndex = commandIndex;
-        Debug.Log($"[PlayerController] 선택된 검술 인덱스: {commandIndex}");
+    }
+
+    // InputSystem의 ActionSelect 1D Axis에 연결될 메서드들
+    public void OnActionSelect(float value)
+    {
+        Debug.Log($"[PlayerController] OnActionSelect(float) 호출됨: {value}");
+        HandleActionSelectInput(value);
+    }
+
+    public void OnActionSelect(InputValue value)
+    {
+        Debug.Log($"[PlayerController] OnActionSelect(InputValue) 호출됨");
+        float floatValue = value.Get<float>();
+        HandleActionSelectInput(floatValue);
+    }
+
+    public void OnActionSelect(InputAction.CallbackContext context)
+    {
+        Debug.Log($"[PlayerController] OnActionSelect(CallbackContext) 호출됨");
+        float floatValue = context.ReadValue<float>();
+        HandleActionSelectInput(floatValue);
+    }
+
+    private void HandleActionSelectInput(float value)
+    {
+        Debug.Log($"[PlayerController] HandleActionSelectInput: {value}");
+        
+        // W/S 키만 처리 (A/D 키는 무시)
+        // 1D Axis 값이 0이 아닐 때만 처리
+        if (Mathf.Abs(value) > 0.1f)
+        {
+            var playerActionSelectUI = FindFirstObjectByType<PlayerActionSelectUI>();
+            if (playerActionSelectUI != null)
+            {
+                if (value < 0) // Negative (W키, Up Arrow) - 위로 이동
+                {
+                    Debug.Log("[PlayerController] 위로 이동 요청 (W키)");
+                    playerActionSelectUI.MoveFocus(-1);
+                }
+                else if (value > 0) // Positive (S키, Down Arrow) - 아래로 이동
+                {
+                    Debug.Log("[PlayerController] 아래로 이동 요청 (S키)");
+                    playerActionSelectUI.MoveFocus(1);
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerController] PlayerActionSelectUI를 찾을 수 없습니다!");
+            }
+        }
+    }
+
+
+    public bool UseTestMode => useTestMode;
+
+    public void SetTestMode(bool testMode)
+    {
+        if (useTestMode != testMode)
+        {
+            useTestMode = testMode;
+            Debug.Log($"[PlayerController] 테스트 모드 변경: {testMode}");
+            
+            // UI가 있으면 버튼 새로고침
+            var playerActionSelectUI = FindFirstObjectByType<PlayerActionSelectUI>();
+            if (playerActionSelectUI != null)
+            {
+                playerActionSelectUI.RefreshButtons();
+            }
+        }
     }
 
     void Awake()
     {
-        // UI가 있으면 테스트 모드 자동 비활성화
-        var playerActionSelectUI = FindFirstObjectByType<PlayerActionSelectUI>();
-        if (playerActionSelectUI != null)
-        {
-            useTestMode = false;
-            Debug.Log("[PlayerController] UI 감지됨 - 테스트 모드 비활성화");
-        }
-        
         // CharacterManager 초기화 대기 후 유파 장착
         StartCoroutine(WaitForCharacterManagerAndSetup());
     }
@@ -190,7 +250,14 @@ public class PlayerController : MonoBehaviour, ICombatController
     public ActionCommandData GetSelectedCommand()
     {
         int idx = GetSelectedCommandIndex();
-        return Combatant?.AvailableCommands[idx];
+        
+        // equippedStyle의 CommandSet에서 가져오기
+        if (equippedStyle != null && idx >= 0 && idx < equippedStyle.CommandSet.Count)
+        {
+            return equippedStyle.CommandSet[idx];
+        }
+        
+        return null;
     }
 
     private void UpdateCommandDisplay()

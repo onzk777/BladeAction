@@ -29,12 +29,26 @@ public abstract class BaseInputHandler : MonoBehaviour
             return;
         }
 
-        // 액션맵 "Combat" 내 PerfectInput 액션을 가져옴
-        playerInput.SwitchCurrentActionMap("Combat");
-        perfectAction = playerInput.actions["PerfectInput"];
-        if (perfectAction == null)
+        // Actions Asset이 연결되어 있는지 확인
+        if (playerInput.actions == null)
         {
-            Debug.LogError("[TimingInputHandler] 'PerfectInput' 액션을 찾을 수 없습니다.");
+            Debug.LogError("[TimingInputHandler] PlayerInput에 Actions Asset이 연결되지 않았습니다.");
+            return;
+        }
+
+        // 액션맵 "Combat" 내 PerfectInput 액션을 가져옴
+        try
+        {
+            playerInput.SwitchCurrentActionMap("Combat");
+            perfectAction = playerInput.actions["PerfectInput"];
+            if (perfectAction == null)
+            {
+                Debug.LogError("[TimingInputHandler] 'PerfectInput' 액션을 찾을 수 없습니다.");
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[TimingInputHandler] 액션 맵 전환 실패: {e.Message}");
         }
     }
     // ⬇️ 입력 콜백 등록
