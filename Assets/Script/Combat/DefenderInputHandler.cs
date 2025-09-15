@@ -75,10 +75,14 @@ public class DefenderInputHandler : BaseInputHandler
             guardHoldStartTime = Time.time;
             Debug.Log("[DefenderInputHandler] 막기 입력 시작");
         }
-        else if (ctx.canceled)
+        else         if (ctx.canceled)
         {
             // 입력 해제 - 막기 즉시 해제
             isGuardInputHeld = false;
+            if (isGuardActive)
+            {
+                StopGuardAnimation();
+            }
             isGuardActive = false;
             Debug.Log("[DefenderInputHandler] 막기 입력 해제 - 막기 OFF");
         }
@@ -103,8 +107,16 @@ public class DefenderInputHandler : BaseInputHandler
             if (Time.time - guardHoldStartTime >= guardHoldThreshold)
             {
                 isGuardActive = true;
+                PlayGuardAnimation();
                 Debug.Log($"[DefenderInputHandler] 막기 활성화! 홀드 시간: {Time.time - guardHoldStartTime:F2}초");
             }
+        }
+        else if (!isGuardInputHeld && isGuardActive)
+        {
+            // 막기 입력이 해제되면 막기 비활성화
+            isGuardActive = false;
+            StopGuardAnimation();
+            Debug.Log("[DefenderInputHandler] 막기 비활성화");
         }
     }
     
@@ -159,6 +171,10 @@ public class DefenderInputHandler : BaseInputHandler
     /// </summary>
     public void ResetGuardState()
     {
+        if (isGuardActive)
+        {
+            StopGuardAnimation();
+        }
         isGuardActive = false;
         isGuardInputHeld = false;
         guardHoldStartTime = 0f;
@@ -197,6 +213,47 @@ public class DefenderInputHandler : BaseInputHandler
         if (IsPlayer && isListening)
         {
             UpdateGuardState();
+        }
+    }
+    
+    
+    /// <summary>
+    /// 막기 애니메이션을 재생합니다
+    /// </summary>
+    private void PlayGuardAnimation()
+    {
+        if (CombatManager.Instance != null)
+        {
+            if (IsPlayer)
+            {
+                var playerController = CombatManager.Instance.GetPlayerController();
+                playerController?.OnPlayDefence();
+            }
+            else
+            {
+                var enemyController = CombatManager.Instance.GetEnemyController();
+                enemyController?.OnPlayDefence();
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 막기 애니메이션을 중단합니다
+    /// </summary>
+    private void StopGuardAnimation()
+    {
+        if (CombatManager.Instance != null)
+        {
+            if (IsPlayer)
+            {
+                var playerController = CombatManager.Instance.GetPlayerController();
+                // 애니메이션 중단 로직이 필요하면 여기에 추가
+            }
+            else
+            {
+                var enemyController = CombatManager.Instance.GetEnemyController();
+                // 애니메이션 중단 로직이 필요하면 여기에 추가
+            }
         }
     }
 }

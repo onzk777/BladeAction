@@ -13,6 +13,11 @@ public class CombatManager : MonoBehaviour
 
     [SerializeField] private PlayerController playerController; // 플레이어 컨트롤러
     [SerializeField] private EnemyController enemyController; // 적 컨트롤러
+    
+    // UI에서 접근할 수 있도록 public 프로퍼티 추가
+    public PlayerController PlayerController => playerController;
+    public EnemyController EnemyController => enemyController;
+    
     [SerializeField] private AttackerInputHandler attackerInputHandler; // 공격자 타이밍 입력 핸들러
     [SerializeField] private DefenderInputHandler defenderInputHandler; // 방어자 타이밍 입력 핸들러
     private bool isPlayerAttacker; // 현재 턴이 플레이어인지 여부
@@ -39,6 +44,9 @@ public class CombatManager : MonoBehaviour
     [Header("전역 설정")]
     [SerializeField] private GlobalConfig globalConfig;
 
+    // 현재 턴 지속 시간 (전역 접근 가능)
+    public float CurrentTurnDuration { get; private set; } = 0f;
+
     // CharacterManager를 통해 Combatant 인스턴스 접근
 
     // 현재 히트 컨텍스트 전역화
@@ -51,6 +59,11 @@ public class CombatManager : MonoBehaviour
     // 중단 상태 추적
     private bool isInterrupted = false; // 현재 턴에서 중단이 발생했는지 여부
     
+    // 전투 종료 상태 추적
+    private bool isBattleEnded = false; // 전투가 종료되었는지 여부
+    private BattleResult battleResult; // 전투 결과
+    public event System.Action<BattleResult> OnBattleEnded; // 전투 종료 이벤트
+    
     // FloatingText 생성 상태 추적 (입력 처리 결과와 분리)
     private bool floatingTextShown = false; // 공격자 FloatingText 생성 여부
     public ICombatController CurrentController { get; private set; } // player/enemy 컨트롤러의 인터페이스
@@ -58,7 +71,7 @@ public class CombatManager : MonoBehaviour
     public static float CombatStartTime { get; private set; } // 전투 시작 시간 (초 단위 f.)
     public float GetInputDeadline() // 입력 마감 시간 계산
     {
-        return CombatStartTime + GlobalConfig.Instance.TurnDurationSeconds - GlobalConfig.Instance.InputBufferEndSeconds;
+        return CombatStartTime + CurrentTurnDuration - GlobalConfig.Instance.InputBufferEndSeconds;
     }
 
     private void Awake()
@@ -76,6 +89,10 @@ public class CombatManager : MonoBehaviour
 
     private void Start()
     {
+        // 전투 결과 초기화
+        battleResult = new BattleResult();
+        battleResult.InitializeBattle();
+        
         // CharacterManager 초기화 대기 후 Controller 연결
         StartCoroutine(WaitForCharacterManagerAndConnect());
     }
@@ -109,6 +126,57 @@ public class CombatManager : MonoBehaviour
             Debug.LogError("[CombatManager] CharacterManager.Instance가 null입니다!");
         }
     }
+    
+    /// <summary>
+    /// 검술 기반 턴 지속 시간 계산
+    /// </summary>
+    /// <param name="command">사용할 검술 커맨드</param>
+    /// <returns>계산된 턴 지속 시간 (초)</returns>
+    private float CalculateTurnDuration(ActionCommandData command)
+    {
+        if (command == null || command.perfectTimings == null || command.perfectTimings.Count == 0)
+        {
+            Debug.LogWarning("[CombatManager] 유효하지 않은 커맨드로 기본 턴 지속 시간 사용");
+            return 1.0f; // 기본값 1초 사용 (마지막 히트 완료 시간이 없으므로)
+        }
+        
+        // 마지막 히트의 완료 시간 계산
+        var lastTiming = command.perfectTimings[command.perfectTimings.Count - 1];
+        float lastHitEndTime = lastTiming.start + lastTiming.duration;
+        
+        // 추가 시간 (기본 0초, GlobalConfig에서 설정 가능)
+        float additionalTime = GlobalConfig.Instance.AdditionalTurnDuration; // 기본값 0초
+        
+        float totalDuration = lastHitEndTime + additionalTime;
+        
+        Debug.Log($"[CombatManager] 턴 지속 시간 계산 - 마지막 히트 완료: {lastHitEndTime}초, 추가 시간: {additionalTime}초, 총 지속 시간: {totalDuration}초");
+        
+        return totalDuration;
+    }
+    
+    /// <summary>
+    /// 애니메이션 완료 대기 후 다음 턴 시작
+    /// </summary>
+    /// <param name="nextController">다음 턴을 수행할 컨트롤러</param>
+    /// <returns></returns>
+    private IEnumerator WaitForAnimationAndStartNextTurn(ICombatController nextController)
+    {
+        // 기본 턴 전환 대기 시간
+        float baseWaitTime = GlobalConfig.Instance.TurnEndBuffer;
+        
+        // 애니메이션 완료를 위한 추가 대기 시간 (피격 애니메이션 등)
+        float animationWaitTime = GlobalConfig.Instance.AnimationWaitTime;
+        
+        // 총 대기 시간
+        float totalWaitTime = baseWaitTime + animationWaitTime;
+        
+        Debug.Log($"[CombatManager] 턴 전환 대기 - 기본: {baseWaitTime}초, 애니메이션: {animationWaitTime}초, 총: {totalWaitTime}초");
+        
+        yield return new WaitForSeconds(totalWaitTime);
+        
+        // 다음 턴 시작
+        yield return StartCoroutine(PerformTurn(nextController));
+    }
 
 
     private IEnumerator RunCombat()
@@ -119,15 +187,36 @@ public class CombatManager : MonoBehaviour
         Debug.Log($"[RunCombat] timingInputHandler InstanceID: {attackerInputHandler.GetInstanceID()}");
         ////////////////////////////////////////////////////////////////
 
-        bool isCombatOver = false; // 테스트용, 전투 완료 여부
-        while (!isCombatOver)
+        while (!isBattleEnded)
         {
+            // 전투 종료 조건 체크
+            if (isBattleEnded)
+            {
+                Debug.Log("[RunCombat] 전투가 종료되어 루프를 중단합니다.");
+                break;
+            }
+            
+            // 플레이어 턴
             CombatStartTime = Time.time;
             yield return new WaitForSeconds(0.2f); // 첫 턴 시작 전에 살짝 
             yield return StartCoroutine(PerformTurn(playerController));
-            yield return new WaitForSeconds(3.0f); // 테스트 용 결과 확인 대기 시간
+            
+            // 플레이어 턴 후 전투 종료 체크
+            if (isBattleEnded)
+            {
+                Debug.Log("[RunCombat] 플레이어 턴 후 전투 종료 감지");
+                break;
+            }
+            
+            // 적 턴 (애니메이션 대기 없이 즉시 시작)
             yield return StartCoroutine(PerformTurn(enemyController));
-            yield return new WaitForSeconds(3.0f); // 테스트 용 결과 확인 대기 시간
+            
+            // 적 턴 후 전투 종료 체크
+            if (isBattleEnded)
+            {
+                Debug.Log("[RunCombat] 적 턴 후 전투 종료 감지");
+                break;
+            }
         }
         Debug.Log("전투 종료!");
     }
@@ -138,6 +227,7 @@ public class CombatManager : MonoBehaviour
 
         // 초기화        
         Combatant actor = controller.Combatant; // 현재 턴을 수행하는 Combatant
+        Combatant defender = isPlayerAttacker ? CharacterManager.Instance.EnemyCombatant : CharacterManager.Instance.PlayerCombatant; // 피격자
         int selectedCommandIndex = controller.GetSelectedCommandIndex(); // 선택된 커맨드 인덱스
         ActionCommandData command = actor.AvailableCommands[selectedCommandIndex];
         isPlayerAttacker = (controller.Combatant == CharacterManager.Instance?.PlayerCombatant) ? true : false; // 플레이어 여부      
@@ -145,7 +235,8 @@ public class CombatManager : MonoBehaviour
         attackerInputHandler.SetIsPlayer(isPlayerAttacker); // 공격자 입력 핸들러 설정
         defenderInputHandler.SetIsPlayer(!isPlayerAttacker); // 방어자 입력 핸들러 설정
         TurnTimer.Reset(); // 턴 시작 시각 초기화        
-        float turnDuration = globalConfig.TurnDurationSeconds; // 턴 지속 시간 설정에서 읽어오기
+        float turnDuration = CalculateTurnDuration(command); // 검술 기반 턴 지속 시간 계산
+        CurrentTurnDuration = turnDuration; // 전역 접근 가능하도록 설정
         int hitCount = command.hitCount; // 커맨드의 히트 카운트(연타 공격일 경우 체크용)
         attackerPerfectInput = null; // 공격자 완벽 입력 여부 초기화
         defenderPerfectInput = null; // 방어자 완벽 입력 여부 초기화
@@ -216,6 +307,13 @@ public class CombatManager : MonoBehaviour
             Debug.Log($"[히트={CurrentHit}] 조건 점검 → elapsed={elapsed}, windowPrompted={windowPrompted}, clashShown={CurrentClashResultShown}, atkResult={CurrentAttackResultShown}, defResult={CurrentDefenseResultShown}");
 
             CombatStatusDisplay.Instance?.updateTurnInfo(turnDuration - elapsed);
+            
+            // 전투 종료 조건 체크 (HP가 0이 되었는지 확인)
+            if (isBattleEnded)
+            {
+                Debug.LogWarning("[PerformTurn] 전투가 종료되어 턴을 중단합니다.");
+                break;
+            }
             
             // 중단 발생 시 턴 조기 종료
             if (isInterrupted)
@@ -396,6 +494,140 @@ public class CombatManager : MonoBehaviour
 
         attackerInputHandler.ResetInputState();
         defenderInputHandler.ResetInputState();
+        
+        // 턴 종료 후 애니메이션 완료 대기
+        yield return StartCoroutine(WaitForAnimationsComplete(actor, defender));
+    }
+    
+    /// <summary>
+    /// 공격자와 피격자의 애니메이션이 모두 완료될 때까지 대기
+    /// </summary>
+    private IEnumerator WaitForAnimationsComplete(Combatant attacker, Combatant target)
+    {
+        Debug.Log($"[CombatManager] 애니메이션 완료 대기 시작 - 공격자: {attacker.Name}, 피격자: {target.Name}");
+        
+        // 공격자와 피격자의 컨트롤러 가져오기
+        ICombatController attackerController = isPlayerAttacker ? playerController : enemyController;
+        ICombatController defenderController = isPlayerAttacker ? enemyController : playerController;
+        
+        // 최대 대기 시간 (안전장치)
+        float maxWaitTime = 10f;
+        float startTime = Time.time;
+        
+        // 공격자 애니메이션 완료 대기
+        yield return StartCoroutine(WaitForControllerAnimationComplete(attackerController, "공격자", maxWaitTime));
+        
+        // 피격자 애니메이션 완료 대기
+        yield return StartCoroutine(WaitForControllerAnimationComplete(defenderController, "피격자", maxWaitTime));
+        
+        float totalWaitTime = Time.time - startTime;
+        Debug.Log($"[CombatManager] 모든 애니메이션 완료 대기 완료 - 총 대기 시간: {totalWaitTime:F2}초");
+    }
+    
+    /// <summary>
+    /// 특정 컨트롤러의 애니메이션이 완료될 때까지 대기
+    /// </summary>
+    private IEnumerator WaitForControllerAnimationComplete(ICombatController controller, string role, float maxWaitTime)
+    {
+        if (controller == null)
+        {
+            Debug.LogWarning($"[CombatManager] {role} 컨트롤러가 null입니다. 애니메이션 대기를 건너뜁니다.");
+            yield break;
+        }
+        
+        float startTime = Time.time;
+        
+        // 기본 애니메이션 대기 시간 (GlobalConfig에서 설정)
+        float baseWaitTime = GlobalConfig.Instance.AnimationWaitTime;
+        
+        // 최소 대기 시간 적용
+        if (baseWaitTime > 0)
+        {
+            Debug.Log($"[CombatManager] {role} 기본 애니메이션 대기: {baseWaitTime}초");
+            yield return new WaitForSeconds(baseWaitTime);
+        }
+        
+        // 실제 애니메이션 상태 확인을 통한 완료 대기
+        yield return StartCoroutine(WaitForActualAnimationComplete(controller, role, maxWaitTime));
+        
+        float totalWaitTime = Time.time - startTime;
+        Debug.Log($"[CombatManager] {role} 애니메이션 대기 완료 - 총 대기 시간: {totalWaitTime:F2}초");
+    }
+    
+    /// <summary>
+    /// 실제 Animator 상태를 확인하여 애니메이션 완료를 감지
+    /// </summary>
+    private IEnumerator WaitForActualAnimationComplete(ICombatController controller, string role, float maxWaitTime)
+    {
+        // Controller에서 Animator 컴포넌트 가져오기
+        Animator animator = GetControllerAnimator(controller);
+        if (animator == null)
+        {
+            Debug.LogWarning($"[CombatManager] {role} Animator를 찾을 수 없습니다. 기본 대기 시간을 사용합니다.");
+            yield return new WaitForSeconds(1f); // 기본 1초 대기
+            yield break;
+        }
+        
+        float startTime = Time.time;
+        float lastAnimationTime = 0f;
+        int stableFrameCount = 0;
+        const int requiredStableFrames = 3; // 3프레임 동안 안정적이어야 완료로 간주
+        
+        Debug.Log($"[CombatManager] {role} 실제 애니메이션 상태 모니터링 시작");
+        
+        while (Time.time - startTime < maxWaitTime)
+        {
+            // 현재 애니메이션 상태 정보 가져오기
+            AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+            float currentAnimationTime = stateInfo.normalizedTime;
+            
+            // 애니메이션이 루프되지 않는 경우 (normalizedTime이 1.0 이상이면 완료)
+            if (stateInfo.normalizedTime >= 1.0f)
+            {
+                Debug.Log($"[CombatManager] {role} 애니메이션 완료 감지 (normalizedTime: {stateInfo.normalizedTime:F2})");
+                break;
+            }
+            
+            // 애니메이션 시간이 변하지 않는 경우 (안정 상태)
+            if (Mathf.Approximately(currentAnimationTime, lastAnimationTime))
+            {
+                stableFrameCount++;
+                if (stableFrameCount >= requiredStableFrames)
+                {
+                    Debug.Log($"[CombatManager] {role} 애니메이션 안정 상태 감지 (stableFrames: {stableFrameCount})");
+                    break;
+                }
+            }
+            else
+            {
+                stableFrameCount = 0; // 리셋
+            }
+            
+            lastAnimationTime = currentAnimationTime;
+            yield return null; // 다음 프레임까지 대기
+        }
+        
+        // 추가 안전 대기 (애니메이션이 완전히 끝날 때까지)
+        float additionalWaitTime = 0.2f;
+        Debug.Log($"[CombatManager] {role} 추가 안전 대기: {additionalWaitTime}초");
+        yield return new WaitForSeconds(additionalWaitTime);
+    }
+    
+    /// <summary>
+    /// Controller에서 Animator 컴포넌트를 가져옵니다
+    /// </summary>
+    private Animator GetControllerAnimator(ICombatController controller)
+    {
+        if (controller is PlayerController playerCtrl)
+        {
+            return playerCtrl.CombatAnimationObject?.GetComponent<Animator>();
+        }
+        else if (controller is EnemyController enemyCtrl)
+        {
+            return enemyCtrl.CombatAnimationObject?.GetComponent<Animator>();
+        }
+        
+        return null;
     }
     
     /// <summary>
@@ -603,51 +835,44 @@ public class CombatManager : MonoBehaviour
         var ivr = new InputVersusResult(atkPerfect, atkTime, defPerfect, defTime, guard); // 입력 결과 생성
         var resultVersus = ivr.GetResult(atkPerfect, atkTime, defPerfect, defTime, guard); // 입력 결과 생성
 
-        // 현재 공격자와 방어자 Combatant 찾기
-        Combatant attacker = isPlayerAttacker ? CharacterManager.Instance?.PlayerCombatant : CharacterManager.Instance?.EnemyCombatant;
-        Combatant defender = isPlayerAttacker ? CharacterManager.Instance?.EnemyCombatant : CharacterManager.Instance?.PlayerCombatant;
+        Debug.Log($"[CombatManager] 판정 결과: {resultVersus} (공격자 완벽: {atkPerfect}, 방어자 완벽: {defPerfect}, 막기: {guard})");
 
-        // 쳐내기 판정 시 공격자 Poise 감소
+        // 현재 공격자와 방어자 Combatant 찾기
+        Combatant attacker = isPlayerAttacker ? CharacterManager.Instance.PlayerCombatant : CharacterManager.Instance.EnemyCombatant;
+        Combatant defender = isPlayerAttacker ? CharacterManager.Instance.EnemyCombatant : CharacterManager.Instance.PlayerCombatant;
+        
+        // 현재 사용된 검술 커맨드 가져오기
+        var currentCommand = CurrentResult?.Command;
+        if (currentCommand == null)
+        {
+            Debug.LogError("[CombatManager] 현재 커맨드를 찾을 수 없습니다!");
+            return;
+        }
+        
+        // 피해량 계산 및 적용
+        ProcessDamageCalculation(attacker, defender, currentCommand, resultVersus, CurrentHit);
+        
+        // 쳐내기 판정 시 공격자 자세 포인트 감소
         if (resultVersus == InputVersusResult.ResultType.Parry || resultVersus == InputVersusResult.ResultType.HalfParry)
         {
-            // 방어자의 ParryPoiseDamage 스탯 사용
-            int poiseDamage = defender?.ParryPoiseDamage ?? 25;
+            int poiseDamage = defender.CharacterData.ParryPoiseDamage;
             
-            // Poise 감소
-            attacker?.LosePoise(poiseDamage);
+            Debug.Log($"[CombatManager] {resultVersus} 판정! {attacker.Name}의 Poise 감소 시작 (현재: {attacker.GetPoiseStatus()}, {defender.Name}의 ParryPoiseDamage: {poiseDamage})");
+            
+            attacker.LosePoise(poiseDamage); // 쳐내기 당했을 때 Poise 감소
+            
+            Debug.Log($"[CombatManager] {attacker.Name}의 Poise 감소 완료 (감소 후: {attacker.GetPoiseStatus()})");
             
             // 중단 발생 확인
-            if (attacker?.IsInterrupted == true)
+            if (attacker.IsInterrupted)
             {
                 Debug.LogWarning($"[CombatManager] {attacker.Name}의 공격이 중단되었습니다!");
                 TriggerInterrupt();
             }
         }
-        // 공격 성공 시 방어자 HP 감소
-        else if (resultVersus == InputVersusResult.ResultType.Hit || 
-                 resultVersus == InputVersusResult.ResultType.PerfectAttack || 
-                 resultVersus == InputVersusResult.ResultType.GuardBreak)
+        else
         {
-            // 공격자의 ATK 스탯으로 기본 피해 계산
-            int baseDamage = attacker?.ATK ?? 0;
-            
-            // 완벽 공격 시 치명타 판정
-            if (resultVersus == InputVersusResult.ResultType.PerfectAttack && attacker != null)
-            {
-                if (attacker.CharacterData?.IsCriticalHit() == true)
-                {
-                    baseDamage = attacker.CharacterData.CalculateCriticalDamage(baseDamage);
-                    Debug.Log($"[CombatManager] 치명타 발생! 피해: {baseDamage}");
-                }
-            }
-            
-            // 방어자의 DR 스탯 적용하여 최종 피해 계산
-            int finalDamage = Mathf.Max(1, baseDamage - (defender?.DR ?? 0));
-            
-            // 방어자 HP 감소
-            defender?.CharacterData?.TakeDamage(finalDamage);
-            
-            Debug.Log($"[CombatManager] {defender?.Name} 피해 받음: {finalDamage} (기본 피해: {baseDamage}, DR: {defender?.DR ?? 0})");
+            Debug.Log($"[CombatManager] {resultVersus} 판정 - Poise 감소 없음");
         }
 
         ivr.OnHitVersusResult(CurrentHit, resultVersus); // 히트 결과 UI에 표시
@@ -773,9 +998,361 @@ public class CombatManager : MonoBehaviour
         return InterruptManager.IsInterrupted();        
     }
 
+    /// <summary>
+    /// 피해량 계산 및 적용
+    /// </summary>
+    private void ProcessDamageCalculation(Combatant attacker, Combatant defender, ActionCommandData command, InputVersusResult.ResultType resultType, int hitIndex = 0)
+    {
+        // ========== 피해량 계산 시작 ==========
+        Debug.Log($"\n[피해량 계산] ========== {attacker.Name} → {defender.Name} ==========");
+        Debug.Log($"[피해량 계산] 판정: {resultType}, 히트: {hitIndex + 1}");
+        
+        // 히트별 damageRatio 사용
+        float currentHitDamageRatio = command.GetDamageRatio(hitIndex);
+        int baseDamage = Mathf.RoundToInt(attacker.ATK * currentHitDamageRatio);
+        
+        Debug.Log($"[피해량 계산] 기본 피해량: {attacker.ATK} × {currentHitDamageRatio} = {baseDamage}");
+        
+        // 치명타 판정
+        bool isCritical = attacker.IsCriticalHit();
+        if (isCritical)
+        {
+            int criticalDamage = attacker.CalculateCriticalDamage(baseDamage);
+            Debug.Log($"[피해량 계산] 치명타 발생! {baseDamage} → {criticalDamage}");
+            baseDamage = criticalDamage;
+        }
+        else
+        {
+            Debug.Log($"[피해량 계산] 치명타 없음");
+        }
+        
+        // 판정 결과에 따른 피해량 감소 적용
+        float damageReduction = GetDamageReduction(resultType);
+        int damageAfterReduction = Mathf.RoundToInt(baseDamage * damageReduction);
+        Debug.Log($"[피해량 계산] 판정 감소: {baseDamage} × {damageReduction} = {damageAfterReduction}");
+        
+        // DR 적용 (막기 상태에 따라 다른 DR 사용)
+        int effectiveDR;
+        if (defenderInputHandler.IsGuardActive)
+        {
+            effectiveDR = defender.GetGuardEffectiveDR();
+        }
+        else
+        {
+            effectiveDR = defender.GetEffectiveDR();
+        }
+        
+        int damageAfterDR = ApplyDefenseReduction(damageAfterReduction, effectiveDR);
+        
+        // DR 적용 결과 로그
+        if (defenderInputHandler.IsGuardActive)
+        {
+            Debug.Log($"[피해량 계산] 막기 상태 - 막기 DR 적용: {damageAfterReduction} - {effectiveDR} = {damageAfterDR} (기본 DR: {defender.DR}, 막기 보너스: {defender.CharacterData.guardDRBonus}, 임시 보너스: {defender.tempDRBonus})");
+        }
+        else
+        {
+            Debug.Log($"[피해량 계산] 일반 상태 - 일반 DR 적용: {damageAfterReduction} - {effectiveDR} = {damageAfterDR} (기본 DR: {defender.DR}, 임시 보너스: {defender.tempDRBonus})");
+        }
+        
+        // 피해량이 0보다 크면 HP 감소 적용
+        if (damageAfterDR > 0)
+        {
+            int oldHP = defender.HP;
+            defender.TakeDamage(damageAfterDR);
+            int newHP = defender.HP;
+            int actualDamage = oldHP - newHP;
+            
+            Debug.Log($"[피해량 계산] HP 감소: {oldHP} → {newHP} (실제 감소량: {actualDamage})");
+            Debug.Log($"[피해량 계산] 최종 결과: {defender.Name}이 {actualDamage} 피해를 받았습니다!");
+            
+            // HP 0 체크 및 전투 종료 처리 (즉시 체크)
+            if (defender.IsDefeated)
+            {
+                Debug.LogWarning($"[피해량 계산] {defender.Name}이 패배했습니다! (HP: {defender.GetHPStatus()})");
+                EndBattle(defender == CharacterManager.Instance.PlayerCombatant ? BattleResult.BattleEndReason.PlayerDefeated : BattleResult.BattleEndReason.EnemyDefeated);
+                return; // 피해 처리 후 즉시 종료
+            }
+        }
+        else
+        {
+            Debug.Log($"[피해량 계산] 피해량이 0이므로 HP 감소 없음");
+        }
+        
+        Debug.Log($"[피해량 계산] ========== 계산 완료 ==========\n");
+    }
+    
+    /// <summary>
+    /// 판정 결과에 따른 피해량 감소 비율 반환
+    /// </summary>
+    private float GetDamageReduction(InputVersusResult.ResultType resultType)
+    {
+        float reduction;
+        
+        if (GameRule.Instance == null)
+        {
+            // GameRule이 없으면 기본값 사용
+            switch (resultType)
+            {
+                case InputVersusResult.ResultType.Parry:
+                    reduction = 0f; // 패리: 100% 감소 (완전 무효화)
+                    break;
+                case InputVersusResult.ResultType.HalfParry:
+                    reduction = 0.5f; // 하프패리: 50% 감소
+                    break;
+                case InputVersusResult.ResultType.Guard:
+                    reduction = 0.5f; // 막기: 50% 감소
+                    break;
+                case InputVersusResult.ResultType.GuardBreak:
+                case InputVersusResult.ResultType.PerfectAttack:
+                case InputVersusResult.ResultType.Hit:
+                default:
+                    reduction = 1f; // 일반 명중: 감소 없음
+                    break;
+            }
+            Debug.Log($"[피해량 계산] 기본값 사용 - {resultType}: {reduction} (GameRule 없음)");
+        }
+        else
+        {
+            // GameRule에서 피해량 감소 비율 가져오기
+            switch (resultType)
+            {
+                case InputVersusResult.ResultType.Parry:
+                    reduction = GameRule.Instance.CalculateParryDamageReduction();
+                    break;
+                case InputVersusResult.ResultType.HalfParry:
+                    reduction = GameRule.Instance.CalculateHalfParryDamageReduction();
+                    break;
+                case InputVersusResult.ResultType.Guard:
+                    reduction = GameRule.Instance.CalculateGuardDamageReduction();
+                    break;
+                case InputVersusResult.ResultType.GuardBreak:
+                    reduction = GameRule.Instance.CalculateGuardBreakDamageReduction();
+                    break;
+                case InputVersusResult.ResultType.PerfectAttack:
+                case InputVersusResult.ResultType.Hit:
+                default:
+                    reduction = 1f; // 일반 명중: 감소 없음
+                    break;
+            }
+            Debug.Log($"[피해량 계산] GameRule 사용 - {resultType}: {reduction}");
+        }
+        
+        return reduction;
+    }
+    
+    /// <summary>
+    /// 막기 시 피해량 감소 비율 반환
+    /// </summary>
+    private float GetGuardDamageReduction()
+    {
+        if (GameRule.Instance != null)
+        {
+            return GameRule.Instance.CalculateGuardDamageReduction();
+        }
+        
+        // GameRule이 없으면 기본값 사용
+        return 0.5f; // 50% 감소
+    }
+    
+    /// <summary>
+    /// 방어력(DR) 적용하여 최종 피해량 계산
+    /// </summary>
+    private int ApplyDefenseReduction(int damage, int defenderDR)
+    {
+        int finalDamage;
+        
+        if (GameRule.Instance != null)
+        {
+            finalDamage = GameRule.Instance.CalculateFinalDamage(damage, defenderDR);
+            Debug.Log($"[피해량 계산] GameRule DR 적용: {damage} - {defenderDR} = {finalDamage}");
+        }
+        else
+        {
+            // GameRule이 없으면 기본 계산
+            int minimumDamage = 1; // 기본 최소 피해량
+            finalDamage = Mathf.Max(minimumDamage, damage - defenderDR);
+            Debug.Log($"[피해량 계산] 기본 DR 적용: {damage} - {defenderDR} = {finalDamage} (최소: {minimumDamage})");
+        }
+        
+        return finalDamage;
+    }
+    
+    /// <summary>
+    /// 전투 종료 처리 (새로운 방식)
+    /// </summary>
+    private void EndBattle(BattleResult.BattleEndReason reason)
+    {
+        if (isBattleEnded) return; // 이미 전투가 종료된 경우 무시
+        
+        isBattleEnded = true;
+        battleResult.EndReason = reason;
+        battleResult.EndTime = Time.time;
+        
+        // 승리자와 패배자 결정
+        Combatant winner = null;
+        Combatant loser = null;
+        string winnerName = "";
+        
+        if (reason == BattleResult.BattleEndReason.PlayerDefeated)
+        {
+            winner = CharacterManager.Instance.EnemyCombatant;
+            loser = CharacterManager.Instance.PlayerCombatant;
+            winnerName = "적";
+        }
+        else if (reason == BattleResult.BattleEndReason.EnemyDefeated)
+        {
+            winner = CharacterManager.Instance.PlayerCombatant;
+            loser = CharacterManager.Instance.EnemyCombatant;
+            winnerName = "플레이어";
+        }
+        
+        // 전투 결과 저장
+        battleResult.winner = winner;
+        battleResult.loser = loser;
+        
+        // 캐릭터 비활성화 처리
+        DisableCharacters();
+        
+        // UI에 전투 종료 및 승리자 표시
+        string resultMessage = "승리!"; // 승리자에게는 항상 승리 메시지
+        CombatStatusDisplay.Instance?.ShowBattleEndResult(winnerName, resultMessage);
+        
+        // 전투 종료 이벤트 발생
+        OnBattleEnded?.Invoke(battleResult);
+        
+        Debug.Log($"[CombatManager] 전투 종료 - 사유: {reason}, 승리자: {winnerName}, 결과: {resultMessage}");
+    }
+    
+    /// <summary>
+    /// 전투 종료 시 캐릭터들 비활성화
+    /// </summary>
+    private void DisableCharacters()
+    {
+        // 플레이어 Controller 비활성화
+        if (playerController != null)
+        {
+            playerController.gameObject.SetActive(false);
+            Debug.Log("[CombatManager] 플레이어 캐릭터 비활성화");
+        }
+        
+        // 적 Controller 비활성화
+        if (enemyController != null)
+        {
+            enemyController.gameObject.SetActive(false);
+            Debug.Log("[CombatManager] 적 캐릭터 비활성화");
+        }
+        
+        // 입력 핸들러 비활성화
+        if (attackerInputHandler != null)
+        {
+            attackerInputHandler.DisableInput();
+        }
+        
+        if (defenderInputHandler != null)
+        {
+            defenderInputHandler.DisableInput();
+        }
+    }
+    
+    /// <summary>
+    /// 전투 재시작 시 캐릭터들 재활성화
+    /// </summary>
+    private void EnableCharacters()
+    {
+        // 플레이어 Controller 재활성화
+        if (playerController != null)
+        {
+            playerController.gameObject.SetActive(true);
+            Debug.Log("[CombatManager] 플레이어 캐릭터 재활성화");
+        }
+        
+        // 적 Controller 재활성화
+        if (enemyController != null)
+        {
+            enemyController.gameObject.SetActive(true);
+            Debug.Log("[CombatManager] 적 캐릭터 재활성화");
+        }
+    }
+    
+    /// <summary>
+    /// 전투 처음부터 다시 시작 (UI 버튼에서 호출)
+    /// </summary>
+    public void RestartBattle()
+    {
+        Debug.Log("[CombatManager] 전투 다시 시작 요청");
+        
+        // 1. 전투 상태 초기화
+        isBattleEnded = false;
+        isInterrupted = false;
+        CurrentHit = 0;
+        CurrentAttackResultShown = false;
+        CurrentDefenseResultShown = false;
+        CurrentClashResultShown = false;
+        windowPrompted = false;
+        floatingTextShown = false;
+        
+        // 2. 입력 핸들러 초기화
+        attackerInputHandler?.ResetInputState();
+        defenderInputHandler?.ResetInputState();
+        attackerInputHandler?.DisableInput();
+        defenderInputHandler?.DisableInput();
+        
+        // 3. 캐릭터 재활성화 및 스테이터스 초기화
+        EnableCharacters();
+        
+        if (CharacterManager.Instance != null)
+        {
+            // 플레이어 스테이터스 초기화
+            var playerCombatant = CharacterManager.Instance.PlayerCombatant;
+            if (playerCombatant != null)
+            {
+                playerCombatant.InitializeRuntimeStats();
+                Debug.Log($"[CombatManager] 플레이어 스테이터스 초기화 - HP: {playerCombatant.GetHPStatus()}, Poise: {playerCombatant.GetPoiseStatus()}");
+            }
+            
+            // 적 스테이터스 초기화
+            var enemyCombatant = CharacterManager.Instance.EnemyCombatant;
+            if (enemyCombatant != null)
+            {
+                enemyCombatant.InitializeRuntimeStats();
+                Debug.Log($"[CombatManager] 적 스테이터스 초기화 - HP: {enemyCombatant.GetHPStatus()}, Poise: {enemyCombatant.GetPoiseStatus()}");
+            }
+        }
+        
+        // 4. UI 초기화
+        CombatStatusDisplay.Instance?.ClearResults();
+        CombatStatusDisplay.Instance?.ShowInputPrompt("전투 다시 시작!");
+        
+        // 5. 전투 결과 초기화
+        battleResult = new BattleResult();
+        battleResult.InitializeBattle();
+        
+        // 6. 전투 재시작
+        StopAllCoroutines();
+        StartCoroutine(RunCombat());
+        
+        Debug.Log("[CombatManager] 전투 다시 시작 완료");
+    }
+
     public void Update()
     {
         CombatStatusDisplay.Instance?.SetPlayerActionInputCooldown(attackerInputHandler.NextAllowedInputTime - Time.time);
         Debug.Log($"[windowPrompted]:{windowPrompted}");
+    }
+    
+    /// <summary>
+    /// 플레이어 컨트롤러를 반환합니다
+    /// </summary>
+    public PlayerController GetPlayerController()
+    {
+        return playerController;
+    }
+    
+    /// <summary>
+    /// 적 컨트롤러를 반환합니다
+    /// </summary>
+    public EnemyController GetEnemyController()
+    {
+        return enemyController;
     }
 }

@@ -86,7 +86,8 @@ public abstract class BaseInputHandler : MonoBehaviour
     {
         float relativeTime = TurnTimer.ElapsedTime; // 현재 턴의 상대 시간
 
-        float turnDuration = GlobalConfig.Instance.TurnDurationSeconds;
+        // CombatManager에서 현재 턴 지속 시간을 가져옴
+        float turnDuration = CombatManager.Instance?.CurrentTurnDuration ?? 1.0f;
 
         bool inStartBuffer = relativeTime <= GlobalConfig.Instance.InputBufferStartSeconds;
         bool inEndBuffer = relativeTime >= (turnDuration - GlobalConfig.Instance.InputBufferEndSeconds);

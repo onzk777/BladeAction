@@ -26,13 +26,21 @@ public class GlobalConfig : ScriptableObject
     
 
     [Header("Timing Settings")]
-    [Tooltip("플레이어/AI가 입력 윈도우 동안 기다리는 시간(초)")]
-    [SerializeField] private float turnDurationSeconds = 3f;
-    public float TurnDurationSeconds => turnDurationSeconds;
-    [SerializeField] private float inputBufferStartSeconds = 3f;
+    [SerializeField] private float inputBufferStartSeconds = 0.1f;
     public float InputBufferStartSeconds => inputBufferStartSeconds;
-    [SerializeField] private float inputBufferEndSeconds = 3f;
+    [SerializeField] private float inputBufferEndSeconds = 0.1f;
     public float InputBufferEndSeconds => inputBufferEndSeconds;
+    [SerializeField] private float additionalTurnDuration = 0f;
+    [Tooltip("마지막 히트 완료 후 추가 턴 지속 시간 (초) - 빠른 템포 테스트용")]
+    public float AdditionalTurnDuration => additionalTurnDuration;
+    
+    [Tooltip("턴 전환 시 대기 시간")]
+    [SerializeField] private float turnEndBuffer = 0.1f;
+    public float TurnEndBuffer => turnEndBuffer;
+    
+    [Tooltip("피격 애니메이션 완료 대기 시간")]
+    [SerializeField] private float animationWaitTime = 0.5f;
+    public float AnimationWaitTime => animationWaitTime;
 
     [Header("AI Settings")]
     [Tooltip("AI가 완벽 입력 타이밍을 성공할 확률(0~1)")]

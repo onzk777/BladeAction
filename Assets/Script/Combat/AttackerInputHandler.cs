@@ -28,6 +28,10 @@ public class AttackerInputHandler : BaseInputHandler
     public override void RegisterHitTiming(PerfectTimingWindow timing) // 현재 턴의 PerfectTimingWindow을 등록                                                                       
     {
         currentTiming = timing;
+        loadedTimings = new List<PerfectTimingWindow> { timing }; // loadedTimings도 설정
+#if UNITY_EDITOR
+        Debug.Log($"[AttackerInputHandler] Registered Timing: start={timing.start}, duration={timing.duration}");
+#endif
     }
     
     public override void NotifyWindowClosed(bool isPlayer)

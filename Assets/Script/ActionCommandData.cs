@@ -33,5 +33,22 @@ public class ActionCommandData : ScriptableObject
 
     [Range(0, 5)] public int instantTimingFactor = 1; // 0이면 찰나 불가, 1~5는 찰나 입력 시간 계수
 
+    [Header("공격력 설정")]
+    [Tooltip("공격력 배율 (1.0 = 기본 공격력, 2.0 = 2배 공격력)")]
+    [Range(0.1f, 5.0f)]
+    public float damageRatio = 1.0f;
 
+    /// <summary>
+    /// 특정 히트의 공격력 배율을 반환합니다
+    /// </summary>
+    /// <param name="hitIndex">히트 인덱스 (0부터 시작)</param>
+    /// <returns>해당 히트의 damageRatio, 인덱스가 유효하지 않으면 1.0 반환</returns>
+    public float GetDamageRatio(int hitIndex)
+    {
+        if (perfectTimings == null || hitIndex < 0 || hitIndex >= perfectTimings.Count)
+        {
+            return 1.0f; // 기본값
+        }
+        return perfectTimings[hitIndex].damageRatio;
+    }
 }

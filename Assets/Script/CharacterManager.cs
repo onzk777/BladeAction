@@ -6,6 +6,10 @@ public class CharacterManager : MonoBehaviour
 {
     public static CharacterManager Instance { get; private set; }
 
+    [Header("캐릭터 데이터 에셋")]
+    [SerializeField] private CharacterData playerDataAsset;
+    [SerializeField] private CharacterData enemyDataAsset;
+    
     public CharacterData PlayerData { get; private set; }
     public CharacterData EnemyData { get; private set; }
 
@@ -28,11 +32,24 @@ public class CharacterManager : MonoBehaviour
 
     private void InitializeCharacterData()
     {
-        // 기본 스테이터스로 CharacterData 생성
-        PlayerData = new CharacterData("Player", maxHp: 100, atk: 20, dr: 0, crit: 0, critRatio: 150, maxPoise: 100, parryPoiseDamage: 25);
-        EnemyData = new CharacterData("Enemy", maxHp: 100, atk: 20, dr: 0, crit: 0, critRatio: 150, maxPoise: 100, parryPoiseDamage: 25);
+        // ScriptableObject 에셋이 할당되어 있는지 확인
+        if (playerDataAsset == null)
+        {
+            Debug.LogError("[CharacterManager] PlayerDataAsset이 할당되지 않았습니다!");
+            return;
+        }
+        
+        if (enemyDataAsset == null)
+        {
+            Debug.LogError("[CharacterManager] EnemyDataAsset이 할당되지 않았습니다!");
+            return;
+        }
+        
+        // ScriptableObject를 복사하여 런타임 인스턴스 생성
+        PlayerData = Instantiate(playerDataAsset);
+        EnemyData = Instantiate(enemyDataAsset);
 
-        // Combatant 인스턴스 생성 (아직 Controller는 연결되지 않음)
+        // Combatant 인스턴스 생성 (CharacterData를 통해 1차 스탯 초기화)
         PlayerCombatant = new PlayerCombatant(PlayerData, null);
         EnemyCombatant = new EnemyCombatant(EnemyData, null);
 

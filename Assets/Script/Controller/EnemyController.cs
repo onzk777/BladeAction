@@ -18,6 +18,11 @@ public class EnemyController : MonoBehaviour, ICombatController
     [Tooltip("CombatAnimation 오브젝트 (SkeletonMecanim 컴포넌트가 포함된 하위 오브젝트)")]
     [SerializeField] private GameObject combatAnimationObject;
     
+    /// <summary>
+    /// CombatAnimation 오브젝트에 접근하기 위한 프로퍼티
+    /// </summary>
+    public GameObject CombatAnimationObject => combatAnimationObject;
+    
     public int TestCommandIndex
     {
         get => testCommandIndex;

@@ -12,11 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9e2a1f770c3bb2c46becfb724f99779f, type: 3}
   m_Name: GlobalConfig
   m_EditorClassIdentifier: 
-  turnDurationSeconds: 5
   inputBufferStartSeconds: 0
   inputBufferEndSeconds: 0
-  npcActionPerfectRate: 0
-  npcDefensePerfectRate: 0
+  additionalTurnDuration: 0
+  turnEndBuffer: 0.1
+  animationWaitTime: 0.5
+  npcActionPerfectRate: 0.475
+  npcDefensePerfectRate: 0.492
   npcInputDifficulty: 1
   posturePointsMax: 100
   posturePointsLossOnParry: 50
