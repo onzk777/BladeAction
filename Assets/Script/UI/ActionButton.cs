@@ -6,35 +6,35 @@ using System;
 public class ActionButton : MonoBehaviour
 {
     [Header("UI References")]
-    public Toggle toggle; // Button 대신 Toggle 사용
+    public Button button; // Button 사용
     public TextMeshProUGUI buttonText;
 
     private ActionCommandData commandData;
     private int buttonIndex;
+    private bool isFocused = false; // 포커스 상태 저장
 
     public event Action<int> OnButtonClicked;
 
     private void Awake()
     {
-        if (toggle == null)
-            toggle = GetComponent<Toggle>();
+        if (button == null)
+            button = GetComponent<Button>();
 
         if (buttonText == null)
             buttonText = GetComponentInChildren<TextMeshProUGUI>();
 
-        if (toggle != null)
+        if (button != null)
         {
-            toggle.onValueChanged.AddListener(OnToggleChanged);
+            button.onClick.AddListener(OnButtonClick);
         }
     }
 
-    private void OnToggleChanged(bool isOn)
+    private void OnButtonClick()
     {
-        if (isOn) // Toggle이 선택되었을 때만 이벤트 발생
-        {
-            Debug.Log($"[ActionButton] Toggle 선택됨: {buttonIndex}");
-            OnButtonClicked?.Invoke(buttonIndex);
-        }
+        Debug.Log($"[ActionButton] 버튼 클릭됨: {buttonIndex}");
+        
+        // UI 이벤트만 전달 (검술 실행은 PlayerActionSelectUI에서 처리)
+        OnButtonClicked?.Invoke(buttonIndex);
     }
 
     public void Initialize(ActionCommandData data, int index)
@@ -50,23 +50,22 @@ public class ActionButton : MonoBehaviour
 
     public void SetInteractable(bool interactable)
     {
-        if (toggle != null)
+        if (button != null)
         {
-            toggle.interactable = interactable;
+            button.interactable = interactable;
         }
     }
 
-    public void SetSelected(bool selected)
+    public void SetFocused(bool focused)
     {
-        if (toggle != null)
-        {
-            toggle.isOn = selected;
-        }
+        // 포커스 상태 저장
+        isFocused = focused;
+        Debug.Log($"[ActionButton] 버튼 {buttonIndex} 포커스 상태: {focused}");
     }
-
-    public bool IsSelected()
+    
+    public bool IsFocused()
     {
-        return toggle != null && toggle.isOn;
+        return isFocused;
     }
 
     public ActionCommandData GetCommandData()

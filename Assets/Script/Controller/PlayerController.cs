@@ -73,28 +73,10 @@ public class PlayerController : MonoBehaviour, ICombatController
     {
         Debug.Log($"[PlayerController] HandleActionSelectInput: {value}");
         
-        // W/S 키만 처리 (A/D 키는 무시)
-        // 1D Axis 값이 0이 아닐 때만 처리
+        // 포커스 이동 기능이 제거됨 - 키보드 입력 무시
         if (Mathf.Abs(value) > 0.1f)
         {
-            var playerActionSelectUI = FindFirstObjectByType<PlayerActionSelectUI>();
-            if (playerActionSelectUI != null)
-            {
-                if (value < 0) // Negative (W키, Up Arrow) - 위로 이동
-                {
-                    Debug.Log("[PlayerController] 위로 이동 요청 (W키)");
-                    playerActionSelectUI.MoveFocus(-1);
-                }
-                else if (value > 0) // Positive (S키, Down Arrow) - 아래로 이동
-                {
-                    Debug.Log("[PlayerController] 아래로 이동 요청 (S키)");
-                    playerActionSelectUI.MoveFocus(1);
-                }
-            }
-            else
-            {
-                Debug.LogWarning("[PlayerController] PlayerActionSelectUI를 찾을 수 없습니다!");
-            }
+            Debug.Log("[PlayerController] 키보드 입력 감지됨 (포커스 이동 기능 제거됨)");
         }
     }
 
@@ -241,9 +223,19 @@ public class PlayerController : MonoBehaviour, ICombatController
         }
         else
         {
-            // UI에서 설정된 currentCommandIndex 사용
-            Debug.Log($"[PlayerController] GetSelectedCommandIndex 호출: currentCommandIndex = {currentCommandIndex}");
-            return currentCommandIndex;
+            // UI에서 현재 선택된 버튼의 인덱스 사용
+            var playerActionSelectUI = FindFirstObjectByType<PlayerActionSelectUI>();
+            if (playerActionSelectUI != null)
+            {
+                int selectedIndex = playerActionSelectUI.GetCurrentSelectedButtonIndex();
+                Debug.Log($"[PlayerController] GetSelectedCommandIndex 호출: UI에서 선택된 버튼 = {selectedIndex}번");
+                return selectedIndex;
+            }
+            else
+            {
+                Debug.LogWarning("[PlayerController] PlayerActionSelectUI를 찾을 수 없어서 기본값 0 사용");
+                return 0;
+            }
         }
     }
 

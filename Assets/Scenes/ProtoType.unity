@@ -1555,15 +1555,15 @@ RectTransform:
   m_GameObject: {fileID: 558365721}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.84733254, y: 0.84733254, z: 0.84733254}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1185267422}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 274, y: 0}
-  m_SizeDelta: {x: -40.3511, y: -0.0040283203}
+  m_AnchoredPosition: {x: 278.561, y: -0.00019836426}
+  m_SizeDelta: {x: 8.1384, y: 74.651}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &558365723
 MonoBehaviour:
@@ -3881,7 +3881,7 @@ MonoBehaviour:
   m_ScrollWheelAction: {fileID: 6240969308177333660, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_TrackedDevicePositionAction: {fileID: 6564999863303420839, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_TrackedDeviceOrientationAction: {fileID: 7970375526676320489, guid: 052faaac586de48259a63d0c4782560b, type: 3}
-  m_DeselectOnBackgroundClick: 1
+  m_DeselectOnBackgroundClick: 0
   m_PointerBehavior: 0
   m_CursorLockBehavior: 0
   m_ScrollDeltaPerTick: 6
@@ -4630,7 +4630,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Navigation:
-    m_Mode: 3
+    m_Mode: 0
     m_WrapAround: 0
     m_SelectOnUp: {fileID: 0}
     m_SelectOnDown: {fileID: 0}
@@ -4860,7 +4860,6 @@ GameObject:
   - component: {fileID: 2047554959}
   - component: {fileID: 2047554958}
   - component: {fileID: 2047554957}
-  - component: {fileID: 2047554961}
   m_Layer: 5
   m_Name: PlayerActionSelectUI
   m_TagString: Untagged
@@ -4875,17 +4874,17 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2047554955}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.84733254, y: 0.84733254, z: 0.84733254}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 83361296}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -277.17557, y: 0}
-  m_SizeDelta: {x: -40.3511, y: 0}
+  m_AnchoredPosition: {x: -278.1494, y: -0.000061035156}
+  m_SizeDelta: {x: 3.2335, y: 74.651}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2047554957
 MonoBehaviour:
@@ -4902,7 +4901,6 @@ MonoBehaviour:
   actionButtonContainer: {fileID: 2047554956}
   actionButtonPrefab: {fileID: 5193987179068666628, guid: d2deed43130e61f42a6def8bbbf12ead, type: 3}
   maxButtons: 5
-  toggleGroup: {fileID: 2047554961}
   playerController: {fileID: 172118089}
 --- !u!114 &2047554958
 MonoBehaviour:
@@ -4968,19 +4966,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2047554955}
   m_CullTransparentMesh: 1
---- !u!114 &2047554961
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2047554955}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2fafe2cfe61f6974895a912c3755e8f1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_AllowSwitchOff: 0
 --- !u!1 &2111702991
 GameObject:
   m_ObjectHideFlags: 0

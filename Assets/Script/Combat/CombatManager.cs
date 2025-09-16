@@ -87,6 +87,7 @@ public class CombatManager : MonoBehaviour
         }
     }
 
+
     private void Start()
     {
         // EventSystem 상태 확인
@@ -203,8 +204,7 @@ public class CombatManager : MonoBehaviour
         if (playerActionSelectUI != null)
         {
             Debug.Log("[CombatManager] PlayerActionSelectUI 찾음 - 초기화 후 포커스 설정 시도");
-            playerActionSelectUI.Initialize(); // 먼저 초기화
-            playerActionSelectUI.SetFocusToFirstButton();
+            playerActionSelectUI.Initialize(); // 먼저 초기화 (내부에서 코루틴으로 포커스 설정됨)
         }
         else
         {

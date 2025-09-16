@@ -9,13 +9,13 @@ public class PlayerActionSelectUI : MonoBehaviour
     public Transform actionButtonContainer;
     public GameObject actionButtonPrefab;
     public int maxButtons = 5;
-    public ToggleGroup toggleGroup; // Toggle Group 컴포넌트
 
     [Header("Player Reference")]
     public PlayerController playerController;
 
     private List<ActionButton> actionButtons = new List<ActionButton>();
     private bool isInitialized = false;
+    private CanvasGroup canvasGroup;
 
     private void Awake()
     {
@@ -27,12 +27,84 @@ public class PlayerActionSelectUI : MonoBehaviour
                 Debug.Log("[PlayerActionSelectUI] PlayerController 자동 연결 완료");
             }
         }
+        
+        // Canvas Group 가져오기 (네비게이션 그룹 제어용)
+        canvasGroup = GetComponent<CanvasGroup>();
+        if (canvasGroup == null)
+        {
+            canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            Debug.Log("[PlayerActionSelectUI] Canvas Group 추가됨 (네비게이션 그룹 제어용)");
+        }
+        
+        // Canvas Group 강제 활성화
+        if (canvasGroup != null)
+        {
+            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
+            canvasGroup.alpha = 1.0f;
+            Debug.Log("[PlayerActionSelectUI] Canvas Group 강제 활성화 완료");
+        }
     }
 
     private void Start()
     {
         Initialize();
-        // CheckUIState(); // 디버깅용 메서드, 임시 비활성화
+        CheckUIState(); // 디버깅용 메서드 활성화
+        CheckCanvasGroupState(); // Canvas Group 상태 확인
+        
+        // 포커스 유지를 위한 모니터링 시작
+        StartCoroutine(MonitorFocusRetention());
+    }
+    
+    /// <summary>
+    /// 포커스 유지 모니터링 (버튼 외 클릭 시 선택 유지)
+    /// </summary>
+    private System.Collections.IEnumerator MonitorFocusRetention()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(0.1f);
+            
+            // 현재 선택된 버튼이 있는지 확인
+            var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+            if (eventSystem != null)
+            {
+                bool hasSelectedButton = false;
+                
+                // 우리 버튼 중 하나가 선택되어 있는지 확인
+                for (int i = 0; i < actionButtons.Count; i++)
+                {
+                    if (actionButtons[i] != null && actionButtons[i].gameObject == eventSystem.currentSelectedGameObject)
+                    {
+                        hasSelectedButton = true;
+                        break;
+                    }
+                }
+                
+                // 선택된 버튼이 없으면 첫 번째 버튼 선택
+                if (!hasSelectedButton && actionButtons.Count > 0)
+                {
+                    eventSystem.SetSelectedGameObject(actionButtons[0].gameObject);
+                    Debug.Log("[PlayerActionSelectUI] 포커스 복원: 첫 번째 버튼 선택");
+                }
+            }
+        }
+    }
+    
+    private void CheckCanvasGroupState()
+    {
+        if (canvasGroup != null)
+        {
+            Debug.Log($"[PlayerActionSelectUI] Canvas Group 상태:");
+            Debug.Log($"  - Interactable: {canvasGroup.interactable}");
+            Debug.Log($"  - Blocks Raycasts: {canvasGroup.blocksRaycasts}");
+            Debug.Log($"  - Alpha: {canvasGroup.alpha}");
+            Debug.Log($"  - Ignore Parent Groups: {canvasGroup.ignoreParentGroups}");
+        }
+        else
+        {
+            Debug.LogError("[PlayerActionSelectUI] Canvas Group이 null입니다!");
+        }
     }
 
     private void CheckUIState()
@@ -105,14 +177,30 @@ public class PlayerActionSelectUI : MonoBehaviour
 
         CreateActionButtons();
         
-        // 초기 포커스 설정
+        // 모든 버튼 생성 완료 후 초기화 완료
+        isInitialized = true;
+        
+        // 첫 번째 버튼 선택
+        SelectFirstButton();
+        
+        Debug.Log("[PlayerActionSelectUI] 모든 버튼 생성 완료");
+    }
+    
+    /// <summary>
+    /// 첫 번째 버튼 선택
+    /// </summary>
+    private void SelectFirstButton()
+    {
         if (actionButtons.Count > 0)
         {
-            Debug.Log("[PlayerActionSelectUI] Initialize에서 초기 포커스 설정");
-            SetFocusToFirstButton();
+            // Unity EventSystem에 첫 번째 버튼 선택
+            var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+            if (eventSystem != null)
+            {
+                eventSystem.SetSelectedGameObject(actionButtons[0].gameObject);
+                Debug.Log("[PlayerActionSelectUI] 첫 번째 버튼 선택 완료");
+            }
         }
-        
-        isInitialized = true;
     }
 
     private void CreateActionButtons()
@@ -142,6 +230,8 @@ public class PlayerActionSelectUI : MonoBehaviour
         {
             CreateNormalModeButtons();
         }
+        
+        Debug.Log($"[PlayerActionSelectUI] 모든 버튼 생성 완료 - 총 {actionButtons.Count}개 버튼 생성됨");
     }
 
     private void CreateTestModeButton()
@@ -193,18 +283,22 @@ public class PlayerActionSelectUI : MonoBehaviour
             actionButton = buttonObj.AddComponent<ActionButton>();
         }
         
-        // Toggle Group에 연결
-        Toggle toggle = actionButton.GetComponent<Toggle>();
-        if (toggle != null && toggleGroup != null)
+        // Button 컴포넌트 확인
+        Button button = actionButton.GetComponent<Button>();
+        if (button != null)
         {
-            toggle.group = toggleGroup;
+            Debug.Log($"[PlayerActionSelectUI] 버튼 {index} Button 컴포넌트 확인 완료");
+        }
+        else
+        {
+            Debug.LogError($"[PlayerActionSelectUI] 버튼 {index}에 Button 컴포넌트가 없습니다!");
         }
         
         actionButton.Initialize(commandData, index);
         actionButton.OnButtonClicked += OnButtonClicked;
         actionButtons.Add(actionButton);
         
-        Debug.Log($"[PlayerActionSelectUI] 버튼 {index} 생성 완료, Toggle Group 연결됨");
+        Debug.Log($"[PlayerActionSelectUI] 버튼 {index} 생성 완료");
     }
 
     public void RefreshButtons()
@@ -212,108 +306,50 @@ public class PlayerActionSelectUI : MonoBehaviour
         CreateActionButtons();
     }
 
-    // Toggle Group 기반 선택 시스템
+    // 버튼 클릭 시 처리 (포커스만 이동)
     private void OnButtonClicked(int buttonIndex)
     {
-        Debug.Log($"[PlayerActionSelectUI] Toggle 선택됨: {buttonIndex}");
+        Debug.Log($"[PlayerActionSelectUI] 버튼 클릭됨: {buttonIndex}");
         
-        // PlayerController에 검술 인덱스 전달
-        if (playerController != null)
-        {
-            playerController.SetSelectedCommandIndex(buttonIndex);
-            Debug.Log($"[PlayerActionSelectUI] PlayerController에 검술 인덱스 {buttonIndex} 전달 완료");
-        }
-    }
-
-    public void SetFocusToFirstButton()
-    {
-        Debug.Log($"[PlayerActionSelectUI] SetFocusToFirstButton 호출됨 - 버튼 개수: {actionButtons.Count}");
-        
-        if (actionButtons.Count > 0)
-        {
-            // 모든 버튼의 선택 상태를 먼저 해제
-            foreach (var button in actionButtons)
-            {
-                if (button != null)
-                {
-                    button.SetSelected(false);
-                }
-            }
-            
-            // 첫 번째 버튼 선택
-            SelectButton(0);
-            Debug.Log("[PlayerActionSelectUI] 첫 번째 버튼 선택 완료");
-        }
-        else
-        {
-            Debug.LogWarning("[PlayerActionSelectUI] 액션 버튼이 없어서 포커스를 설정할 수 없습니다!");
-        }
-    }
-    
-    public void MoveFocus(int direction)
-    {
-        if (actionButtons.Count == 0) return;
-        
-        // 현재 선택된 인덱스 찾기
-        int currentIndex = GetCurrentSelectedIndex();
-        
-        // 선택된 것이 없으면 첫 번째 버튼으로 설정
-        if (currentIndex == -1)
-        {
-            currentIndex = 0;
-        }
-        
-        // 새로운 인덱스 계산 (순환 구조)
-        int newIndex = (currentIndex + direction + actionButtons.Count) % actionButtons.Count;
-        
-        Debug.Log($"[PlayerActionSelectUI] MoveFocus: 현재={currentIndex}, 방향={direction}, 새로운={newIndex}");
-        
-        // 키보드 입력으로 선택 이동
-        SelectButton(newIndex);
-    }
-    
-    private int GetCurrentSelectedIndex()
-    {
-        // 현재 선택된 Toggle 찾기
-        for (int i = 0; i < actionButtons.Count; i++)
-        {
-            if (actionButtons[i] != null && actionButtons[i].IsSelected())
-            {
-                return i;
-            }
-        }
-        return -1; // 선택된 것이 없으면 -1 반환
+        // 포커스만 이동 (검술 인덱스는 검술 사용 시점에 설정)
+        // Unity EventSystem이 자동으로 포커스 처리
     }
     
     /// <summary>
-    /// Toggle Group을 사용한 안전한 버튼 선택
+    /// 현재 선택된 버튼의 인덱스를 반환
     /// </summary>
-    private void SelectButton(int targetIndex)
+    public int GetCurrentSelectedButtonIndex()
     {
-        Debug.Log($"[PlayerActionSelectUI] SelectButton 호출됨 - 목표: {targetIndex}, 버튼 개수: {actionButtons.Count}");
-        
-        if (actionButtons.Count == 0)
+        // Unity EventSystem에서 현재 선택된 버튼 찾기
+        var eventSystem = UnityEngine.EventSystems.EventSystem.current;
+        if (eventSystem != null && eventSystem.currentSelectedGameObject != null)
         {
-            Debug.LogWarning("[PlayerActionSelectUI] 액션 버튼이 없습니다!");
-            return;
+            // 현재 선택된 GameObject가 우리 버튼 중 하나인지 확인
+            for (int i = 0; i < actionButtons.Count; i++)
+            {
+                if (actionButtons[i] != null && actionButtons[i].gameObject == eventSystem.currentSelectedGameObject)
+                {
+                    Debug.Log($"[PlayerActionSelectUI] 현재 선택된 버튼: {i}번");
+                    return i;
+                }
+            }
         }
         
-        // 인덱스 범위 검증
-        if (targetIndex < 0 || targetIndex >= actionButtons.Count)
+        // 선택된 버튼이 없으면 0번 반환 (기본값)
+        Debug.Log($"[PlayerActionSelectUI] 선택된 버튼 없음, 기본값 0번 반환");
+        return 0;
+    }
+    
+    /// <summary>
+    /// 네비게이션 그룹 활성화/비활성화
+    /// </summary>
+    public void SetNavigationGroupActive(bool active)
+    {
+        if (canvasGroup != null)
         {
-            Debug.LogWarning($"[PlayerActionSelectUI] 유효하지 않은 인덱스: {targetIndex} (범위: 0-{actionButtons.Count - 1})");
-            return;
-        }
-        
-        // Toggle Group이 자동으로 하나만 선택되도록 처리
-        if (actionButtons[targetIndex] != null)
-        {
-            actionButtons[targetIndex].SetSelected(true);
-            Debug.Log($"[PlayerActionSelectUI] 버튼 {targetIndex} 선택 완료");
-        }
-        else
-        {
-            Debug.LogError($"[PlayerActionSelectUI] 버튼 {targetIndex}이 null입니다!");
+            canvasGroup.interactable = active;
+            canvasGroup.blocksRaycasts = active;
+            Debug.Log($"[PlayerActionSelectUI] 네비게이션 그룹 {(active ? "활성화" : "비활성화")}");
         }
     }
 }
