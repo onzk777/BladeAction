@@ -15,6 +15,7 @@ MonoBehaviour:
   inputBufferStartSeconds: 0
   inputBufferEndSeconds: 0
   additionalTurnDuration: 0
+  combatStartDelay: 3
   turnEndBuffer: 0.1
   animationWaitTime: 0.5
   npcActionPerfectRate: 0.475

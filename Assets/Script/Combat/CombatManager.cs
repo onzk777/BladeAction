@@ -222,7 +222,7 @@ public class CombatManager : MonoBehaviour
             
             // 플레이어 턴
             CombatStartTime = Time.time;
-            yield return new WaitForSeconds(0.2f); // 첫 턴 시작 전에 살짝 
+            yield return new WaitForSeconds(GlobalConfig.Instance.CombatStartDelay); // 전투 시작 후 대기 시간
             yield return StartCoroutine(PerformTurn(playerController));
             
             // 플레이어 턴 후 전투 종료 체크

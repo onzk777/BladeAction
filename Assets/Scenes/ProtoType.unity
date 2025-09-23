@@ -516,7 +516,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50a16896f48c07e41bba3a428af3bd23, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useTestMode: 0
+  useTestMode: 1
   useRandomAction: 0
   testCommandIndex: 1
   equippedStyle: {fileID: 11400000, guid: 0b9381922b6f4064c9fa76ce99959125, type: 2}

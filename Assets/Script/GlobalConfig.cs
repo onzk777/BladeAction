@@ -34,6 +34,10 @@ public class GlobalConfig : ScriptableObject
     [Tooltip("마지막 히트 완료 후 추가 턴 지속 시간 (초) - 빠른 템포 테스트용")]
     public float AdditionalTurnDuration => additionalTurnDuration;
     
+    [Tooltip("전투 시작 후 첫 턴 시작 전 대기 시간 (초)")]
+    [SerializeField] private float combatStartDelay = 0.2f;
+    public float CombatStartDelay => combatStartDelay;
+    
     [Tooltip("턴 전환 시 대기 시간")]
     [SerializeField] private float turnEndBuffer = 0.1f;
     public float TurnEndBuffer => turnEndBuffer;
