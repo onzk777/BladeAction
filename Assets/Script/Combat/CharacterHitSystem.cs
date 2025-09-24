@@ -192,7 +192,7 @@ public class CharacterHitSystem : MonoBehaviour
     
     private void HandleProjectileHit(Projectile projectile)
     {
-        Debug.Log($"[CharacterHitSystem] 발사체 히트 감지: {projectile.name}");
+        Debug.Log($"[CharacterHitSystem] 🚨 HandleProjectileHit 호출 - 발사체: {projectile.name}");
         // CombatManager의 OnProjectileHit 이벤트 호출
         CombatManager.Instance.OnProjectileHit(projectile);
     }

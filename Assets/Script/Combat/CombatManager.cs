@@ -54,6 +54,9 @@ public class CombatManager : MonoBehaviour
     // 🆕 히트당 판정 한 번만 발생하도록 추적
     private bool[] hitJudgmentCompleted; // 각 히트별 판정 완료 상태
     
+    // 🆕 중복 판정 추적을 위한 카운터
+    private int[] hitJudgmentCount; // 각 히트별 판정 발생 횟수
+    
     // ❌ 제거: 턴 종료 플래그들 (PerformTurn에서 직접 처리)
     // private bool turnEndRequested = false;
     // private bool isWaitingForTurnEnd = false;
@@ -366,6 +369,13 @@ public class CombatManager : MonoBehaviour
         for (int i = 0; i < hitJudgmentCompleted.Length; i++)
         {
             hitJudgmentCompleted[i] = false;
+        }
+        
+        // 🆕 히트 판정 횟수 배열 초기화
+        hitJudgmentCount = new int[command.hitCount];
+        for (int i = 0; i < hitJudgmentCount.Length; i++)
+        {
+            hitJudgmentCount[i] = 0;
         }
 
 
@@ -1050,6 +1060,9 @@ public class CombatManager : MonoBehaviour
         
         Projectile projectile = ProjectileManager.Instance.GetProjectile(projectilePrefab);
         
+        // ❌ 제거: 중복된 hitIndex 설정 (Initialize에서 이미 설정됨)
+        // projectile.hitIndex = CurrentHit;
+        
         // Controller 기반으로 위치 가져오기
         Vector3 attackerPos, defenderPos;
         
@@ -1094,25 +1107,37 @@ public class CombatManager : MonoBehaviour
     /// </summary>
     public void OnProjectileHit(Projectile projectile)
     {
-        Debug.Log($"[CombatManager] 발사체 충돌 감지 - 히트 {CurrentHit}, 배열 길이: {hitJudgmentCompleted.Length}");
+        // 🆕 발사체의 히트 인덱스 사용
+        int hitIdx = projectile.hitIndex;
         
-        // 🆕 중복 판정 방지: 이미 판정이 완료된 히트는 무시
-        if (CurrentHit < hitJudgmentCompleted.Length && hitJudgmentCompleted[CurrentHit])
+        // 🆕 히트 인덱스 범위 체크
+        if (hitIdx < 0 || hitIdx >= hitJudgmentCount.Length)
         {
-            Debug.Log($"[CombatManager] 히트 {CurrentHit} 이미 판정 완료됨 - 중복 판정 방지");
+            Debug.LogError($"[CombatManager] 🚨 히트 인덱스 범위 초과! hitIdx={hitIdx}, 배열 길이={hitJudgmentCount.Length} - 판정 무시");
             return;
         }
         
-        Debug.Log($"[CombatManager] 발사체 충돌 - 즉시 판정 발생 (히트 {CurrentHit})");
+        // 🆕 판정 발생 횟수 카운트
+        hitJudgmentCount[hitIdx]++;
+        int currentCount = hitJudgmentCount[hitIdx];
+        
+        Debug.Log($"[CombatManager] 🚨 OnProjectileHit 호출 - 히트 {hitIdx}, 호출 횟수: {currentCount}, 배열 길이: {hitJudgmentCompleted.Length}");
+        
+        // 🆕 중복 판정 방지: 이미 판정이 완료된 히트는 무시
+        if (hitJudgmentCompleted[hitIdx])
+        {
+            Debug.Log($"[CombatManager] 🚨 히트 {hitIdx} 이미 판정 완료됨 - 중복 판정 방지 (총 {currentCount}번 호출됨)");
+            return;
+        }
+        
+        Debug.Log($"[CombatManager] 🚨 발사체 충돌 - 즉시 판정 발생 (히트 {hitIdx}, {currentCount}번째 호출)");
         
         // 발사체 충돌 시 즉시 판정 발생
         EvaluateClashResult();
         
         // 🆕 히트 판정 완료 상태 기록
-        if (CurrentHit < hitJudgmentCompleted.Length)
-        {
-            hitJudgmentCompleted[CurrentHit] = true;
-        }
+        hitJudgmentCompleted[hitIdx] = true;
+        Debug.Log($"[CombatManager] 🚨 히트 {hitIdx} 판정 완료 상태 설정됨");
     }
     
     // ❌ 제거: WaitForTurnEnd 코루틴 (PerformTurn에서 직접 처리)

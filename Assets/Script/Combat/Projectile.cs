@@ -10,7 +10,7 @@ public class Projectile : MonoBehaviour
     
     // ✅ 내부 변수로 변경
     private ActionCommandData sourceCommand;
-    private int hitIndex;
+    // ❌ 제거: private int hitIndex; (public hitIndex와 중복)
     private bool isFromPlayer;
     
     [Header("물리 설정")]
@@ -29,6 +29,9 @@ public class Projectile : MonoBehaviour
     private bool isCompleted = false;
     private float currentLifetime = 0f;
     private float currentSpeed; // 현재 속도
+    
+    // 🆕 발사 시점의 히트 인덱스
+    public int hitIndex = -1;
     
     // 이벤트
     public event System.Action<Projectile> OnProjectileHit;
@@ -161,19 +164,23 @@ public class Projectile : MonoBehaviour
             return;
         }
         
-        Debug.Log($"[Projectile] 🚨 OnProjectileHit 이벤트 발생");
+        Debug.Log($"[Projectile] 🚨 OnProjectileHit 이벤트 발생 - 발사체: {gameObject.name}");
         isCompleted = true;
         
         // 🆕 발사체 즉시 소멸 (이벤트 발생 전에 소멸하여 중복 충돌 방지)
         DestroyProjectile();
         
         // 🆕 발사체 소멸 후 이벤트 발생 (중복 충돌 방지)
+        Debug.Log($"[Projectile] 🚨 OnProjectileHit 이벤트 호출 시작");
         OnProjectileHit?.Invoke(this);
+        Debug.Log($"[Projectile] 🚨 OnProjectileHit 이벤트 호출 완료");
     }
     
     private void DestroyProjectile()
     {
-        OnProjectileCompleted?.Invoke(this);
+        Debug.Log($"[Projectile] 🚨 DestroyProjectile 호출 - 발사체 소멸");
+        // ❌ 제거: OnProjectileCompleted 호출 (발사체 소멸 후 이벤트 발생으로 인한 문제 방지)
+        // OnProjectileCompleted?.Invoke(this);
         Destroy(gameObject);
     }
     
