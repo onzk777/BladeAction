@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class ProjectileManager : MonoBehaviour
 {
+    public static ProjectileManager Instance { get; private set; }
+    
     [Header("풀링 설정")]
     public GameObject projectilePrefab;
     public int poolSize = 20;
@@ -12,7 +14,15 @@ public class ProjectileManager : MonoBehaviour
     
     private void Awake()
     {
-        InitializePool();
+        if (Instance == null)
+        {
+            Instance = this;
+            InitializePool();
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
     
     private void InitializePool()
@@ -53,6 +63,9 @@ public class ProjectileManager : MonoBehaviour
         // 발사체 활성화
         projectile.gameObject.SetActive(true);
         activeProjectiles.Add(projectile);
+        
+        // 🆕 디버그 로그 추가
+        Debug.Log($"[ProjectileManager] 발사체 활성화: position={projectile.transform.position}, active={projectile.gameObject.activeInHierarchy}");
         
         return projectile;
     }

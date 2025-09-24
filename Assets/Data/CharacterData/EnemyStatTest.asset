@@ -13,15 +13,13 @@ MonoBehaviour:
   m_Name: EnemyStatTest
   m_EditorClassIdentifier: 
   characterName: Unknown
-  maxHP: 100
-  atk: 20
-  dr: 0
-  crit: 0
-  critRatio: 150
-  maxPoise: 100
-  parryPoiseDamage: 25
-  currentHP: 0
-  currentPoise: 0
+  baseMaxHP: 100000
+  baseATK: 20
+  baseDR: 0
+  baseCrit: 0
+  baseCritRatio: 150
+  baseMaxPoise: 100
+  baseParryPoiseDamage: 25
   guardDRBonus: 5
   guardDamageReduction: 0.5
   tempDRBonus: 0

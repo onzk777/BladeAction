@@ -81,24 +81,40 @@ public class Projectile : MonoBehaviour
         this.direction = direction.normalized;
         this.baseSpeed = speed;
         isLaunched = true;
+        
+        // 🆕 디버그 로그 추가
+        Debug.Log($"[Projectile] 발사체 발사: position={transform.position}, direction={this.direction}, speed={speed}");
     }
     
     private void OnTriggerEnter2D(Collider2D other)
     {
+        Debug.Log($"[Projectile] 충돌 감지: {other.name}, tag={other.tag}, isFromPlayer={isFromPlayer}");
+        
         // 🆕 Controller 기반 발사자 충돌 방지
         if (isFromPlayer && other.GetComponent<PlayerController>() != null)
+        {
+            Debug.Log($"[Projectile] 플레이어 발사체가 플레이어와 충돌 - 무시");
             return;
+        }
         if (!isFromPlayer && other.GetComponent<EnemyController>() != null)
+        {
+            Debug.Log($"[Projectile] 적 발사체가 적과 충돌 - 무시");
             return;
+        }
         
         // 🆕 태그 기반 충돌체 구분
         switch (other.tag)
         {
             case "PerfectInputArea":
+                Debug.Log($"[Projectile] PerfectInputArea 충돌");
                 HandlePerfectInputArea(other);
                 break;
             case "CharacterHitBox":
+                Debug.Log($"[Projectile] CharacterHitBox 충돌");
                 HandleCharacterHitBox(other);
+                break;
+            default:
+                Debug.Log($"[Projectile] 알 수 없는 태그 충돌: {other.tag}");
                 break;
         }
     }
@@ -122,9 +138,10 @@ public class Projectile : MonoBehaviour
         
         isCompleted = true;
         OnProjectileHit?.Invoke(this);
-        OnProjectileCompleted?.Invoke(this);
         
-        // 발사체 파괴
+        // ❌ 제거: OnProjectileCompleted?.Invoke(this); // 중복 호출 제거
+        
+        // 발사체 파괴 (OnProjectileCompleted는 DestroyProjectile에서 호출)
         DestroyProjectile();
     }
     

@@ -45,10 +45,15 @@ public class CombatManager : MonoBehaviour
     [SerializeField] private GlobalConfig globalConfig;
     
     [Header("발사체 관리")]
-    [SerializeField] private ProjectileManager projectileManager;
+    // ❌ 제거: ProjectileManager는 싱글톤으로 접근
+    // [SerializeField] private ProjectileManager projectileManager;
     
     // 발사체 발사 상태 추적
     private bool[] projectileLaunched; // 각 히트별 발사 상태
+    
+    // 🆕 발사체 완료 카운팅
+    private int completedProjectiles = 0;
+    private int totalProjectiles = 0;
 
     // 현재 턴 지속 시간 (전역 접근 가능)
     public float CurrentTurnDuration { get; private set; } = 0f;
@@ -205,6 +210,9 @@ public class CombatManager : MonoBehaviour
         Debug.Log($"[RunCombat] timingInputHandler InstanceID: {attackerInputHandler.GetInstanceID()}");
         ////////////////////////////////////////////////////////////////
 
+        // 🆕 전투 시작 시 CombatStartDelay 적용
+        yield return new WaitForSeconds(GlobalConfig.Instance.CombatStartDelay);
+        
         // 전투 시작 시 첫 번째 검술 버튼에 포커스 설정
         var playerActionSelectUI = FindFirstObjectByType<PlayerActionSelectUI>();
         if (playerActionSelectUI != null)
@@ -228,7 +236,8 @@ public class CombatManager : MonoBehaviour
             
             // 플레이어 턴
             CombatStartTime = Time.time;
-            yield return new WaitForSeconds(GlobalConfig.Instance.CombatStartDelay); // 전투 시작 후 대기 시간
+            // ❌ 제거: CombatStartDelay는 전투 시작 시에만 적용되어야 함
+            // yield return new WaitForSeconds(GlobalConfig.Instance.CombatStartDelay); // 전투 시작 후 대기 시간
             yield return StartCoroutine(PerformTurn(playerController));
             
             // 플레이어 턴 후 전투 종료 체크
@@ -323,7 +332,8 @@ public class CombatManager : MonoBehaviour
         
         // 타이밍 윈도우 등록 및 입력 수신 시작
         attackerInputHandler.LoadTimingWindows(command.perfectTimings); // 커맨드의 완벽 타이밍 윈도우를 로드        
-        defenderInputHandler.LoadFromOpponentCommand(command); // 적의 커맨드 데이터를 방어자 핸들러에 로드
+        // ❌ 제거: 발사체 기반 시스템에서는 방어자가 공격자 커맨드 데이터를 로드할 필요 없음
+        // defenderInputHandler.LoadFromOpponentCommand(command);
         
         // 🆕 발사체 발사 상태 배열 초기화
         projectileLaunched = new bool[command.hitCount];
@@ -423,7 +433,7 @@ public class CombatManager : MonoBehaviour
                         {
                             Debug.Log($"[PerformTurn] 히트 {CurrentHit} fallback");
                             attackerInputHandler.NotifyWindowClosed(true); // 공격자 입력 실패 처리
-                            // 🆕 Perfect End 시 발사체 발사 (실패/미입력 시)
+                            // 🆕 플레이어 공격자 실패 시 발사체 발사
                             CreateProjectileForCurrentHit();
                         }
                     }
@@ -439,32 +449,19 @@ public class CombatManager : MonoBehaviour
                             }
                             // AI 애니메이션은 이미 Perfect Window 시작 시점에 재생됨
                         }
+                        else if (elapsed >= perfectWindowEnd)
+                        {
+                            // 🆕 AI가 실패했을 때도 발사체 발사
+                            CreateProjectileForCurrentHit();
+                        }
                     }
                 }
                 
-                if (!CurrentDefenseResultShown && elapsed >= perfectWindowStart) // 방어자 입력 처리
-                {
-                    if (defenderInputHandler.IsPlayer)
-                    {
-                        // 플레이어 입력 대기 UI 표시
-                        if (elapsed < perfectWindowEnd)
-                        {                            
-                            CombatStatusDisplay.Instance.ShowInputPrompt("막아!");
-                            Debug.Log($"[UI표시:막아!] 히트 {CurrentHit + 1}, elapsed={elapsed:F5}, 타이밍창=({perfectWindow.start:F5} ~ {perfectWindow.End:F5})");
-                        }
-                        else
-                        {
-                            defenderInputHandler.NotifyWindowClosed(true);
-                        }
-                    }
-                    else // AI 방어자 처리
-                    {
-                        if (elapsed >= aiInputTime)
-                        {
-                            defenderInputHandler.RecordAIInput(aiInputTime, aiDefenseSuccess); // AI 입력 기록 
-                        }
-                    }
-                }
+                // ❌ 제거: 발사체 기반 시스템에서는 방어자 입력 처리가 발사체 트리거로 대체됨
+                // if (!CurrentDefenseResultShown && elapsed >= perfectWindowStart) // 방어자 입력 처리
+                // {
+                //     // 타이밍 윈도우 기반 방어자 입력 처리 로직 제거
+                // }
                 if(isPlayerAttacker && CurrentAttackResultShown)
                 {
                     CombatStatusDisplay.Instance.ShowInputPrompt("V");
@@ -475,7 +472,7 @@ public class CombatManager : MonoBehaviour
                 }
                 
 
-                if (elapsed >= perfectWindowEnd && windowPrompted && CurrentAttackResultShown && CurrentDefenseResultShown && !CurrentClashResultShown)
+                if (elapsed >= perfectWindowEnd && windowPrompted && CurrentAttackResultShown && !CurrentClashResultShown)
                 {
                     // 🆕 Perfect End 시 발사체 발사 (실패/미입력 시)
                     if (!projectileLaunched[CurrentHit])
@@ -966,7 +963,13 @@ public class CombatManager : MonoBehaviour
     /// </summary>
     private void CreateProjectileForCurrentHit()
     {
-        if (projectileLaunched[CurrentHit]) return; // 중복 발사 방지
+        Debug.Log($"[CombatManager] 발사체 생성 시도 - 히트 {CurrentHit}, 이미 발사됨: {projectileLaunched[CurrentHit]}");
+        
+        if (projectileLaunched[CurrentHit]) 
+        {
+            Debug.Log($"[CombatManager] 히트 {CurrentHit}는 이미 발사됨 - 중복 발사 방지");
+            return; // 중복 발사 방지
+        }
         
         // ActionCommandData에서 발사체 정보 가져오기
         var command = CurrentResult.Command;
@@ -976,8 +979,24 @@ public class CombatManager : MonoBehaviour
             return;
         }
         
-        // ProjectileManager를 통해 발사체 가져오기
-        Projectile projectile = projectileManager.GetProjectile();
+        Debug.Log($"[CombatManager] 발사체 프리팹 확인됨: {command.projectilePrefab.name}");
+        
+        // 🆕 발사체 카운팅 초기화 (첫 번째 히트에서만)
+        if (CurrentHit == 0)
+        {
+            completedProjectiles = 0;
+            totalProjectiles = command.hitCount;
+            Debug.Log($"[CombatManager] 발사체 카운팅 초기화: 총 {totalProjectiles}개");
+        }
+        
+        // 🆕 ProjectileManager 싱글톤을 통해 발사체 가져오기
+        if (ProjectileManager.Instance == null)
+        {
+            Debug.LogError("[CombatManager] ProjectileManager.Instance가 null입니다!");
+            return;
+        }
+        
+        Projectile projectile = ProjectileManager.Instance.GetProjectile();
         
         // Controller 기반으로 위치 가져오기
         Vector3 attackerPos, defenderPos;
@@ -996,8 +1015,18 @@ public class CombatManager : MonoBehaviour
         // 발사체 초기화
         projectile.Initialize(command, CurrentHit, isPlayerAttacker);
         
+        // 🆕 발사체 초기 위치 설정
+        projectile.transform.position = attackerPos;
+        
         // 발사 방향 계산
         Vector3 direction = (defenderPos - attackerPos).normalized;
+        
+        // 🆕 디버그 로그 추가
+        Debug.Log($"[CombatManager] 발사체 생성: attackerPos={attackerPos}, defenderPos={defenderPos}, direction={direction}");
+        
+        // 🆕 발사체 이벤트 구독
+        projectile.OnProjectileHit += OnProjectileHit;
+        projectile.OnProjectileCompleted += OnProjectileCompleted;
         
         // 발사체 발사
         projectile.Launch(direction, projectile.baseSpeed);
@@ -1006,6 +1035,33 @@ public class CombatManager : MonoBehaviour
         projectileLaunched[CurrentHit] = true;
         
         Debug.Log($"[CombatManager] 히트 {CurrentHit} 발사체 발사 완료");
+    }
+    
+    /// <summary>
+    /// 발사체 충돌 시 호출되는 메서드
+    /// </summary>
+    private void OnProjectileHit(Projectile projectile)
+    {
+        Debug.Log($"[CombatManager] 발사체 충돌 감지 - 즉시 판정 발생");
+        
+        // 발사체 충돌 시 즉시 판정 발생
+        EvaluateClashResult();
+    }
+    
+    /// <summary>
+    /// 발사체 완료 시 호출되는 메서드
+    /// </summary>
+    private void OnProjectileCompleted(Projectile projectile)
+    {
+        completedProjectiles++;
+        Debug.Log($"[CombatManager] 발사체 완료: {completedProjectiles}/{totalProjectiles}");
+        
+        if (completedProjectiles >= totalProjectiles)
+        {
+            Debug.Log($"[CombatManager] 모든 발사체 완료 - 기존 애니메이션 대기 메서드 사용");
+            // TODO: 기존 WaitForAnimationsComplete() 메서드와 연동 필요
+            // 현재는 발사체 완료만 확인하고 있음
+        }
     }
     
     /// <summary>
