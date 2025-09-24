@@ -797,12 +797,12 @@ public class CombatManager : MonoBehaviour
         }
         else if (handler == defenderInputHandler)
         {
+            // 🆕 발사체 기반 방어자 입력 처리
             defenderPerfectInput = isPerfect; // 방어자 입력 처리
-            Debug.Log($"[CombatManager] 방어자 입력 수신: {isPerfect}");
-            if (!CurrentDefenseResultShown)
-            {
-                ResolveInput(handler, isPerfect);
-            }
+            Debug.Log($"[CombatManager] 발사체 기반 방어자 입력 수신: {isPerfect}");
+            
+            // 🆕 발사체 기반에서는 즉시 판정하지 않고, 발사체 충돌 시에만 판정
+            // ResolveInput 호출 제거 (발사체 충돌 시에만 판정 발생)
         }
     }
 

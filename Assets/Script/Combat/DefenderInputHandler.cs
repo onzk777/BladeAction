@@ -38,7 +38,7 @@ public class DefenderInputHandler : BaseInputHandler
         isPerfectInputAvailable = true;
         isHitTiming = false;
         hasPerfectInputSucceeded = false; // 완벽 입력 성공 플래그 초기화
-        Debug.Log($"[DefenderInputHandler] PerfectInputArea 진입 - 완벽 입력 가능 (상태 2)");
+        Debug.Log($"[DefenderInputHandler] 🚨 PerfectInputArea 진입 - 완벽 입력 가능 (상태 2)");
     }
     
     private void OnProjectileEnterHitZone(Projectile projectile)
@@ -46,7 +46,7 @@ public class DefenderInputHandler : BaseInputHandler
         // 상태 3: CharacterHitBox 진입 (end 타이밍)
         isPerfectInputAvailable = false;
         isHitTiming = true;
-        Debug.Log($"[DefenderInputHandler] CharacterHitBox 진입 - 피격 판정 발생 (상태 3)");
+        Debug.Log($"[DefenderInputHandler] 🚨 CharacterHitBox 진입 - 피격 판정 발생 (상태 3)");
         
         // end 타이밍에서 완벽 입력 성공 여부에 따른 판정 처리
         if (hasPerfectInputSucceeded)
@@ -125,10 +125,17 @@ public class DefenderInputHandler : BaseInputHandler
         // 발사체 기반 판정
         return hasPerfectInputSucceeded;
     }
+    
+    // 🆕 기존 타이밍 윈도우 로직 완전 차단
+    public override bool HasPerfectInput(PerfectTimingWindow timing)
+    {
+        // 발사체 기반 판정만 사용 (기존 타이밍 윈도우 로직 무시)
+        return hasPerfectInputSucceeded;
+    }
 
     protected override void OnTimingInput(InputAction.CallbackContext ctx)
     {
-        // 🆕 발사체 기반 입력 처리
+        // 🆕 발사체 기반 입력 처리 (기존 타이밍 윈도우 로직 완전 제거)
         if (IsPlayer)
         {
             HandleGuardInput(ctx);
@@ -137,30 +144,35 @@ public class DefenderInputHandler : BaseInputHandler
             if (isPerfectInputAvailable && !isHitTiming)
             {
                 // 상태 2: PerfectInputArea 진입 상태에서 입력 시 완벽 입력 성공
-                hasPerfectInputSucceeded = true; // 완벽 입력 성공 플래그 설정
+                hasPerfectInputSucceeded = true;
                 Debug.Log($"[DefenderInputHandler] 완벽 입력 성공! (상태 2에서 입력)");
+                
+                // 🆕 발사체 기반 완벽 입력 성공 처리
+                RecordPerfectInput();
             }
             else if (!isPerfectInputAvailable && !isHitTiming)
             {
                 // 상태 1: 충돌 없음 상태에서 입력 시 완벽 입력 실패
-                hasPerfectInputSucceeded = false; // 완벽 입력 실패 플래그 설정
+                hasPerfectInputSucceeded = false;
                 Debug.Log($"[DefenderInputHandler] 완벽 입력 실패! (상태 1에서 입력)");
+                
+                // 🆕 발사체 기반 완벽 입력 실패 처리
+                RecordPerfectInput();
             }
             // 상태 3 (isHitTiming = true)에서는 입력 무시 (이미 판정 완료)
         }
         
-        base.OnTimingInput(ctx); // 기본 입력 처리 호출
-#if UNITY_EDITOR
-        Debug.Log($"[DefenseInputHandler] OnTimingInput 호출: {lastInputTime}");
-        if (currentTiming != null)
-        {
-            Debug.Log($"[DefenseInputHandler] currentTiming: start={currentTiming.start}, duration={currentTiming.duration}");
-        }
-        else
-        {
-            Debug.LogError("[DefenseInputHandler] currentTiming is NULL!");
-        }
-#endif
+        // ❌ 제거: base.OnTimingInput(ctx) 호출하지 않음 (기존 타이밍 윈도우 로직 제거)
+    }
+    
+    // 🆕 발사체 기반 완벽 입력 기록 (기존 OnInputReceivedFromHandler 활용)
+    private void RecordPerfectInput()
+    {
+        lastInputTime = Time.time;
+        Debug.Log($"[DefenderInputHandler] 발사체 기반 완벽 입력 기록: {hasPerfectInputSucceeded}, 시간: {lastInputTime}");
+        
+        // 🆕 기존 OnInputReceivedFromHandler 메서드 활용
+        CombatManager.Instance.OnInputReceivedFromHandler(this);
     }
     
     /// <summary>
