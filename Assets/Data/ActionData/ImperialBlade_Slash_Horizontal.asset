@@ -14,11 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   commandType: 0
   commandName: "\uC81C\uAD6D \uAC80\uC220 - \uD718\uB458\uB7EC \uBCA0\uAE30"
+  animationName: 
   perfectTimings:
   - start: 1.5
     duration: 0.5
+    damageRatio: 1
   canInterruptTarget: 0
   canBeInterrupted: 1
   instantTimingFactor: 1
-  perfectTimeStart: 1
-  perfectTimeRange: 1
+  damageRatio: 1
+  projectilePrefab: {fileID: 8093953169184290097, guid: 5c72bd0d761f3fe4fa456204b84709ea, type: 3}
+  projectileScale: 1

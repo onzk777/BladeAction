@@ -43,6 +43,12 @@ public class CombatManager : MonoBehaviour
 
     [Header("전역 설정")]
     [SerializeField] private GlobalConfig globalConfig;
+    
+    [Header("발사체 관리")]
+    [SerializeField] private ProjectileManager projectileManager;
+    
+    // 발사체 발사 상태 추적
+    private bool[] projectileLaunched; // 각 히트별 발사 상태
 
     // 현재 턴 지속 시간 (전역 접근 가능)
     public float CurrentTurnDuration { get; private set; } = 0f;
@@ -318,6 +324,13 @@ public class CombatManager : MonoBehaviour
         // 타이밍 윈도우 등록 및 입력 수신 시작
         attackerInputHandler.LoadTimingWindows(command.perfectTimings); // 커맨드의 완벽 타이밍 윈도우를 로드        
         defenderInputHandler.LoadFromOpponentCommand(command); // 적의 커맨드 데이터를 방어자 핸들러에 로드
+        
+        // 🆕 발사체 발사 상태 배열 초기화
+        projectileLaunched = new bool[command.hitCount];
+        for (int i = 0; i < projectileLaunched.Length; i++)
+        {
+            projectileLaunched[i] = false;
+        }
 
 
         bool hasLoggedBlockedReason = false; // 히트 전환 디버깅용, PerformTurn 지역 변수로 선언
@@ -410,6 +423,8 @@ public class CombatManager : MonoBehaviour
                         {
                             Debug.Log($"[PerformTurn] 히트 {CurrentHit} fallback");
                             attackerInputHandler.NotifyWindowClosed(true); // 공격자 입력 실패 처리
+                            // 🆕 Perfect End 시 발사체 발사 (실패/미입력 시)
+                            CreateProjectileForCurrentHit();
                         }
                     }
                     else // AI 공격자 처리
@@ -417,6 +432,11 @@ public class CombatManager : MonoBehaviour
                         if (elapsed >= aiInputTime)
                         {
                             attackerInputHandler.RecordAIInput(aiInputTime, aiAttackSuccess); // AI 입력 기록
+                            // 🆕 AI 완벽 입력 성공 시 발사체 발사
+                            if (aiAttackSuccess)
+                            {
+                                CreateProjectileForCurrentHit();
+                            }
                             // AI 애니메이션은 이미 Perfect Window 시작 시점에 재생됨
                         }
                     }
@@ -457,6 +477,11 @@ public class CombatManager : MonoBehaviour
 
                 if (elapsed >= perfectWindowEnd && windowPrompted && CurrentAttackResultShown && CurrentDefenseResultShown && !CurrentClashResultShown)
                 {
+                    // 🆕 Perfect End 시 발사체 발사 (실패/미입력 시)
+                    if (!projectileLaunched[CurrentHit])
+                    {
+                        CreateProjectileForCurrentHit();
+                    }
 
                     ///////////////////////// 판정 구간 진입 /////////////////////////
                     Debug.Log("[판정 구간 진입] 판정 결과 표시 중...");
@@ -934,6 +959,53 @@ public class CombatManager : MonoBehaviour
         }
         
         Debug.LogWarning("[CombatManager] 중단 발생! 턴이 조기 종료됩니다.");
+    }
+    
+    /// <summary>
+    /// 현재 히트에 대한 발사체 생성 및 발사
+    /// </summary>
+    private void CreateProjectileForCurrentHit()
+    {
+        if (projectileLaunched[CurrentHit]) return; // 중복 발사 방지
+        
+        // ActionCommandData에서 발사체 정보 가져오기
+        var command = CurrentResult.Command;
+        if (command.projectilePrefab == null)
+        {
+            Debug.LogError($"[CombatManager] {command.commandName}에 발사체 프리팹이 설정되지 않았습니다!");
+            return;
+        }
+        
+        // ProjectileManager를 통해 발사체 가져오기
+        Projectile projectile = projectileManager.GetProjectile();
+        
+        // Controller 기반으로 위치 가져오기
+        Vector3 attackerPos, defenderPos;
+        
+        if (isPlayerAttacker)
+        {
+            attackerPos = playerController.transform.position;
+            defenderPos = enemyController.transform.position;
+        }
+        else
+        {
+            attackerPos = enemyController.transform.position;
+            defenderPos = playerController.transform.position;
+        }
+        
+        // 발사체 초기화
+        projectile.Initialize(command, CurrentHit, isPlayerAttacker);
+        
+        // 발사 방향 계산
+        Vector3 direction = (defenderPos - attackerPos).normalized;
+        
+        // 발사체 발사
+        projectile.Launch(direction, projectile.baseSpeed);
+        
+        // 발사 상태 기록
+        projectileLaunched[CurrentHit] = true;
+        
+        Debug.Log($"[CombatManager] 히트 {CurrentHit} 발사체 발사 완료");
     }
     
     /// <summary>

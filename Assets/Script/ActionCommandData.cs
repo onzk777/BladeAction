@@ -37,6 +37,13 @@ public class ActionCommandData : ScriptableObject
     [Tooltip("공격력 배율 (1.0 = 기본 공격력, 2.0 = 2배 공격력)")]
     [Range(0.1f, 5.0f)]
     public float damageRatio = 1.0f;
+    
+    [Header("발사체 설정")]
+    [Tooltip("발사체 프리팹")]
+    public GameObject projectilePrefab;
+    
+    [Tooltip("발사체 크기")]
+    public float projectileScale = 1f;
 
     /// <summary>
     /// 특정 히트의 공격력 배율을 반환합니다
