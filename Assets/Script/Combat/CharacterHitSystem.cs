@@ -14,13 +14,58 @@ public class CharacterHitSystem : MonoBehaviour
     public event System.Action<Projectile> OnProjectileEnterPerfectZone;
     public event System.Action<Projectile> OnProjectileEnterHitZone;
     
+    private void Start()
+    {
+        // 충돌체 위치 확인
+        if (perfectInputArea != null)
+        {
+            Debug.Log($"[CharacterHitSystem] PerfectInputArea 위치: {perfectInputArea.transform.position}, 태그: {perfectInputArea.tag}");
+        }
+        if (characterHitBox != null)
+        {
+            Debug.Log($"[CharacterHitSystem] CharacterHitBox 위치: {characterHitBox.transform.position}, 태그: {characterHitBox.tag}");
+        }
+        
+        // 🆕 충돌체 정보 상세 로그
+        LogColliderInfo();
+        
+        // Physics2D 설정 확인
+        CheckPhysics2DSettings();
+    }
+    
+    // 디버깅 메서드 제거됨
+    
+    private void LogColliderInfo()
+    {
+        // 충돌체 정보 로그 (디버깅 로그 제거됨)
+    }
+    
+    private void CheckPhysics2DSettings()
+    {
+        // Layer 0과 Layer 0 충돌 강제 활성화 (Unity 자동 충돌 감지 문제로 인한 임시 해결책)
+        if (Physics2D.GetIgnoreLayerCollision(0, 0))
+        {
+            Physics2D.IgnoreLayerCollision(0, 0, false);
+        }
+    }
+    
     private void OnTriggerEnter2D(Collider2D other)
     {
         // 발사체인지 확인
-        if (!other.CompareTag("Projectile")) return;
+        if (!other.CompareTag("Projectile")) 
+        {
+            return;
+        }
         
         Projectile projectile = other.GetComponent<Projectile>();
-        if (projectile == null) return;
+        if (projectile == null) 
+        {
+            return;
+        }
+        
+        // Projectile 이벤트 구독
+        projectile.OnProjectileEnterPerfectZone += HandleProjectileEnterPerfectZone;
+        projectile.OnProjectileEnterHitZone += HandleProjectileEnterHitZone;
         
         // PerfectInputArea 충돌 감지
         if (other == perfectInputArea)
@@ -31,6 +76,67 @@ public class CharacterHitSystem : MonoBehaviour
         else if (other == characterHitBox)
         {
             HandleCharacterHitBoxEnter(projectile);
+        }
+    }
+    
+    // 강제 충돌 감지 (Unity 자동 충돌 감지 문제로 인한 임시 해결책)
+    private void Update()
+    {
+        // 매 0.5초마다 발사체와의 충돌을 강제로 확인
+        if (Time.frameCount % 30 == 0)
+        {
+            Debug.Log($"[CharacterHitSystem] Update 호출 - 프레임: {Time.frameCount}");
+            CheckForProjectiles();
+        }
+    }
+    
+    private void CheckForProjectiles()
+    {
+        GameObject[] projectiles = GameObject.FindGameObjectsWithTag("Projectile");
+        Debug.Log($"[CharacterHitSystem] 발사체 검색: {projectiles.Length}개 발견");
+        
+        foreach (GameObject projectileObj in projectiles)
+        {
+            if (projectileObj.activeInHierarchy)
+            {
+                Projectile projectile = projectileObj.GetComponent<Projectile>();
+                if (projectile != null)
+                {
+                    Debug.Log($"[CharacterHitSystem] 활성화된 발사체 확인: {projectileObj.name}");
+                    CheckProjectileOverlap(projectileObj);
+                }
+            }
+        }
+    }
+    
+    private void CheckProjectileOverlap(GameObject projectileObj)
+    {
+        // PerfectInputArea와의 겹침 확인
+        if (perfectInputArea != null)
+        {
+            Collider2D perfectCollider = perfectInputArea.GetComponent<Collider2D>();
+            if (perfectCollider != null)
+            {
+                bool isOverlapping = perfectCollider.OverlapPoint(projectileObj.transform.position);
+                if (isOverlapping)
+                {
+                    OnTriggerEnter2D(projectileObj.GetComponent<Collider2D>());
+                }
+            }
+        }
+        
+        // CharacterHitBox와의 겹침 확인
+        if (characterHitBox != null)
+        {
+            Collider2D hitCollider = characterHitBox.GetComponent<Collider2D>();
+            if (hitCollider != null)
+            {
+                bool isOverlapping = hitCollider.OverlapPoint(projectileObj.transform.position);
+                if (isOverlapping)
+                {
+                    OnTriggerEnter2D(projectileObj.GetComponent<Collider2D>());
+                }
+            }
         }
     }
     
@@ -53,26 +159,33 @@ public class CharacterHitSystem : MonoBehaviour
     {
         IsPerfectInputAvailable = true;
         OnProjectileEnterPerfectZone?.Invoke(projectile);
-        Debug.Log($"[CharacterHitSystem] PerfectInputArea 진입 - 완벽 입력 가능");
     }
     
     private void HandlePerfectInputAreaExit(Projectile projectile)
     {
         IsPerfectInputAvailable = false;
-        Debug.Log($"[CharacterHitSystem] PerfectInputArea 이탈 - 완벽 입력 불가");
     }
     
     private void HandleCharacterHitBoxEnter(Projectile projectile)
     {
         IsHitTiming = true;
         OnProjectileEnterHitZone?.Invoke(projectile);
-        Debug.Log($"[CharacterHitSystem] CharacterHitBox 진입 - 피격 판정 발생");
     }
     
     public void ResetHitState()
     {
         IsPerfectInputAvailable = false;
         IsHitTiming = false;
-        Debug.Log($"[CharacterHitSystem] 히트 상태 초기화");
+    }
+    
+    // Projectile 이벤트 핸들러
+    private void HandleProjectileEnterPerfectZone(Projectile projectile)
+    {
+        HandlePerfectInputAreaEnter(projectile);
+    }
+    
+    private void HandleProjectileEnterHitZone(Projectile projectile)
+    {
+        HandleCharacterHitBoxEnter(projectile);
     }
 }

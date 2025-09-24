@@ -719,7 +719,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   guardHoldThreshold: 0.25
-  characterHitSystem: {fileID: 0}
 --- !u!114 &172118094
 MonoBehaviour:
   m_ObjectHideFlags: 0

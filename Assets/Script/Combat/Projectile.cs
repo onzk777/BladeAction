@@ -38,6 +38,12 @@ public class Projectile : MonoBehaviour
     
     private void Update()
     {
+        // 🆕 발사체 상태 로그 (디버깅용)
+        if (Time.frameCount % 60 == 0) // 1초마다 로그
+        {
+            Debug.Log($"[Projectile] 상태: isLaunched={isLaunched}, isCompleted={isCompleted}, lifetime={currentLifetime}/{lifetime}");
+        }
+        
         if (isLaunched && !isCompleted)
         {
             // 수명 관리
@@ -50,6 +56,9 @@ public class Projectile : MonoBehaviour
             
             // 발사체 이동
             transform.Translate(direction * currentSpeed * Time.deltaTime);
+            
+            // 발사체 이동 (디버깅 로그 제거)
+            
             
             if (currentLifetime >= lifetime)
             {
@@ -82,40 +91,49 @@ public class Projectile : MonoBehaviour
         this.baseSpeed = speed;
         isLaunched = true;
         
-        // 🆕 디버그 로그 추가
-        Debug.Log($"[Projectile] 발사체 발사: position={transform.position}, direction={this.direction}, speed={speed}");
+        // 발사체 발사 (디버깅 로그 제거)
     }
     
     private void OnTriggerEnter2D(Collider2D other)
     {
         Debug.Log($"[Projectile] 충돌 감지: {other.name}, tag={other.tag}, isFromPlayer={isFromPlayer}");
         
-        // 🆕 Controller 기반 발사자 충돌 방지
-        if (isFromPlayer && other.GetComponent<PlayerController>() != null)
+        // 🆕 공격자 자기 자신과의 충돌 방지 (우선 처리)
+        // 부모 오브젝트까지 확인
+        Transform current = other.transform;
+        while (current != null)
         {
-            Debug.Log($"[Projectile] 플레이어 발사체가 플레이어와 충돌 - 무시");
-            return;
-        }
-        if (!isFromPlayer && other.GetComponent<EnemyController>() != null)
-        {
-            Debug.Log($"[Projectile] 적 발사체가 적과 충돌 - 무시");
-            return;
+            if (isFromPlayer && current.GetComponent<PlayerController>() != null)
+            {
+                Debug.Log($"[Projectile] 플레이어 발사체가 플레이어 계층과 충돌 - 무시");
+                return;
+            }
+            if (!isFromPlayer && current.GetComponent<EnemyController>() != null)
+            {
+                Debug.Log($"[Projectile] 적 발사체가 적 계층과 충돌 - 무시");
+                return;
+            }
+            current = current.parent;
         }
         
-        // 🆕 태그 기반 충돌체 구분
-        switch (other.tag)
+        // PerfectInputArea/CharacterHitBox는 항상 허용
+        if (other.CompareTag("PerfectInputArea") || other.CompareTag("CharacterHitBox"))
         {
-            case "PerfectInputArea":
-                Debug.Log($"[Projectile] PerfectInputArea 충돌");
-                HandlePerfectInputArea(other);
-                break;
-            case "CharacterHitBox":
-                Debug.Log($"[Projectile] CharacterHitBox 충돌");
-                HandleCharacterHitBox(other);
-                break;
-            default:
-                Debug.Log($"[Projectile] 알 수 없는 태그 충돌: {other.tag}");
-                break;
+            Debug.Log($"[Projectile] PerfectInputArea/CharacterHitBox 충돌 허용: {other.tag}");
+            // 태그 기반 충돌체 구분
+            switch (other.tag)
+            {
+                case "PerfectInputArea":
+                    HandlePerfectInputArea(other);
+                    break;
+                case "CharacterHitBox":
+                    HandleCharacterHitBox(other);
+                    break;
+            }
+        }
+        else
+        {
+            Debug.Log($"[Projectile] 알 수 없는 충돌체: {other.name}, tag={other.tag}");
         }
     }
     
@@ -150,4 +168,6 @@ public class Projectile : MonoBehaviour
         OnProjectileCompleted?.Invoke(this);
         Destroy(gameObject);
     }
+    
+    // 디버깅 메서드들 제거됨
 }

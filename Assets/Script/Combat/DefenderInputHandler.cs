@@ -18,7 +18,7 @@ public class DefenderInputHandler : BaseInputHandler
     public bool IsGuardActive => isGuardActive;
     
     [Header("발사체 기반 입력 시스템")]
-    [SerializeField] private CharacterHitSystem characterHitSystem; // 🆕 CharacterHitSystem 참조
+    private CharacterHitSystem characterHitSystem; // 🆕 CharacterHitSystem 참조 (자동 참조)
     private bool isPerfectInputAvailable = false; // 🆕 완벽 입력 가능 상태
     private bool isHitTiming = false; // 🆕 피격 타이밍 상태
     private bool hasPerfectInputSucceeded = false; // 🆕 완벽 입력 성공 여부 추적
@@ -74,6 +74,16 @@ public class DefenderInputHandler : BaseInputHandler
     protected override void Awake()
     {
         base.Awake(); // 부모 클래스의 Awake() 호출
+        
+        // 🆕 같은 오브젝트에서 CharacterHitSystem 자동 참조
+        characterHitSystem = GetComponent<CharacterHitSystem>();
+        if (characterHitSystem == null)
+        {
+            Debug.LogError($"[DefenderInputHandler] {gameObject.name}에 CharacterHitSystem 컴포넌트가 없습니다!");
+            return;
+        }
+        
+        Debug.Log($"[DefenderInputHandler] CharacterHitSystem 자동 참조 성공: {characterHitSystem.name}");
         SubscribeToHitSystemEvents();
     }
     
