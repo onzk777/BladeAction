@@ -46,6 +46,16 @@ public class ProjectileManager : MonoBehaviour
     
     public Projectile GetProjectile()
     {
+        return GetProjectile(projectilePrefab);
+    }
+    
+    /// <summary>
+    /// 지정된 프리팹으로 발사체를 가져옵니다
+    /// </summary>
+    /// <param name="prefab">사용할 발사체 프리팹</param>
+    /// <returns>활성화된 발사체</returns>
+    public Projectile GetProjectile(GameObject prefab)
+    {
         Projectile projectile;
         
         if (projectilePool.Count > 0)
@@ -56,7 +66,7 @@ public class ProjectileManager : MonoBehaviour
         else
         {
             // 풀이 비어있으면 새로 생성
-            GameObject projectileObj = Instantiate(projectilePrefab);
+            GameObject projectileObj = Instantiate(prefab);
             projectile = projectileObj.GetComponent<Projectile>();
         }
         
@@ -65,7 +75,7 @@ public class ProjectileManager : MonoBehaviour
         activeProjectiles.Add(projectile);
         
         // 🆕 디버그 로그 추가
-        Debug.Log($"[ProjectileManager] 발사체 활성화: position={projectile.transform.position}, active={projectile.gameObject.activeInHierarchy}");
+        Debug.Log($"[ProjectileManager] 발사체 활성화: prefab={prefab.name}, position={projectile.transform.position}, active={projectile.gameObject.activeInHierarchy}");
         
         return projectile;
     }

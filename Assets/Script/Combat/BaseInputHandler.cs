@@ -153,6 +153,13 @@ public abstract class BaseInputHandler : MonoBehaviour
     // 입력 이벤트 핸들러
     protected virtual void OnTimingInput(InputAction.CallbackContext ctx) // 입력 이벤트 핸들러
     {
+        // 🆕 DefenderInputHandler는 발사체 기반으로 완전 오버라이드됨
+        if (this is DefenderInputHandler)
+        {
+            Debug.Log($"[BaseInputHandler] DefenderInputHandler는 발사체 기반으로 오버라이드됨 - 차단");
+            return;
+        }
+        
         Debug.LogWarning($"[OnTimingInput:입력 감지됨] Handler={this.GetType().Name}, isListening={isListening}, Time={Time.time}, turnStartTime={TurnTimer.GetTurnStartTime()}, InputSource={ctx.control.device.name}");
 
         CombatManager manager = FindAnyObjectByType<CombatManager>();

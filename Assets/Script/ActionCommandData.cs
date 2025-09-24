@@ -39,8 +39,11 @@ public class ActionCommandData : ScriptableObject
     public float damageRatio = 1.0f;
     
     [Header("발사체 설정")]
-    [Tooltip("발사체 프리팹")]
+    [Tooltip("일반 발사체 프리팹")]
     public GameObject projectilePrefab;
+    
+    [Tooltip("완벽 입력 성공 시 발사체 프리팹")]
+    public GameObject perfectProjectilePrefab;
     
     [Tooltip("발사체 크기")]
     public float projectileScale = 1f;

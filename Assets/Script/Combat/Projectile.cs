@@ -96,7 +96,7 @@ public class Projectile : MonoBehaviour
     
     private void OnTriggerEnter2D(Collider2D other)
     {
-        Debug.Log($"[Projectile] 충돌 감지: {other.name}, tag={other.tag}, isFromPlayer={isFromPlayer}");
+        Debug.Log($"[Projectile] 🚨 OnTriggerEnter2D 호출됨: {other.name}, tag={other.tag}, isFromPlayer={isFromPlayer}");
         
         // 🆕 공격자 자기 자신과의 충돌 방지 (우선 처리)
         // 부모 오브젝트까지 확인
@@ -127,6 +127,7 @@ public class Projectile : MonoBehaviour
                     HandlePerfectInputArea(other);
                     break;
                 case "CharacterHitBox":
+                    Debug.Log($"[Projectile] 🚨 CharacterHitBox 충돌 감지 - HandleCharacterHitBox 호출");
                     HandleCharacterHitBox(other);
                     break;
             }
@@ -145,6 +146,7 @@ public class Projectile : MonoBehaviour
     
     private void HandleCharacterHitBox(Collider2D other)
     {
+        Debug.Log($"[Projectile] 🚨 HandleCharacterHitBox 호출됨");
         // 🆕 즉시 피격 판정 발생
         OnProjectileEnterHitZone?.Invoke(this);
         HandleHit(other);
@@ -152,15 +154,21 @@ public class Projectile : MonoBehaviour
     
     private void HandleHit(Collider2D hitCollider)
     {
-        if (isCompleted) return;
+        Debug.Log($"[Projectile] 🚨 HandleHit 호출됨 - isCompleted: {isCompleted}");
+        if (isCompleted) 
+        {
+            Debug.Log($"[Projectile] 🚨 이미 완료된 발사체 - HandleHit 무시");
+            return;
+        }
         
+        Debug.Log($"[Projectile] 🚨 OnProjectileHit 이벤트 발생");
         isCompleted = true;
-        OnProjectileHit?.Invoke(this);
         
-        // ❌ 제거: OnProjectileCompleted?.Invoke(this); // 중복 호출 제거
-        
-        // 발사체 파괴 (OnProjectileCompleted는 DestroyProjectile에서 호출)
+        // 🆕 발사체 즉시 소멸 (이벤트 발생 전에 소멸하여 중복 충돌 방지)
         DestroyProjectile();
+        
+        // 🆕 발사체 소멸 후 이벤트 발생 (중복 충돌 방지)
+        OnProjectileHit?.Invoke(this);
     }
     
     private void DestroyProjectile()

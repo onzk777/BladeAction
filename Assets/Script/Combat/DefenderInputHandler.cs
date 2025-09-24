@@ -136,6 +136,8 @@ public class DefenderInputHandler : BaseInputHandler
     protected override void OnTimingInput(InputAction.CallbackContext ctx)
     {
         // 🆕 발사체 기반 입력 처리 (기존 타이밍 윈도우 로직 완전 제거)
+        Debug.Log($"[DefenderInputHandler] 🚨 발사체 기반 입력 처리 시작 - isPerfectInputAvailable: {isPerfectInputAvailable}, isHitTiming: {isHitTiming}");
+        
         if (IsPlayer)
         {
             HandleGuardInput(ctx);
@@ -145,7 +147,7 @@ public class DefenderInputHandler : BaseInputHandler
             {
                 // 상태 2: PerfectInputArea 진입 상태에서 입력 시 완벽 입력 성공
                 hasPerfectInputSucceeded = true;
-                Debug.Log($"[DefenderInputHandler] 완벽 입력 성공! (상태 2에서 입력)");
+                Debug.Log($"[DefenderInputHandler] 🚨 완벽 입력 성공! (상태 2에서 입력)");
                 
                 // 🆕 발사체 기반 완벽 입력 성공 처리
                 RecordPerfectInput();
@@ -154,7 +156,7 @@ public class DefenderInputHandler : BaseInputHandler
             {
                 // 상태 1: 충돌 없음 상태에서 입력 시 완벽 입력 실패
                 hasPerfectInputSucceeded = false;
-                Debug.Log($"[DefenderInputHandler] 완벽 입력 실패! (상태 1에서 입력)");
+                Debug.Log($"[DefenderInputHandler] 🚨 완벽 입력 실패! (상태 1에서 입력)");
                 
                 // 🆕 발사체 기반 완벽 입력 실패 처리
                 RecordPerfectInput();
@@ -163,6 +165,8 @@ public class DefenderInputHandler : BaseInputHandler
         }
         
         // ❌ 제거: base.OnTimingInput(ctx) 호출하지 않음 (기존 타이밍 윈도우 로직 제거)
+        // 🆕 기존 BaseInputHandler 로직 완전 차단
+        Debug.Log($"[DefenderInputHandler] 🚨 기존 타이밍 윈도우 로직 차단됨");
     }
     
     // 🆕 발사체 기반 완벽 입력 기록 (기존 OnInputReceivedFromHandler 활용)
