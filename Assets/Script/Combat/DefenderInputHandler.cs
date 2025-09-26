@@ -23,6 +23,10 @@ public class DefenderInputHandler : BaseInputHandler
     private bool isHitTiming = false; // 🆕 피격 타이밍 상태
     private bool hasPerfectInputSucceeded = false; // 🆕 완벽 입력 성공 여부 추적
     private Projectile currentProjectile = null; // 🆕 현재 처리 중인 발사체
+    private bool isProjectileInPerfectZone = false; // 🆕 PerfectInputZone 내 발사체 존재 여부
+    private bool isProjectileInHitZone = false; // 🆕 CharacterHitBox 진입 여부
+    private float perfectZoneEnterTime = -1f; // 🆕 PerfectZone 진입 시각
+    private float hitZoneEnterTime = -1f; // 🆕 HitZone 진입 시각
     
     // ❌ 제거: 기존 타이밍 윈도우 복제 방식
     // public void LoadFromOpponentCommand(ActionCommandData opponentCommand)
@@ -39,11 +43,15 @@ public class DefenderInputHandler : BaseInputHandler
         isPerfectInputAvailable = true;
         isHitTiming = false;
         hasPerfectInputSucceeded = false; // 완벽 입력 성공 플래그 초기화
+        isProjectileInPerfectZone = true;
+        isProjectileInHitZone = false;
+        perfectZoneEnterTime = Time.time;
+        hitZoneEnterTime = -1f;
         
         // 🆕 현재 발사체 정보 저장 (최종 판정 시 사용)
         currentProjectile = projectile;
         
-        Debug.Log($"[DefenderInputHandler] 🚨 PerfectInputArea 진입 - 완벽 입력 가능 (상태 2), 발사체: {projectile.name}");
+        Debug.Log($"[InputTrace][Defender] Projectile Enter PerfectZone - hitIndex:{projectile.hitIndex}, projectile:{projectile.name}, time:{perfectZoneEnterTime:F4}");
     }
     
     private void OnProjectileEnterHitZone(Projectile projectile)
@@ -51,18 +59,21 @@ public class DefenderInputHandler : BaseInputHandler
         // 상태 3: CharacterHitBox 진입 (end 타이밍)
         isPerfectInputAvailable = false;
         isHitTiming = true;
-        Debug.Log($"[DefenderInputHandler] 🚨 CharacterHitBox 진입 - 피격 판정 발생 (상태 3)");
+        isProjectileInPerfectZone = false;
+        isProjectileInHitZone = true;
+        hitZoneEnterTime = Time.time;
+        Debug.Log($"[InputTrace][Defender] Projectile Enter HitZone - hitIndex:{projectile.hitIndex}, projectile:{projectile.name}, time:{hitZoneEnterTime:F4}");
         
         // 🆕 CharacterHitBox 충돌 시 최종 판정 발생
         // 방어자 완벽 입력이 실패했거나 입력하지 않은 경우에만 실행
         if (!hasPerfectInputSucceeded)
         {
-            Debug.Log($"[DefenderInputHandler] 🚨 방어자 완벽 입력 실패/무입력 - CharacterHitBox 충돌 시 최종 판정 발생");
+            Debug.Log($"[InputTrace][Defender] 방어자 완벽 입력 실패/무입력 - CharacterHitBox 충돌 시 최종 판정 발생");
             TriggerFinalJudgment(projectile, false);
         }
         else
         {
-            Debug.Log($"[DefenderInputHandler] 방어자 완벽 입력 성공으로 이미 최종 판정 완료됨");
+            Debug.Log($"[InputTrace][Defender] 방어자 완벽 입력 성공으로 이미 최종 판정 완료됨");
         }
     }
     
@@ -72,7 +83,13 @@ public class DefenderInputHandler : BaseInputHandler
         isPerfectInputAvailable = false;
         isHitTiming = false;
         hasPerfectInputSucceeded = false; // 완벽 입력 성공 플래그 초기화
-        Debug.Log($"[DefenderInputHandler] 발사체 이탈 - 입력 상태 초기화 (상태 1)");
+        isProjectileInPerfectZone = false;
+        isProjectileInHitZone = false;
+        if (currentProjectile == projectile)
+        {
+            currentProjectile = null;
+        }
+        Debug.Log($"[InputTrace][Defender] Projectile Exit Zones - hitIndex:{projectile.hitIndex}, projectile:{projectile.name}, time:{Time.time:F4}");
     }
     
     // 🆕 CharacterHitSystem 이벤트 구독
@@ -141,44 +158,76 @@ public class DefenderInputHandler : BaseInputHandler
     protected override void OnTimingInput(InputAction.CallbackContext ctx)
     {
         // 🆕 발사체 기반 입력 처리 (기존 타이밍 윈도우 로직 완전 제거)
-        Debug.Log($"[DefenderInputHandler] 🚨 발사체 기반 입력 처리 시작 - isPerfectInputAvailable: {isPerfectInputAvailable}, isHitTiming: {isHitTiming}");
-        
-        if (IsPlayer)
+        Debug.Log($"[InputTrace][Defender] OnTimingInput - phase:{ctx.phase}, isPerfectAvailable:{isPerfectInputAvailable}, isHitTiming:{isHitTiming}, isListening:{isListening}, time:{Time.time:F4}, frame:{Time.frameCount}");
+
+        if (!IsPlayer)
         {
-            HandleGuardInput(ctx);
-            
-            // 상태에 따른 판정 처리
-            if (isPerfectInputAvailable && !isHitTiming)
-            {
-                // 상태 2: PerfectInputArea 진입 상태에서 입력 시 완벽 입력 성공
-                hasPerfectInputSucceeded = true;
-                Debug.Log($"[DefenderInputHandler] 🚨 완벽 입력 성공! (상태 2에서 입력)");
-                
-                // 🆕 발사체 기반 완벽 입력 성공 처리
-                RecordPerfectInput();
-                
-                // 🆕 방어자 완벽 입력 성공 시 즉시 최종 판정 발생
-                if (currentProjectile != null)
-                {
-                    Debug.Log($"[DefenderInputHandler] 🚨 방어자 완벽 입력 성공 - 즉시 최종 판정 발생");
-                    TriggerFinalJudgment(currentProjectile, true);
-                }
-            }
-            else if (!isPerfectInputAvailable && !isHitTiming)
-            {
-                // 상태 1: 충돌 없음 상태에서 입력 시 완벽 입력 실패
-                hasPerfectInputSucceeded = false;
-                Debug.Log($"[DefenderInputHandler] 🚨 완벽 입력 실패! (상태 1에서 입력)");
-                
-                // 🆕 발사체 기반 완벽 입력 실패 처리
-                RecordPerfectInput();
-            }
-            // 상태 3 (isHitTiming = true)에서는 입력 무시 (이미 판정 완료)
+            Debug.Log("[InputTrace][Defender] 플레이어가 아니므로 입력 처리 생략");
+            return;
         }
-        
-        // ❌ 제거: base.OnTimingInput(ctx) 호출하지 않음 (기존 타이밍 윈도우 로직 제거)
-        // 🆕 기존 BaseInputHandler 로직 완전 차단
-        Debug.Log($"[DefenderInputHandler] 🚨 기존 타이밍 윈도우 로직 차단됨");
+
+        HandleGuardInput(ctx);
+
+        // 입력 이벤트 기록 (최근 입력 시각)
+        lastInputTime = Time.time;
+        Debug.Log($"[InputTrace][Defender] 입력 시각 기록 - lastInputTime:{lastInputTime:F4}, frame:{Time.frameCount}");
+
+        if (ctx.phase != InputActionPhase.Performed)
+        {
+            Debug.Log($"[InputTrace][Defender] 입력 phase={ctx.phase} → 판정 처리 생략");
+            Debug.Log($"[InputTrace][Defender] 기존 타이밍 윈도우 로직 차단");
+            return;
+        }
+
+        bool success = EvaluatePerfectInputWindow();
+        hasPerfectInputSucceeded = success;
+
+        if (success)
+        {
+            Debug.Log("[InputTrace][Defender] PerfectInput 성공 판정");
+        }
+        else
+        {
+            Debug.Log("[InputTrace][Defender] PerfectInput 실패 판정 (히트 또는 윈도우 외 입력)");
+        }
+
+        RecordPerfectInput();
+
+        if (success && currentProjectile != null)
+        {
+            Debug.Log("[InputTrace][Defender] PerfectInput 성공 → 즉시 최종 판정 트리거");
+            TriggerFinalJudgment(currentProjectile, true);
+            isProjectileInPerfectZone = false;
+            isProjectileInHitZone = true;
+        }
+
+        Debug.Log($"[InputTrace][Defender] 기존 타이밍 윈도우 로직 차단");
+    }
+
+    /// <summary>
+    /// 현재 발사체 위치 상태를 기반으로 완벽 입력 가능 여부를 평가합니다.
+    /// </summary>
+    private bool EvaluatePerfectInputWindow()
+    {
+        if (currentProjectile == null)
+        {
+            Debug.Log($"[InputTrace][Defender] 평가 실패 - currentProjectile null (lastInput:{lastInputTime:F4}, perfectEnter:{perfectZoneEnterTime:F4}, hitEnter:{hitZoneEnterTime:F4})");
+            return false;
+        }
+
+        if (!isProjectileInPerfectZone)
+        {
+            Debug.Log($"[InputTrace][Defender] 평가 실패 - PerfectZone 내에 있지 않음 (lastInput:{lastInputTime:F4}, perfectEnter:{perfectZoneEnterTime:F4}, hitEnter:{hitZoneEnterTime:F4})");
+            return false;
+        }
+
+        if (isProjectileInHitZone)
+        {
+            Debug.Log($"[InputTrace][Defender] 평가 실패 - 이미 HitZone 진입 (lastInput:{lastInputTime:F4}, perfectEnter:{perfectZoneEnterTime:F4}, hitEnter:{hitZoneEnterTime:F4})");
+            return false;
+        }
+
+        return true;
     }
     
     // 🆕 발사체 기반 완벽 입력 기록 (기존 OnInputReceivedFromHandler 활용)
@@ -280,6 +329,7 @@ public class DefenderInputHandler : BaseInputHandler
         base.EnableInput();
         // 막기 상태 초기화
         ResetGuardState();
+        ResetDefenseState();
 #if UNITY_EDITOR
         Debug.Log("[DefenseInputHandler] EnableInput() 호출됨");
 #endif
@@ -294,11 +344,17 @@ public class DefenderInputHandler : BaseInputHandler
     
     protected override void RegisterInputCallbacks()
     {
+        Debug.Log($"[InputTrace][Defender] RegisterInputCallbacks - perfectActionNull:{perfectAction == null}");
         if (perfectAction != null)
         {
             perfectAction.performed += OnTimingInput;
             perfectAction.canceled += OnTimingInput; // canceled 이벤트 추가
             perfectAction.Enable();
+            Debug.Log("[InputTrace][Defender] perfectAction.Enable 호출");
+        }
+        else
+        {
+            Debug.LogWarning("[InputTrace][Defender] perfectAction이 null - 콜백 등록 불가");
         }
     }
     
@@ -366,6 +422,18 @@ public class DefenderInputHandler : BaseInputHandler
         if (IsPlayer && isListening)
         {
             UpdateGuardState();
+
+#if UNITY_EDITOR
+            var keyboard = Keyboard.current;
+            if (keyboard != null && keyboard.spaceKey.wasPressedThisFrame)
+            {
+                Debug.Log("[InputTrace][Defender] Keyboard.spaceKey.wasPressedThisFrame");
+            }
+            if (perfectAction != null && perfectAction.triggered)
+            {
+                Debug.Log("[InputTrace][Defender] perfectAction.triggered=true");
+            }
+#endif
         }
     }
     

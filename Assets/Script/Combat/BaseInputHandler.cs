@@ -45,6 +45,10 @@ public abstract class BaseInputHandler : MonoBehaviour
             {
                 Debug.LogError("[TimingInputHandler] 'PerfectInput' 액션을 찾을 수 없습니다.");
             }
+            else
+            {
+                Debug.Log($"[InputTrace][Awake] handler:{GetType().Name} devices:{string.Join(",", playerInput.devices)} controls:{perfectAction.controls.Count}");
+            }
         }
         catch (System.Exception e)
         {
@@ -85,16 +89,40 @@ public abstract class BaseInputHandler : MonoBehaviour
 
     public virtual void EnableInput()
     {
+        Debug.Log($"[InputTrace][InputLifecycle] Enable - handler:{GetType().Name} perfectActionNull:{perfectAction == null} isPlayer:{IsPlayer} time:{Time.time:F4} frame:{Time.frameCount}");
         RegisterInputCallbacks();
-        perfectAction?.Enable();
+        if (perfectAction != null)
+        {
+            perfectAction.Enable();
+            Debug.Log($"[InputTrace][InputLifecycle] perfectAction.Enable - handler:{GetType().Name} controls:{perfectAction.controls.Count} time:{Time.time:F4} frame:{Time.frameCount}");
+            perfectAction.started -= OnTimingInput;
+            perfectAction.performed -= OnTimingInput;
+            perfectAction.canceled -= OnTimingInput;
+
+            perfectAction.started += OnTimingInput;
+            perfectAction.performed += OnTimingInput;
+            perfectAction.canceled += OnTimingInput;
+
+            Debug.Log($"[InputTrace][InputLifecycle] 이벤트 재등록 완료 - handler:{GetType().Name} time:{Time.time:F4} frame:{Time.frameCount}");
+        }
         isListening = true;
+        Debug.Log($"[InputTrace][InputLifecycle] isListening->{isListening} - handler:{GetType().Name} time:{Time.time:F4} frame:{Time.frameCount}");
     }
 
     public virtual void DisableInput()
     {
+        Debug.Log($"[InputTrace][InputLifecycle] Disable - handler:{GetType().Name} time:{Time.time:F4} frame:{Time.frameCount}");
         UnregisterInputCallbacks();
-        perfectAction?.Disable();
+        if (perfectAction != null)
+        {
+            perfectAction.started -= OnTimingInput;
+            perfectAction.performed -= OnTimingInput;
+            perfectAction.canceled -= OnTimingInput;
+            perfectAction.Disable();
+            Debug.Log($"[InputTrace][InputLifecycle] 이벤트 해제 - handler:{GetType().Name} time:{Time.time:F4} frame:{Time.frameCount}");
+        }
         isListening = false;
+        Debug.Log($"[InputTrace][InputLifecycle] isListening->{isListening} - handler:{GetType().Name} time:{Time.time:F4} frame:{Time.frameCount}");
     }
     public virtual bool IsInBufferPeriod() // 현재 입력이 버퍼 구간에 있는지 확인
     {
@@ -156,11 +184,11 @@ public abstract class BaseInputHandler : MonoBehaviour
         // 🆕 DefenderInputHandler는 발사체 기반으로 완전 오버라이드됨
         if (this is DefenderInputHandler)
         {
-            Debug.Log($"[BaseInputHandler] DefenderInputHandler는 발사체 기반으로 오버라이드됨 - 차단");
+            Debug.Log("[InputTrace][BaseOnTiming] DefenderInputHandler 전용 구현 - 차단");
             return;
         }
         
-        Debug.LogWarning($"[OnTimingInput:입력 감지됨] Handler={this.GetType().Name}, isListening={isListening}, Time={Time.time}, turnStartTime={TurnTimer.GetTurnStartTime()}, InputSource={ctx.control.device.name}");
+        Debug.LogWarning($"[InputTrace][OnTiming] handler:{GetType().Name} phase:{ctx.phase} isListening:{isListening} device:{ctx.control?.device?.name} time:{Time.time:F4} frame:{Time.frameCount}");
 
         CombatManager manager = FindAnyObjectByType<CombatManager>();
         bool isPlayerAttacker = manager.IsPlayerAttacker;
@@ -203,20 +231,20 @@ public abstract class BaseInputHandler : MonoBehaviour
 
     private bool ShouldIgnoreInput() // 입력을 무시해야 하는지 확인
     {
-        Debug.Log($"[TurnTimer] ElapsedTime={TurnTimer.ElapsedTime}, lastInputTime={lastInputTime}, diff={TurnTimer.ElapsedTime - lastInputTime}, BUFFER={IsInBufferPeriod()}");
+        Debug.Log($"[InputTrace][ShouldIgnore] handler:{GetType().Name} isListening:{isListening} buffer:{IsInBufferPeriod()} cooldown:{TurnTimer.ElapsedTime < nextAllowedInputTime}");
         if (!isListening)
         {
-            Debug.LogWarning($"[IgnoreInput] Handler={this.GetType().Name}, 리스닝 상태 아님");
+            Debug.LogWarning($"[InputTrace][ShouldIgnore] handler:{GetType().Name} 입력 무시 - 리스닝 상태 아님");
             return true;
         }
         if (IsInBufferPeriod()) // 버퍼 구간에 있는 경우 입력 무시
         {
-            Debug.Log($"[IgnoreInput] 버퍼 구간 → 입력 무시");
+            Debug.Log($"[InputTrace][ShouldIgnore] handler:{GetType().Name} 입력 무시 - 버퍼 구간");
             return true;
         }
         if (TurnTimer.ElapsedTime < nextAllowedInputTime)
         {
-            Debug.Log($"[IgnoreInput] 입력 쿨다운! ElapsedTime:{TurnTimer.ElapsedTime}, 다음 입력 가능:{nextAllowedInputTime}");
+            Debug.Log($"[InputTrace][ShouldIgnore] handler:{GetType().Name} 입력 무시 - 쿨다운 (Elapsed:{TurnTimer.ElapsedTime}, Next:{nextAllowedInputTime})");
             return true;
         }
         return false;
@@ -236,6 +264,7 @@ public abstract class BaseInputHandler : MonoBehaviour
     public void SetIsPlayer(bool isPlayer)
     {
         IsPlayer = isPlayer;
+        Debug.Log($"[InputTrace][SetIsPlayer] handler:{GetType().Name} IsPlayer->{IsPlayer}");
     }
 
     public void ResetCooldown()

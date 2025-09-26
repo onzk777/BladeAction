@@ -103,7 +103,7 @@ public class Projectile : MonoBehaviour
     
     private void OnTriggerEnter2D(Collider2D other)
     {
-        Debug.Log($"[Projectile] 🚨 OnTriggerEnter2D 호출됨: {other.name}, tag={other.tag}, isFromPlayer={isFromPlayer}");
+        Debug.Log($"[InputTrace][Projectile] OnTriggerEnter2D - projectile:{name}, hitIndex:{hitIndex}, collider:{other.name}, tag:{other.tag}, time:{Time.time:F4}");
         
         // 🆕 공격자 자기 자신과의 충돌 방지 (우선 처리)
         // 부모 오브젝트까지 확인
@@ -126,7 +126,7 @@ public class Projectile : MonoBehaviour
         // PerfectInputArea/CharacterHitBox는 항상 허용
         if (other.CompareTag("PerfectInputArea") || other.CompareTag("CharacterHitBox"))
         {
-            Debug.Log($"[Projectile] PerfectInputArea/CharacterHitBox 충돌 허용: {other.tag}");
+            Debug.Log($"[InputTrace][Projectile] 허용된 충돌 - tag:{other.tag}, time:{Time.time:F4}");
             // 태그 기반 충돌체 구분
             switch (other.tag)
             {

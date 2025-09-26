@@ -291,6 +291,7 @@ public class CombatManager : MonoBehaviour
         CombatantCommandResult result = new CombatantCommandResult(command); // 커맨드 결과 객체 생성
         attackerInputHandler.SetIsPlayer(isPlayerAttacker); // 공격자 입력 핸들러 설정
         defenderInputHandler.SetIsPlayer(!isPlayerAttacker); // 방어자 입력 핸들러 설정
+        Debug.Log($"[InputTrace][Turn] SetIsPlayer - attacker:{attackerInputHandler.IsPlayer} defender:{defenderInputHandler.IsPlayer} (isPlayerAttacker:{isPlayerAttacker}) Time:{Time.time:F4} Frame:{Time.frameCount}");
         TurnTimer.Reset(); // 턴 시작 시각 초기화        
         float turnDuration = CalculateTurnDuration(command); // 검술 기반 턴 지속 시간 계산
         CurrentTurnDuration = turnDuration; // 전역 접근 가능하도록 설정
@@ -337,6 +338,7 @@ public class CombatManager : MonoBehaviour
 
         CombatStatusDisplay.Instance.ShowCommandStart(isPlayerAttacker, command.commandName); // 3. 커맨드 시작 표시
         CombatStatusDisplay.Instance.ShowInputPrompt("입력 대기"); // 입력 프롬프트 표시
+        Debug.Log($"[InputTrace][Turn] PerformTurn Start - actor:{actor.Name}, defender:{defender.Name}, Time:{Time.time:F4}, Frame:{Time.frameCount}");
         
         // ❌ 제거: 턴 종료 플래그 초기화 (PerformTurn에서 직접 처리)
         // turnEndRequested = false;
@@ -572,17 +574,58 @@ public class CombatManager : MonoBehaviour
         }
           
         Debug.Log($"[{actor.Name}] 커맨드 실행 완료: {command.commandName}");  // 최종 결과 로그
+        Debug.Log($"[InputTrace][Turn] PerformTurn End - actor:{actor.Name}, Time:{Time.time:F4}, Frame:{Time.frameCount}");
         controller.ReceiveCommandResult(result);    // 커맨드 결과를 컨트롤러에 전달
+
+        // 1) 모든 히트에 대한 최종 적중 판정이 완료될 때까지 대기
+        yield return StartCoroutine(EnsureAllHitJudgmentsCompleted(command.hitCount));
+
+        // 2) 입력 비활성화 및 상태 초기화
         if(isPlayerAttacker)
-            attackerInputHandler.DisableInput(); // 플레이어 입력 핸들러 비활성화
+            attackerInputHandler.DisableInput();
         else
-            defenderInputHandler.DisableInput(); // 적 입력 핸들러 비활성화
+            defenderInputHandler.DisableInput();
 
         attackerInputHandler.ResetInputState();
         defenderInputHandler.ResetInputState();
-        
-        // 턴 종료 후 애니메이션 완료 대기
+
+        // 3) 턴 종료 버퍼 시간 대기
+        float turnEndBuffer = GlobalConfig.Instance.TurnEndBuffer;
+        if (turnEndBuffer > 0f)
+        {
+            Debug.Log($"[InputTrace][Turn] Waiting TurnEndBuffer - duration:{turnEndBuffer:F4}s, time:{Time.time:F4}");
+            yield return new WaitForSeconds(turnEndBuffer);
+        }
+
+        // 4) 애니메이션 완료 대기
         yield return StartCoroutine(WaitForAnimationsComplete(actor, defender));
+    }
+
+    private IEnumerator EnsureAllHitJudgmentsCompleted(int hitCount)
+    {
+        float waitStart = Time.time;
+        while (!AreAllHitJudgmentsCompleted(hitCount))
+        {
+            yield return null;
+        }
+        float waited = Time.time - waitStart;
+        Debug.Log($"[InputTrace][Turn] All hit judgments completed for {hitCount} hits (waited {waited:F4}s, time:{Time.time:F4}, frame:{Time.frameCount})");
+    }
+
+    private bool AreAllHitJudgmentsCompleted(int hitCount)
+    {
+        if (hitJudgmentCompleted == null)
+        {
+            return false;
+        }
+        for (int i = 0; i < hitCount; i++)
+        {
+            if (i >= hitJudgmentCompleted.Length || !hitJudgmentCompleted[i])
+            {
+                return false;
+            }
+        }
+        return true;
     }
     
     /// <summary>

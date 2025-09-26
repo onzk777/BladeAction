@@ -11,7 +11,7 @@ public static class TurnTimer
     public static void Reset()
     {
         turnStartTime = Time.time;
-        Debug.Log($"[TurnTimer] 턴 시작 시각 초기화: {turnStartTime:F5}");
+        Debug.Log($"[InputTrace][Turn] Reset - turnStart:{turnStartTime:F5}, frame:{Time.frameCount}");
     }
 
     /// <summary>
@@ -23,7 +23,7 @@ public static class TurnTimer
         {
             if (!isInitialized)
             {
-                Debug.LogWarning("[TurnTimer] 아직 Reset되지 않음 → ElapsedTime = 0");
+                Debug.LogWarning("[InputTrace][Turn] Reset되지 않음 → ElapsedTime = 0");
                 return 0f;
             }
             return Time.time - turnStartTime;
