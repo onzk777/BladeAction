@@ -33,6 +33,9 @@ public class Projectile : MonoBehaviour
     // 🆕 발사 시점의 히트 인덱스
     public int hitIndex = -1;
     
+    // 🆕 공격자의 완벽 입력 판정 정보
+    public bool attackerPerfectInput = false;
+    
     // 이벤트
     public event System.Action<Projectile> OnProjectileHit;
     public event System.Action<Projectile> OnProjectileCompleted;
@@ -70,11 +73,12 @@ public class Projectile : MonoBehaviour
         }
     }
     
-    public void Initialize(ActionCommandData command, int hit, bool fromPlayer)
+    public void Initialize(ActionCommandData command, int hit, bool fromPlayer, bool perfectInput = false)
     {
         sourceCommand = command;
         hitIndex = hit;
         isFromPlayer = fromPlayer; // 🆕 Controller 기반 식별
+        attackerPerfectInput = perfectInput; // 🆕 공격자 완벽 입력 판정 정보 저장
         
         // 🆕 발사체 크기 적용
         if (command.projectileScale != 1f)

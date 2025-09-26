@@ -553,17 +553,17 @@ public class CombatManager : MonoBehaviour
                     {
                         Debug.Log($"[PerformTurn] 모든 히트 완료! CurrentHit={CurrentHit}, hitCount={command.hitCount} - 마지막 히트 판정 확인");
                         
-                        // 🆕 마지막 히트의 판정이 발생했는지 확인
+                        // 🆕 마지막 히트의 판정이 발생했는지 확인 (발사체 기반)
                         if (hitJudgmentCompleted[CurrentHit - 1]) // 마지막 히트의 판정 완료 확인
                         {
-                            Debug.Log($"[PerformTurn] 마지막 히트 판정 완료 - 턴 종료 대기 시작");
+                            Debug.Log($"[PerformTurn] 마지막 히트 발사체 기반 판정 완료 - 턴 종료 대기 시작");
                             yield return new WaitForSeconds(GlobalConfig.Instance.TurnEndBuffer);
                             Debug.Log($"[PerformTurn] 턴 종료 대기 완료 - 턴 종료");
                             break; // 턴 종료
                         }
                         else
                         {
-                            Debug.Log($"[PerformTurn] 마지막 히트 판정 대기 중...");
+                            Debug.Log($"[PerformTurn] 마지막 히트 발사체 기반 판정 대기 중...");
                         }
                     }
                 }
@@ -845,6 +845,7 @@ public class CombatManager : MonoBehaviour
             
             // 🆕 발사체 기반에서는 즉시 판정하지 않고, 발사체 충돌 시에만 판정
             // ResolveInput 호출 제거 (발사체 충돌 시에만 판정 발생)
+            // 방어자 입력은 발사체 기반으로만 처리됨
         }
     }
 
@@ -1077,8 +1078,8 @@ public class CombatManager : MonoBehaviour
             defenderPos = playerController.transform.position;
         }
         
-        // 발사체 초기화
-        projectile.Initialize(command, CurrentHit, isPlayerAttacker);
+        // 발사체 초기화 (공격자 완벽 입력 판정 정보 포함)
+        projectile.Initialize(command, CurrentHit, isPlayerAttacker, isPerfect);
         
         // 🆕 발사체 초기 위치 설정
         projectile.transform.position = attackerPos;
@@ -1103,7 +1104,7 @@ public class CombatManager : MonoBehaviour
     }
     
     /// <summary>
-    /// 발사체 충돌 시 호출되는 메서드
+    /// 발사체 충돌 시 호출되는 메서드 (기존 방식 - 호환성 유지)
     /// </summary>
     public void OnProjectileHit(Projectile projectile)
     {
@@ -1138,6 +1139,50 @@ public class CombatManager : MonoBehaviour
         // 🆕 히트 판정 완료 상태 기록
         hitJudgmentCompleted[hitIdx] = true;
         Debug.Log($"[CombatManager] 🚨 히트 {hitIdx} 판정 완료 상태 설정됨");
+    }
+    
+    /// <summary>
+    /// 발사체 기반 최종 판정을 처리합니다
+    /// </summary>
+    /// <param name="projectile">충돌한 발사체</param>
+    /// <param name="defenderPerfectSuccess">방어자 완벽 입력 성공 여부</param>
+    public void TriggerProjectileBasedFinalJudgment(Projectile projectile, bool defenderPerfectSuccess)
+    {
+        Debug.Log($"[CombatManager] 🚨 발사체 기반 최종 판정 시작 - 히트 {projectile.hitIndex}, 공격자 완벽: {projectile.attackerPerfectInput}, 방어자 완벽: {defenderPerfectSuccess}");
+        
+        // 🆕 발사체의 히트 인덱스 사용
+        int hitIdx = projectile.hitIndex;
+        
+        // 🆕 히트 인덱스 범위 체크
+        if (hitIdx < 0 || hitIdx >= hitJudgmentCount.Length)
+        {
+            Debug.LogError($"[CombatManager] 🚨 히트 인덱스 범위 초과! hitIdx={hitIdx}, 배열 길이={hitJudgmentCount.Length} - 판정 무시");
+            return;
+        }
+        
+        // 🆕 중복 판정 방지: 이미 판정이 완료된 히트는 무시
+        if (hitJudgmentCompleted[hitIdx])
+        {
+            Debug.Log($"[CombatManager] 🚨 히트 {hitIdx} 이미 판정 완료됨 - 중복 판정 방지");
+            return;
+        }
+        
+        // 🆕 공격자와 방어자 입력 판정 설정
+        attackerPerfectInput = projectile.attackerPerfectInput;
+        defenderPerfectInput = defenderPerfectSuccess;
+        
+        // 🆕 입력 시간 설정 (현재 시간 사용)
+        attackerInputTime = Time.time;
+        defenderInputTime = Time.time;
+        
+        Debug.Log($"[CombatManager] 🚨 발사체 기반 판정 정보 설정 - 공격자: {attackerPerfectInput}, 방어자: {defenderPerfectInput}");
+        
+        // 🆕 최종 판정 실행
+        EvaluateClashResult();
+        
+        // 🆕 히트 판정 완료 상태 기록
+        hitJudgmentCompleted[hitIdx] = true;
+        Debug.Log($"[CombatManager] 🚨 히트 {hitIdx} 발사체 기반 판정 완료");
     }
     
     // ❌ 제거: WaitForTurnEnd 코루틴 (PerformTurn에서 직접 처리)

@@ -22,6 +22,7 @@ public class DefenderInputHandler : BaseInputHandler
     private bool isPerfectInputAvailable = false; // 🆕 완벽 입력 가능 상태
     private bool isHitTiming = false; // 🆕 피격 타이밍 상태
     private bool hasPerfectInputSucceeded = false; // 🆕 완벽 입력 성공 여부 추적
+    private Projectile currentProjectile = null; // 🆕 현재 처리 중인 발사체
     
     // ❌ 제거: 기존 타이밍 윈도우 복제 방식
     // public void LoadFromOpponentCommand(ActionCommandData opponentCommand)
@@ -38,7 +39,11 @@ public class DefenderInputHandler : BaseInputHandler
         isPerfectInputAvailable = true;
         isHitTiming = false;
         hasPerfectInputSucceeded = false; // 완벽 입력 성공 플래그 초기화
-        Debug.Log($"[DefenderInputHandler] 🚨 PerfectInputArea 진입 - 완벽 입력 가능 (상태 2)");
+        
+        // 🆕 현재 발사체 정보 저장 (최종 판정 시 사용)
+        currentProjectile = projectile;
+        
+        Debug.Log($"[DefenderInputHandler] 🚨 PerfectInputArea 진입 - 완벽 입력 가능 (상태 2), 발사체: {projectile.name}");
     }
     
     private void OnProjectileEnterHitZone(Projectile projectile)
@@ -48,16 +53,16 @@ public class DefenderInputHandler : BaseInputHandler
         isHitTiming = true;
         Debug.Log($"[DefenderInputHandler] 🚨 CharacterHitBox 진입 - 피격 판정 발생 (상태 3)");
         
-        // end 타이밍에서 완벽 입력 성공 여부에 따른 판정 처리
-        if (hasPerfectInputSucceeded)
+        // 🆕 CharacterHitBox 충돌 시 최종 판정 발생
+        // 방어자 완벽 입력이 실패했거나 입력하지 않은 경우에만 실행
+        if (!hasPerfectInputSucceeded)
         {
-            // 완벽 입력 성공 (이미 입력됨)
-            Debug.Log($"[DefenderInputHandler] end 타이밍 - 완벽 입력 성공 처리");
+            Debug.Log($"[DefenderInputHandler] 🚨 방어자 완벽 입력 실패/무입력 - CharacterHitBox 충돌 시 최종 판정 발생");
+            TriggerFinalJudgment(projectile, false);
         }
         else
         {
-            // 완벽 입력 실패 (입력 없음 또는 실패)
-            Debug.Log($"[DefenderInputHandler] end 타이밍 - 완벽 입력 실패 처리");
+            Debug.Log($"[DefenderInputHandler] 방어자 완벽 입력 성공으로 이미 최종 판정 완료됨");
         }
     }
     
@@ -151,6 +156,13 @@ public class DefenderInputHandler : BaseInputHandler
                 
                 // 🆕 발사체 기반 완벽 입력 성공 처리
                 RecordPerfectInput();
+                
+                // 🆕 방어자 완벽 입력 성공 시 즉시 최종 판정 발생
+                if (currentProjectile != null)
+                {
+                    Debug.Log($"[DefenderInputHandler] 🚨 방어자 완벽 입력 성공 - 즉시 최종 판정 발생");
+                    TriggerFinalJudgment(currentProjectile, true);
+                }
             }
             else if (!isPerfectInputAvailable && !isHitTiming)
             {
@@ -177,6 +189,19 @@ public class DefenderInputHandler : BaseInputHandler
         
         // 🆕 기존 OnInputReceivedFromHandler 메서드 활용
         CombatManager.Instance.OnInputReceivedFromHandler(this);
+    }
+    
+    /// <summary>
+    /// 발사체 기반 최종 판정을 발생시킵니다
+    /// </summary>
+    /// <param name="projectile">충돌한 발사체</param>
+    /// <param name="defenderPerfectSuccess">방어자 완벽 입력 성공 여부</param>
+    private void TriggerFinalJudgment(Projectile projectile, bool defenderPerfectSuccess)
+    {
+        Debug.Log($"[DefenderInputHandler] 🚨 최종 판정 발생 - 발사체: {projectile.name}, 공격자 완벽: {projectile.attackerPerfectInput}, 방어자 완벽: {defenderPerfectSuccess}");
+        
+        // 🆕 CombatManager에 발사체 기반 최종 판정 요청
+        CombatManager.Instance.TriggerProjectileBasedFinalJudgment(projectile, defenderPerfectSuccess);
     }
     
     /// <summary>
@@ -313,6 +338,7 @@ public class DefenderInputHandler : BaseInputHandler
         isPerfectInputAvailable = false;
         isHitTiming = false;
         hasPerfectInputSucceeded = false;
+        currentProjectile = null; // 🆕 현재 발사체 초기화
         
         Debug.Log("[DefenderInputHandler] ResetDefenseState 호출됨");
     }
