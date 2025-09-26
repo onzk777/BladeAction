@@ -19,6 +19,7 @@ public class DefenderInputHandler : BaseInputHandler
     
     [Header("발사체 기반 입력 시스템")]
     private CharacterHitSystem characterHitSystem; // 🆕 CharacterHitSystem 참조 (자동 참조)
+    public CharacterHitSystem CharacterHitSystem => characterHitSystem;
     private bool isPerfectInputAvailable = false; // 🆕 완벽 입력 가능 상태
     private bool isHitTiming = false; // 🆕 피격 타이밍 상태
     private bool hasPerfectInputSucceeded = false; // 🆕 완벽 입력 성공 여부 추적

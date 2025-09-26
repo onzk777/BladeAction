@@ -2,6 +2,25 @@ using UnityEngine;
 
 public class CharacterHitSystem : MonoBehaviour
 {
+    private readonly System.Collections.Generic.HashSet<Projectile> trackedProjectiles = new System.Collections.Generic.HashSet<Projectile>();
+    public void RegisterProjectile(Projectile projectile)
+    {
+        if (projectile == null) return;
+        if (trackedProjectiles.Contains(projectile)) return;
+        trackedProjectiles.Add(projectile);
+        projectile.OnProjectileEnterPerfectZone += HandleProjectileEnterPerfectZone;
+        projectile.OnProjectileEnterHitZone += HandleProjectileEnterHitZone;
+        projectile.OnProjectileHit += HandleProjectileHit;
+    }
+
+    public void UnregisterProjectile(Projectile projectile)
+    {
+        if (projectile == null) return;
+        if (!trackedProjectiles.Remove(projectile)) return;
+        projectile.OnProjectileEnterPerfectZone -= HandleProjectileEnterPerfectZone;
+        projectile.OnProjectileEnterHitZone -= HandleProjectileEnterHitZone;
+        projectile.OnProjectileHit -= HandleProjectileHit;
+    }
     [Header("Collider 설정")]
     [SerializeField] private Collider2D perfectInputArea;  // 완벽 입력 가능 구간
     [SerializeField] private Collider2D characterHitBox;   // 실제 피격 판정 구간

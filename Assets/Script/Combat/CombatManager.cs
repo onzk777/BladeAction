@@ -17,6 +17,10 @@ public class CombatManager : MonoBehaviour
     // UI에서 접근할 수 있도록 public 프로퍼티 추가
     public PlayerController PlayerController => playerController;
     public EnemyController EnemyController => enemyController;
+    public CharacterHitSystem GetCharacterHitSystemForDefender()
+    {
+        return defenderInputHandler != null ? defenderInputHandler.CharacterHitSystem : null;
+    }
     
     [SerializeField] private AttackerInputHandler attackerInputHandler; // 공격자 타이밍 입력 핸들러
     [SerializeField] private DefenderInputHandler defenderInputHandler; // 방어자 타이밍 입력 핸들러
@@ -1103,6 +1107,7 @@ public class CombatManager : MonoBehaviour
         }
         
         Projectile projectile = ProjectileManager.Instance.GetProjectile(projectilePrefab);
+        projectile.Initialize(command, CurrentHit, isPlayerAttacker, isPerfect, this);
         
         // ❌ 제거: 중복된 hitIndex 설정 (Initialize에서 이미 설정됨)
         // projectile.hitIndex = CurrentHit;
@@ -1120,9 +1125,6 @@ public class CombatManager : MonoBehaviour
             attackerPos = enemyController.transform.position;
             defenderPos = playerController.transform.position;
         }
-        
-        // 발사체 초기화 (공격자 완벽 입력 판정 정보 포함)
-        projectile.Initialize(command, CurrentHit, isPlayerAttacker, isPerfect);
         
         // 🆕 발사체 초기 위치 설정
         projectile.transform.position = attackerPos;

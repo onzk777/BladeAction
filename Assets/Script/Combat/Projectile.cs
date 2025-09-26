@@ -42,6 +42,9 @@ public class Projectile : MonoBehaviour
     public event System.Action<Projectile> OnProjectileEnterPerfectZone;
     public event System.Action<Projectile> OnProjectileEnterHitZone;
     
+    private CharacterHitSystem ownerHitSystem;
+    private CombatManager ownerCombatManager;
+    
     private void Update()
     {
         // 🆕 발사체 상태 로그 (디버깅용)
@@ -90,6 +93,21 @@ public class Projectile : MonoBehaviour
         isLaunched = false;
         isCompleted = false;
         currentLifetime = 0f;
+    }
+
+    public void Initialize(ActionCommandData command, int hit, bool fromPlayer, bool perfectInput, CombatManager combatManager)
+    {
+        Initialize(command, hit, fromPlayer, perfectInput);
+        ownerCombatManager = combatManager;
+        ownerHitSystem = combatManager != null ? combatManager.GetCharacterHitSystemForDefender() : null;
+        if (ownerHitSystem != null)
+        {
+            ownerHitSystem.RegisterProjectile(this);
+        }
+        else
+        {
+            Debug.LogWarning($"[Projectile] CharacterHitSystem을 찾을 수 없습니다. projectile:{name}");
+        }
     }
     
     public void Launch(Vector3 direction, float speed)
@@ -186,6 +204,13 @@ public class Projectile : MonoBehaviour
         // ❌ 제거: OnProjectileCompleted 호출 (발사체 소멸 후 이벤트 발생으로 인한 문제 방지)
         // OnProjectileCompleted?.Invoke(this);
         Destroy(gameObject);
+    }
+    
+    private void OnDestroy()
+    {
+        ownerHitSystem?.UnregisterProjectile(this);
+        ownerHitSystem = null;
+        ownerCombatManager = null;
     }
     
     // 디버깅 메서드들 제거됨
