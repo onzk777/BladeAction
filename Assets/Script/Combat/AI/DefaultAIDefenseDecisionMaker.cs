@@ -24,7 +24,7 @@ public class DefaultAIDefenseDecisionMaker : IAIDefenseDecisionMaker
         }
         
         // 🆕 AI 설정 값 결정 (커스텀 설정 또는 GlobalConfig)
-        float aiDefenseSuccessRate = useCustomSettings ? customDefenseSuccessRate : GlobalConfig.Instance.NpcDefensePerfectRate;
+        float aiDefenseSuccessRate = useCustomSettings ? customDefenseSuccessRate : GlobalConfig.Instance.NpcParryPerfectRate;
         bool canParryWhileGuarding = GlobalConfig.Instance.NpcParryWhileGuarding;
         
         if (debugMode)

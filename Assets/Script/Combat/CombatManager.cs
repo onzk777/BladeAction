@@ -437,8 +437,8 @@ public class CombatManager : MonoBehaviour
                 float perfectWindowEnd = perfectWindow.start + perfectWindow.duration;
                 float inputAvailableEnd = GetInputDeadline();
                 float aiInputTime = perfectWindowStart + perfectWindow.duration * globalConfig.NpcInputDifficulty; // AI 방어 시도 시간 (예시: 윈도우 시작 70% 지점)
-                bool aiAttackSuccess = Random.value < globalConfig.NpcActionPerfectRate; // AI 공격 성공 여부
-                bool aiDefenseSuccess = Random.value < GlobalConfig.Instance.NpcDefensePerfectRate; // AI 방어 성공 여부
+                bool aiAttackSuccess = Random.value < globalConfig.NpcAttackPerfectRate; // AI 공격 성공 여부
+                bool aiDefenseSuccess = Random.value < GlobalConfig.Instance.NpcParryPerfectRate; // AI 방어 성공 여부
                 
 
                 Debug.Log($"[UI표시:지금이닷!] 히트 {CurrentHit + 1}, elapsed={elapsed:F5}, 타이밍창=({perfectWindow.start:F5} ~ {perfectWindow.End:F5})");

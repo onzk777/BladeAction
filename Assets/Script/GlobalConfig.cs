@@ -49,9 +49,9 @@ public class GlobalConfig : ScriptableObject
     [Header("AI Settings")]
     [Tooltip("AI가 완벽 입력 타이밍을 성공할 확률(0~1)")]
     [Range(0f, 1f)]
-    [SerializeField] private float npcActionPerfectRate = 0.5f;
+    [SerializeField] private float npcAttackPerfectRate = 0.5f;
     [Range(0f, 1f)]
-    [SerializeField] private float npcDefensePerfectRate = 0.5f;
+    [SerializeField] private float npcParryPerfectRate = 0.5f;
     [Range(0f, 1f)]
     [Tooltip("AI의 완벽 입력 시점. 숫자가 클 수록 늦음.")]
     [SerializeField] private float npcInputDifficulty = 0.5f;
@@ -60,8 +60,8 @@ public class GlobalConfig : ScriptableObject
     [SerializeField] private float npcGuardAttemptRate = 0.3f;
     [Tooltip("AI가 막기 중에도 쳐내기를 시도할지 여부")]
     [SerializeField] private bool npcParryWhileGuarding = true;
-    public float NpcActionPerfectRate => npcActionPerfectRate;
-    public float NpcDefensePerfectRate => npcDefensePerfectRate;
+    public float NpcAttackPerfectRate => npcAttackPerfectRate;
+    public float NpcParryPerfectRate => npcParryPerfectRate;
     public float NpcInputDifficulty => npcInputDifficulty;
     public float NpcGuardAttemptRate => npcGuardAttemptRate;
     public bool NpcParryWhileGuarding => npcParryWhileGuarding;

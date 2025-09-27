@@ -43,7 +43,7 @@ public struct AIDefenseDecision
 /// AI 의사결정에 필요한 컨텍스트 정보
 /// </summary>
 [System.Serializable]
-public struct AIContext
+public struct AIContext 
 {
     public int hitIndex;                    // 현재 히트 인덱스
     public float turnElapsedTime;           // 턴 경과 시간

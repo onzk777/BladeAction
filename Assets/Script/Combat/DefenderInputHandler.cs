@@ -14,8 +14,8 @@ public class DefenderInputHandler : BaseInputHandler
     private float guardHoldStartTime = 0f; // 막기 홀드 시작 시간
     private bool isGuardInputHeld = false; // 막기 입력이 홀드되고 있는지 여부
     
-    // 막기 상태 프로퍼티
-    public bool IsGuardActive => isGuardActive;
+    // 막기 상태 프로퍼티 (플레이어 + AI 통합)
+    public bool IsGuardActive => isGuardActive || aiIsGuarding;
     
     // 🆕 AI 막기 상태 프로퍼티 (분리)
     public bool IsAIGuardActive => aiIsGuarding;
@@ -875,7 +875,7 @@ public class DefenderInputHandler : BaseInputHandler
     private AIDefenseDecision MakeAIDefenseDecision(Projectile projectile)
     {
         // 🆕 임시 구현 - AI 의사결정 시스템이 완전히 통합되면 제거
-        float aiDefenseSuccessRate = GlobalConfig.Instance.NpcDefensePerfectRate;
+        float aiDefenseSuccessRate = GlobalConfig.Instance.NpcParryPerfectRate;
         
         bool willAttempt = true;
         bool willSucceed = Random.value < aiDefenseSuccessRate;
