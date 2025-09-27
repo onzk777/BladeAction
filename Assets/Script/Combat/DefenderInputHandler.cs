@@ -29,6 +29,12 @@ public class DefenderInputHandler : BaseInputHandler
     private float perfectZoneEnterTime = -1f; // 🆕 PerfectZone 진입 시각
     private float hitZoneEnterTime = -1f; // 🆕 HitZone 진입 시각
     
+    // 🆕 연타 공격 대응: Hit Index별 발사체 추적
+    private Dictionary<int, Projectile> projectilesByHitIndex = new Dictionary<int, Projectile>();
+    private Dictionary<int, bool> perfectInputSucceededByHitIndex = new Dictionary<int, bool>();
+    private Dictionary<int, bool> projectileInPerfectZoneByHitIndex = new Dictionary<int, bool>();
+    private Dictionary<int, bool> projectileInHitZoneByHitIndex = new Dictionary<int, bool>();
+    
     // ❌ 제거: 기존 타이밍 윈도우 복제 방식
     // public void LoadFromOpponentCommand(ActionCommandData opponentCommand)
     // {
@@ -40,57 +46,99 @@ public class DefenderInputHandler : BaseInputHandler
     // 🆕 발사체 기반 입력 처리 메서드들
     private void OnProjectileEnterPerfectZone(Projectile projectile)
     {
-        // 상태 2: PerfectInputArea 진입 (start 타이밍)
+        int hitIndex = projectile.hitIndex;
+        
+        // 🆕 Hit Index별 발사체 추적
+        projectilesByHitIndex[hitIndex] = projectile;
+        perfectInputSucceededByHitIndex[hitIndex] = false; // 완벽 입력 성공 플래그 초기화
+        projectileInPerfectZoneByHitIndex[hitIndex] = true;
+        projectileInHitZoneByHitIndex[hitIndex] = false;
+        
+        // 🆕 현재 발사체 정보 저장 (최종 판정 시 사용) - 가장 최근 발사체
+        currentProjectile = projectile;
+        
+        // 🆕 전역 상태 업데이트 (기존 호환성 유지)
         isPerfectInputAvailable = true;
         isHitTiming = false;
-        hasPerfectInputSucceeded = false; // 완벽 입력 성공 플래그 초기화
+        hasPerfectInputSucceeded = false;
         isProjectileInPerfectZone = true;
         isProjectileInHitZone = false;
         perfectZoneEnterTime = Time.time;
         hitZoneEnterTime = -1f;
         
-        // 🆕 현재 발사체 정보 저장 (최종 판정 시 사용)
-        currentProjectile = projectile;
-        
-        Debug.Log($"[InputTrace][Defender] Projectile Enter PerfectZone - hitIndex:{projectile.hitIndex}, projectile:{projectile.name}, time:{perfectZoneEnterTime:F4}");
+        Debug.Log($"[InputTrace][Defender] 🆕 Projectile Enter PerfectZone - hitIndex:{hitIndex}, projectile:{projectile.name}, time:{perfectZoneEnterTime:F4}");
+        Debug.Log($"[InputTrace][Defender] 🆕 현재 추적 중인 발사체 수: {projectilesByHitIndex.Count}");
     }
     
     private void OnProjectileEnterHitZone(Projectile projectile)
     {
-        // 상태 3: CharacterHitBox 진입 (end 타이밍)
+        int hitIndex = projectile.hitIndex;
+        
+        // 🆕 Hit Index별 상태 업데이트
+        projectileInPerfectZoneByHitIndex[hitIndex] = false;
+        projectileInHitZoneByHitIndex[hitIndex] = true;
+        
+        // 🆕 전역 상태 업데이트 (기존 호환성 유지)
         isPerfectInputAvailable = false;
         isHitTiming = true;
         isProjectileInPerfectZone = false;
         isProjectileInHitZone = true;
         hitZoneEnterTime = Time.time;
-        Debug.Log($"[InputTrace][Defender] Projectile Enter HitZone - hitIndex:{projectile.hitIndex}, projectile:{projectile.name}, time:{hitZoneEnterTime:F4}");
+        
+        Debug.Log($"[InputTrace][Defender] 🆕 Projectile Enter HitZone - hitIndex:{hitIndex}, projectile:{projectile.name}, time:{hitZoneEnterTime:F4}");
         
         // 🆕 CharacterHitBox 충돌 시 최종 판정 발생
         // 방어자 완벽 입력이 실패했거나 입력하지 않은 경우에만 실행
-        if (!hasPerfectInputSucceeded)
+        bool hitIndexPerfectSucceeded = perfectInputSucceededByHitIndex.ContainsKey(hitIndex) && perfectInputSucceededByHitIndex[hitIndex];
+        
+        if (!hitIndexPerfectSucceeded)
         {
-            Debug.Log($"[InputTrace][Defender] 방어자 완벽 입력 실패/무입력 - CharacterHitBox 충돌 시 최종 판정 발생");
+            Debug.Log($"[InputTrace][Defender] 🆕 방어자 완벽 입력 실패/무입력 - CharacterHitBox 충돌 시 최종 판정 발생 (hitIndex:{hitIndex})");
             TriggerFinalJudgment(projectile, false);
         }
         else
         {
-            Debug.Log($"[InputTrace][Defender] 방어자 완벽 입력 성공으로 이미 최종 판정 완료됨");
+            Debug.Log($"[InputTrace][Defender] 🆕 방어자 완벽 입력 성공으로 이미 최종 판정 완료됨 (hitIndex:{hitIndex})");
         }
     }
     
     private void OnProjectileExitZones(Projectile projectile)
     {
-        // 상태 1: 충돌 없음
-        isPerfectInputAvailable = false;
-        isHitTiming = false;
-        hasPerfectInputSucceeded = false; // 완벽 입력 성공 플래그 초기화
-        isProjectileInPerfectZone = false;
-        isProjectileInHitZone = false;
+        int hitIndex = projectile.hitIndex;
+        
+        // 🆕 Hit Index별 상태 정리
+        if (projectilesByHitIndex.ContainsKey(hitIndex))
+        {
+            projectilesByHitIndex.Remove(hitIndex);
+        }
+        if (perfectInputSucceededByHitIndex.ContainsKey(hitIndex))
+        {
+            perfectInputSucceededByHitIndex.Remove(hitIndex);
+        }
+        if (projectileInPerfectZoneByHitIndex.ContainsKey(hitIndex))
+        {
+            projectileInPerfectZoneByHitIndex.Remove(hitIndex);
+        }
+        if (projectileInHitZoneByHitIndex.ContainsKey(hitIndex))
+        {
+            projectileInHitZoneByHitIndex.Remove(hitIndex);
+        }
+        
+        // 🆕 현재 발사체가 나간 경우 정리
         if (currentProjectile == projectile)
         {
             currentProjectile = null;
         }
-        Debug.Log($"[InputTrace][Defender] Projectile Exit Zones - hitIndex:{projectile.hitIndex}, projectile:{projectile.name}, time:{Time.time:F4}");
+        
+        // 🆕 전역 상태 업데이트 (기존 호환성 유지)
+        isPerfectInputAvailable = false;
+        isHitTiming = false;
+        hasPerfectInputSucceeded = false;
+        isProjectileInPerfectZone = false;
+        isProjectileInHitZone = false;
+        
+        Debug.Log($"[InputTrace][Defender] 🆕 Projectile Exit Zones - hitIndex:{hitIndex}, projectile:{projectile.name}, time:{Time.time:F4}");
+        Debug.Log($"[InputTrace][Defender] 🆕 현재 추적 중인 발사체 수: {projectilesByHitIndex.Count}");
     }
     
     // 🆕 CharacterHitSystem 이벤트 구독
@@ -145,14 +193,34 @@ public class DefenderInputHandler : BaseInputHandler
     // 🆕 발사체 기반 HasPerfectInput 재정의
     public override bool HasPerfectInput()
     {
-        // 발사체 기반 판정
+        // 🆕 연타 공격 대응: 모든 Hit Index 중 하나라도 완벽 입력 성공하면 true
+        foreach (var kvp in perfectInputSucceededByHitIndex)
+        {
+            if (kvp.Value)
+            {
+                Debug.Log($"[InputTrace][Defender] 🆕 HasPerfectInput - hitIndex:{kvp.Key}에서 완벽 입력 성공");
+                return true;
+            }
+        }
+        
+        // 기존 호환성 유지
         return hasPerfectInputSucceeded;
     }
     
     // 🆕 기존 타이밍 윈도우 로직 완전 차단
     public override bool HasPerfectInput(PerfectTimingWindow timing)
     {
-        // 발사체 기반 판정만 사용 (기존 타이밍 윈도우 로직 무시)
+        // 🆕 연타 공격 대응: 모든 Hit Index 중 하나라도 완벽 입력 성공하면 true
+        foreach (var kvp in perfectInputSucceededByHitIndex)
+        {
+            if (kvp.Value)
+            {
+                Debug.Log($"[InputTrace][Defender] 🆕 HasPerfectInput(timing) - hitIndex:{kvp.Key}에서 완벽 입력 성공");
+                return true;
+            }
+        }
+        
+        // 기존 호환성 유지
         return hasPerfectInputSucceeded;
     }
 
@@ -180,24 +248,56 @@ public class DefenderInputHandler : BaseInputHandler
             return;
         }
 
-        bool success = EvaluatePerfectInputWindow();
-        hasPerfectInputSucceeded = success;
-
-        if (success)
+        // 🆕 연타 공격 대응: 모든 PerfectZone 내 발사체에 대해 입력 평가
+        bool anySuccess = false;
+        Projectile successfulProjectile = null;
+        
+        foreach (var kvp in projectileInPerfectZoneByHitIndex)
         {
-            Debug.Log("[InputTrace][Defender] PerfectInput 성공 판정");
+            int hitIndex = kvp.Key;
+            bool inPerfectZone = kvp.Value;
+            
+            if (inPerfectZone && projectilesByHitIndex.ContainsKey(hitIndex))
+            {
+                Projectile projectile = projectilesByHitIndex[hitIndex];
+                bool success = EvaluatePerfectInputWindowForProjectile(projectile);
+                
+                if (success)
+                {
+                    Debug.Log($"[InputTrace][Defender] 🆕 PerfectInput 성공 판정 - hitIndex:{hitIndex}");
+                    perfectInputSucceededByHitIndex[hitIndex] = true;
+                    anySuccess = true;
+                    successfulProjectile = projectile;
+                    break; // 첫 번째 성공한 발사체만 처리
+                }
+            }
+        }
+        
+        // 🆕 기존 호환성 유지
+        hasPerfectInputSucceeded = anySuccess;
+
+        if (anySuccess)
+        {
+            Debug.Log("[InputTrace][Defender] 🆕 PerfectInput 성공 판정 (연타 대응)");
         }
         else
         {
-            Debug.Log("[InputTrace][Defender] PerfectInput 실패 판정 (히트 또는 윈도우 외 입력)");
+            Debug.Log("[InputTrace][Defender] 🆕 PerfectInput 실패 판정 (히트 또는 윈도우 외 입력)");
         }
 
         RecordPerfectInput();
 
-        if (success && currentProjectile != null)
+        if (anySuccess && successfulProjectile != null)
         {
-            Debug.Log("[InputTrace][Defender] PerfectInput 성공 → 즉시 최종 판정 트리거");
-            TriggerFinalJudgment(currentProjectile, true);
+            Debug.Log($"[InputTrace][Defender] 🆕 PerfectInput 성공 → 즉시 최종 판정 트리거 (hitIndex:{successfulProjectile.hitIndex})");
+            TriggerFinalJudgment(successfulProjectile, true);
+            
+            // 🆕 해당 Hit Index의 상태 업데이트
+            int hitIndex = successfulProjectile.hitIndex;
+            projectileInPerfectZoneByHitIndex[hitIndex] = false;
+            projectileInHitZoneByHitIndex[hitIndex] = true;
+            
+            // 🆕 전역 상태 업데이트 (기존 호환성 유지)
             isProjectileInPerfectZone = false;
             isProjectileInHitZone = true;
         }
@@ -228,6 +328,35 @@ public class DefenderInputHandler : BaseInputHandler
             return false;
         }
 
+        return true;
+    }
+    
+    /// <summary>
+    /// 🆕 특정 발사체에 대해 완벽 입력 가능 여부를 평가합니다 (연타 공격 대응)
+    /// </summary>
+    private bool EvaluatePerfectInputWindowForProjectile(Projectile projectile)
+    {
+        if (projectile == null)
+        {
+            Debug.Log($"[InputTrace][Defender] 🆕 평가 실패 - projectile null");
+            return false;
+        }
+
+        int hitIndex = projectile.hitIndex;
+        
+        if (!projectileInPerfectZoneByHitIndex.ContainsKey(hitIndex) || !projectileInPerfectZoneByHitIndex[hitIndex])
+        {
+            Debug.Log($"[InputTrace][Defender] 🆕 평가 실패 - hitIndex:{hitIndex} PerfectZone 내에 있지 않음");
+            return false;
+        }
+
+        if (projectileInHitZoneByHitIndex.ContainsKey(hitIndex) && projectileInHitZoneByHitIndex[hitIndex])
+        {
+            Debug.Log($"[InputTrace][Defender] 🆕 평가 실패 - hitIndex:{hitIndex} 이미 HitZone 진입");
+            return false;
+        }
+
+        Debug.Log($"[InputTrace][Defender] 🆕 평가 성공 - hitIndex:{hitIndex} PerfectZone 내에서 입력 가능");
         return true;
     }
     
@@ -397,7 +526,13 @@ public class DefenderInputHandler : BaseInputHandler
         hasPerfectInputSucceeded = false;
         currentProjectile = null; // 🆕 현재 발사체 초기화
         
-        Debug.Log("[DefenderInputHandler] ResetDefenseState 호출됨");
+        // 🆕 연타 공격 대응: Hit Index별 상태 초기화
+        projectilesByHitIndex.Clear();
+        perfectInputSucceededByHitIndex.Clear();
+        projectileInPerfectZoneByHitIndex.Clear();
+        projectileInHitZoneByHitIndex.Clear();
+        
+        Debug.Log("[DefenderInputHandler] 🆕 ResetDefenseState 호출됨 - 연타 공격 상태 초기화");
     }
     
     /// <summary>
