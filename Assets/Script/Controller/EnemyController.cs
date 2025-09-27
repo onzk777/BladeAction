@@ -310,7 +310,7 @@ public class EnemyController : MonoBehaviour, ICombatController
     /// </summary>
     public void OnPlayDefence()
     {
-        Debug.Log("[EnemyController] AI 방어 애니메이션");
+        Debug.Log("[EnemyController] 🆕 OnPlayDefence 호출됨");
         
         // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
         if (combatAnimationObject == null)
@@ -326,8 +326,16 @@ public class EnemyController : MonoBehaviour, ICombatController
             return;
         }
         
+        // 🆕 현재 isGuarding 상태 확인
+        bool currentIsGuarding = animator.GetBool("isGuarding");
+        Debug.Log($"[EnemyController] 🆕 현재 isGuarding 상태: {currentIsGuarding}");
+        
         // 🆕 Bool 파라미터로 막기 상태 지속 (Trigger 대신)
         animator.SetBool("isGuarding", true);
+        
+        // 🆕 설정 후 상태 확인
+        bool newIsGuarding = animator.GetBool("isGuarding");
+        Debug.Log($"[EnemyController] 🆕 isGuarding 설정 후 상태: {newIsGuarding}");
         Debug.Log("[EnemyController] 🆕 막기 애니메이션 지속 시작 (Bool 파라미터)");
     }
     
@@ -336,7 +344,7 @@ public class EnemyController : MonoBehaviour, ICombatController
     /// </summary>
     public void OnStopDefence()
     {
-        Debug.Log("[EnemyController] 🆕 AI 막기 애니메이션 중단");
+        Debug.Log("[EnemyController] 🆕 OnStopDefence 호출됨");
         
         // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
         if (combatAnimationObject == null)
@@ -352,8 +360,16 @@ public class EnemyController : MonoBehaviour, ICombatController
             return;
         }
         
+        // 🆕 현재 isGuarding 상태 확인
+        bool currentIsGuarding = animator.GetBool("isGuarding");
+        Debug.Log($"[EnemyController] 🆕 현재 isGuarding 상태: {currentIsGuarding}");
+        
         // 🆕 Bool 파라미터로 막기 상태 해제
         animator.SetBool("isGuarding", false);
+        
+        // 🆕 설정 후 상태 확인
+        bool newIsGuarding = animator.GetBool("isGuarding");
+        Debug.Log($"[EnemyController] 🆕 isGuarding 설정 후 상태: {newIsGuarding}");
         Debug.Log("[EnemyController] 🆕 막기 애니메이션 중단 (Bool 파라미터)");
     }
 }

@@ -17,6 +17,9 @@ public class DefenderInputHandler : BaseInputHandler
     // 막기 상태 프로퍼티
     public bool IsGuardActive => isGuardActive;
     
+    // 🆕 AI 막기 상태 프로퍼티 (분리)
+    public bool IsAIGuardActive => aiIsGuarding;
+    
     [Header("발사체 기반 입력 시스템")]
     private CharacterHitSystem characterHitSystem; // 🆕 CharacterHitSystem 참조 (자동 참조)
     public CharacterHitSystem CharacterHitSystem => characterHitSystem;
@@ -41,6 +44,11 @@ public class DefenderInputHandler : BaseInputHandler
     
     // 🆕 AI 의사결정 시스템
     private IAIDefenseDecisionMaker aiDefenseDecisionMaker;
+    
+    // 🆕 AI 막기 시스템
+    private bool aiWillGuard = false; // AI가 막기를 시도할지 여부
+    private bool aiIsGuarding = false; // AI가 현재 막기 중인지 여부
+    private Coroutine aiGuardCoroutine = null; // AI 막기 코루틴
     
     // ❌ 제거: 기존 타이밍 윈도우 복제 방식
     // public void LoadFromOpponentCommand(ActionCommandData opponentCommand)
@@ -291,8 +299,8 @@ public class DefenderInputHandler : BaseInputHandler
             {
                 Projectile projectile = projectilesByHitIndex[hitIndex];
                 bool success = EvaluatePerfectInputWindowForProjectile(projectile);
-                
-                if (success)
+
+        if (success)
                 {
                     Debug.Log($"[InputTrace][Defender] 🆕 PerfectInput 성공 판정 - hitIndex:{hitIndex}");
                     perfectInputSucceededByHitIndex[hitIndex] = true;
@@ -486,10 +494,27 @@ public class DefenderInputHandler : BaseInputHandler
     
     public override void EnableInput()
     {
+        Debug.Log($"[DefenderInputHandler] 🆕 EnableInput 호출됨 - IsPlayer:{IsPlayer}");
+        
         base.EnableInput();
-        // 막기 상태 초기화
-        ResetGuardState();
+        // 턴 상태 초기화
+        ResetTurnState();
         ResetDefenseState();
+        
+        // 🆕 AI 의사결정 시스템 초기화
+        InitializeAIDecisionSystem();
+        
+        // 🆕 AI 막기 의사결정 수행
+        if (!IsPlayer)
+        {
+            Debug.Log("[DefenderInputHandler] 🆕 AI 방어자이므로 막기 의사결정 시작");
+            StartAIGuardDecision();
+        }
+        else
+        {
+            Debug.Log("[DefenderInputHandler] 🆕 플레이어 방어자이므로 AI 막기 의사결정 건너뜀");
+        }
+        
 #if UNITY_EDITOR
         Debug.Log("[DefenseInputHandler] EnableInput() 호출됨");
 #endif
@@ -497,9 +522,14 @@ public class DefenderInputHandler : BaseInputHandler
     
     public override void DisableInput()
     {
+        Debug.Log($"[DefenderInputHandler] 🆕 DisableInput 호출됨 - IsPlayer:{IsPlayer}, aiIsGuarding:{aiIsGuarding}");
+        
         base.DisableInput();
-        // 막기 상태 초기화
-        ResetGuardState();
+        
+        // 🆕 입력 해제 시 지속되고 있던 모든 상태 해제
+        ResetTurnState();
+        
+        Debug.Log("[DefenderInputHandler] 🆕 DisableInput 완료 - 모든 지속 상태 해제됨");
     }
     
     protected override void RegisterInputCallbacks()
@@ -529,10 +559,11 @@ public class DefenderInputHandler : BaseInputHandler
     }
     
     /// <summary>
-    /// 막기 상태를 초기화합니다
+    /// 턴 진행에 따라 초기화해야 하는 모든 상태를 초기화합니다
     /// </summary>
-    public void ResetGuardState()
+    public void ResetTurnState()
     {
+        // 1. 플레이어 막기 상태 해제
         if (isGuardActive)
         {
             StopGuardAnimation();
@@ -540,7 +571,23 @@ public class DefenderInputHandler : BaseInputHandler
         isGuardActive = false;
         isGuardInputHeld = false;
         guardHoldStartTime = 0f;
-        Debug.Log("[DefenderInputHandler] 막기 상태 초기화");
+        
+        // 2. AI 막기 상태 해제
+        if (aiIsGuarding)
+        {
+            StopGuardAnimation();
+        }
+        aiIsGuarding = false;
+        aiWillGuard = false;
+        
+        // 3. AI 막기 코루틴 정리
+        if (aiGuardCoroutine != null)
+        {
+            StopCoroutine(aiGuardCoroutine);
+            aiGuardCoroutine = null;
+        }
+        
+        Debug.Log("[DefenderInputHandler] 턴 상태 초기화 완료 (플레이어 + AI)");
     }
     
     /// <summary>
@@ -548,7 +595,7 @@ public class DefenderInputHandler : BaseInputHandler
     /// </summary>
     public void ResetDefenseState()
     {
-        ResetGuardState();
+        ResetTurnState();
         
         // 🆕 발사체 기반 상태 초기화
         isPerfectInputAvailable = false;
@@ -613,17 +660,43 @@ public class DefenderInputHandler : BaseInputHandler
     /// </summary>
     private void PlayGuardAnimation()
     {
-        if (CombatManager.Instance != null)
+        if (CombatManager.Instance == null)
         {
+            Debug.LogError("[DefenderInputHandler] CombatManager.Instance가 null입니다!");
+            return;
+        }
+        
+        // 🆕 Animator 소유권 검증 강화
+        if (!ValidateAnimatorOwnership())
+        {
+            Debug.LogError("[DefenderInputHandler] Animator 소유권 검증 실패 - 막기 애니메이션 재생 중단");
+            return;
+        }
+        
             if (IsPlayer)
             {
                 var playerController = CombatManager.Instance.GetPlayerController();
-                playerController?.OnPlayDefence();
+            if (playerController != null)
+            {
+                playerController.OnPlayDefence();
+                Debug.Log("[DefenderInputHandler] 플레이어 막기 애니메이션 재생");
+            }
+            else
+            {
+                Debug.LogError("[DefenderInputHandler] PlayerController가 null입니다!");
+            }
             }
             else
             {
                 var enemyController = CombatManager.Instance.GetEnemyController();
-                enemyController?.OnPlayDefence();
+            if (enemyController != null)
+            {
+                enemyController.OnPlayDefence();
+                Debug.Log("[DefenderInputHandler] 적 막기 애니메이션 재생");
+            }
+            else
+            {
+                Debug.LogError("[DefenderInputHandler] EnemyController가 null입니다!");
             }
         }
     }
@@ -633,17 +706,46 @@ public class DefenderInputHandler : BaseInputHandler
     /// </summary>
     private void StopGuardAnimation()
     {
-        if (CombatManager.Instance != null)
+        Debug.Log($"[DefenderInputHandler] 🆕 StopGuardAnimation 호출됨 - IsPlayer:{IsPlayer}");
+        
+        if (CombatManager.Instance == null)
         {
+            Debug.LogError("[DefenderInputHandler] CombatManager.Instance가 null입니다!");
+            return;
+        }
+        
+        // 🆕 Animator 소유권 검증 강화
+        if (!ValidateAnimatorOwnership())
+        {
+            Debug.LogError("[DefenderInputHandler] Animator 소유권 검증 실패 - 막기 애니메이션 중단 중단");
+            return;
+        }
+        
             if (IsPlayer)
             {
                 var playerController = CombatManager.Instance.GetPlayerController();
-                playerController?.OnStopDefence(); // 🆕 막기 애니메이션 중단 호출
+            if (playerController != null)
+            {
+                playerController.OnStopDefence();
+                Debug.Log("[DefenderInputHandler] 플레이어 막기 애니메이션 중단");
+            }
+            else
+            {
+                Debug.LogError("[DefenderInputHandler] PlayerController가 null입니다!");
+            }
             }
             else
             {
                 var enemyController = CombatManager.Instance.GetEnemyController();
-                enemyController?.OnStopDefence(); // 🆕 막기 애니메이션 중단 호출
+            if (enemyController != null)
+            {
+                Debug.Log("[DefenderInputHandler] 🆕 EnemyController.OnStopDefence() 호출 시작");
+                enemyController.OnStopDefence();
+                Debug.Log("[DefenderInputHandler] 🆕 EnemyController.OnStopDefence() 호출 완료");
+            }
+            else
+            {
+                Debug.LogError("[DefenderInputHandler] EnemyController가 null입니다!");
             }
         }
     }
@@ -753,7 +855,8 @@ public class DefenderInputHandler : BaseInputHandler
             combatManager.IsPlayerAttacker,
             totalHitCount,
             posturePoints,
-            isInterrupted
+            isInterrupted,
+            aiIsGuarding
         );
     }
     
@@ -779,5 +882,196 @@ public class DefenderInputHandler : BaseInputHandler
         float reactionTime = 0f; // 즉시 반응
         
         return new AIDefenseDecision(willAttempt, willSucceed, reactionTime);
+    }
+    
+    /// <summary>
+    /// 🆕 AI 막기 의사결정 시작
+    /// </summary>
+    private void StartAIGuardDecision()
+    {
+        Debug.Log("[DefenderInputHandler] 🆕 StartAIGuardDecision 호출됨");
+        
+        if (aiDefenseDecisionMaker == null)
+        {
+            Debug.LogError("[DefenderInputHandler] AI 의사결정 시스템이 초기화되지 않았습니다!");
+            return;
+        }
+        
+        // 🆕 AI 막기 의사결정 수행
+        var aiContext = CreateAIContextForGuard();
+        Debug.Log($"[DefenderInputHandler] 🆕 AI 컨텍스트 생성 완료 - isInterrupted:{aiContext.isInterrupted}");
+        
+        aiWillGuard = aiDefenseDecisionMaker.MakeGuardDecision(aiContext);
+        Debug.Log($"[DefenderInputHandler] 🆕 AI 막기 의사결정 결과: {aiWillGuard}");
+        
+        if (aiWillGuard)
+        {
+            Debug.Log("[DefenderInputHandler] 🆕 AI가 막기를 시도하기로 결정");
+            // 🆕 첫 번째 Hit 타이밍까지 대기 후 막기 시작
+            aiGuardCoroutine = StartCoroutine(WaitForFirstHitAndStartGuard());
+        }
+        else
+        {
+            Debug.Log("[DefenderInputHandler] 🆕 AI가 막기를 시도하지 않기로 결정");
+        }
+    }
+    
+    /// <summary>
+    /// 🆕 막기 의사결정용 AI 컨텍스트 생성
+    /// </summary>
+    private AIContext CreateAIContextForGuard()
+    {
+        var combatManager = CombatManager.Instance;
+        if (combatManager == null)
+        {
+            Debug.LogError("[DefenderInputHandler] CombatManager를 찾을 수 없습니다!");
+            return new AIContext(0, 0f, false, 1, 100f, false, false);
+        }
+        
+        // 🆕 턴 경과 시간 계산
+        float turnElapsedTime = TurnTimer.ElapsedTime;
+        
+        // 🆕 자세 포인트 가져오기
+        float posturePoints = combatManager.CurrentController?.Combatant?.CurrentPoise ?? 100f;
+        
+        // 🆕 중단 상태 확인
+        bool isInterrupted = combatManager.CurrentController?.Combatant?.IsInterrupted ?? false;
+        
+        // 🆕 총 히트 수 가져오기
+        int totalHitCount = combatManager.CurrentResult?.HitCount ?? 1;
+        
+        return new AIContext(
+            0, // 막기 의사결정 시에는 hitIndex 0 사용
+            turnElapsedTime,
+            combatManager.IsPlayerAttacker,
+            totalHitCount,
+            posturePoints,
+            isInterrupted,
+            false // 막기 의사결정 시에는 아직 막기 중이 아님
+        );
+    }
+    
+    /// <summary>
+    /// 🆕 첫 번째 Hit 타이밍까지 대기 후 막기 시작
+    /// </summary>
+    private System.Collections.IEnumerator WaitForFirstHitAndStartGuard()
+    {
+        Debug.Log("[DefenderInputHandler] 🆕 WaitForFirstHitAndStartGuard 코루틴 시작");
+        
+        var combatManager = CombatManager.Instance;
+        if (combatManager == null || combatManager.CurrentResult == null)
+        {
+            Debug.LogError("[DefenderInputHandler] CombatManager 또는 CurrentResult가 null입니다!");
+            yield break;
+        }
+        
+        // 🆕 첫 번째 Hit 타이밍 계산
+        var command = combatManager.CurrentResult.Command;
+        if (command == null || command.perfectTimings == null || command.perfectTimings.Count == 0)
+        {
+            Debug.LogError("[DefenderInputHandler] Command 또는 perfectTimings가 null입니다!");
+            yield break;
+        }
+        
+        var firstHitTiming = command.perfectTimings[0];
+        float firstHitTime = firstHitTiming.start;
+        
+        Debug.Log($"[DefenderInputHandler] 🆕 첫 번째 Hit 타이밍까지 대기: {firstHitTime:F2}초");
+        
+        // 🆕 첫 번째 Hit 타이밍까지 대기
+        yield return new WaitForSeconds(firstHitTime);
+        
+        Debug.Log($"[DefenderInputHandler] 🆕 첫 번째 Hit 타이밍 도달 - aiWillGuard:{aiWillGuard}, aiIsGuarding:{aiIsGuarding}");
+        
+        // 🆕 막기 시작
+        if (aiWillGuard && !aiIsGuarding)
+        {
+            StartAIGuard();
+        }
+        else
+        {
+            Debug.Log($"[DefenderInputHandler] 🆕 막기 시작 조건 불만족 - aiWillGuard:{aiWillGuard}, aiIsGuarding:{aiIsGuarding}");
+        }
+    }
+    
+    /// <summary>
+    /// 🆕 AI 막기 시작
+    /// </summary>
+    private void StartAIGuard()
+    {
+        aiIsGuarding = true;
+        PlayGuardAnimation();
+        Debug.Log("[DefenderInputHandler] 🆕 AI 막기 시작");
+    }
+    
+    /// <summary>
+    /// 🆕 AI 막기 중지 (내부에서만 사용)
+    /// </summary>
+    private void StopAIGuard()
+    {
+        if (aiIsGuarding)
+        {
+            aiIsGuarding = false;
+            StopGuardAnimation();
+            Debug.Log("[DefenderInputHandler] 🆕 AI 막기 중지 완료");
+        }
+        else
+        {
+            Debug.Log("[DefenderInputHandler] 🆕 AI 막기 상태가 이미 해제됨");
+        }
+    }
+    
+    /// <summary>
+    /// 🆕 Animator 소유권 검증 강화
+    /// </summary>
+    private bool ValidateAnimatorOwnership()
+    {
+        if (CombatManager.Instance == null)
+        {
+            Debug.LogError("[DefenderInputHandler] CombatManager.Instance가 null입니다!");
+            return false;
+        }
+        
+        // 🆕 현재 DefenderInputHandler가 올바른 캐릭터의 Animator를 제어하는지 검증
+        if (IsPlayer)
+        {
+            // 플레이어 DefenderInputHandler는 플레이어의 Animator만 제어해야 함
+            var playerController = CombatManager.Instance.GetPlayerController();
+            if (playerController == null)
+            {
+                Debug.LogError("[DefenderInputHandler] PlayerController가 null입니다!");
+                return false;
+            }
+            
+            // 🆕 현재 턴이 플레이어 공격 턴인지 확인 (플레이어가 방어자여야 함)
+            if (CombatManager.Instance.IsPlayerAttacker)
+            {
+                Debug.LogError("[DefenderInputHandler] 플레이어가 공격자 턴인데 플레이어 DefenderInputHandler가 실행됨!");
+                return false;
+            }
+            
+            Debug.Log("[DefenderInputHandler] ✅ 플레이어 Animator 소유권 검증 성공");
+            return true;
+        }
+        else
+        {
+            // 적 DefenderInputHandler는 적의 Animator만 제어해야 함
+            var enemyController = CombatManager.Instance.GetEnemyController();
+            if (enemyController == null)
+            {
+                Debug.LogError("[DefenderInputHandler] EnemyController가 null입니다!");
+                return false;
+            }
+            
+            // 🆕 현재 턴이 적 공격 턴인지 확인 (적이 방어자여야 함)
+            if (!CombatManager.Instance.IsPlayerAttacker)
+            {
+                Debug.LogError("[DefenderInputHandler] 적이 공격자 턴인데 적 DefenderInputHandler가 실행됨!");
+                return false;
+            }
+            
+            Debug.Log("[DefenderInputHandler] ✅ 적 Animator 소유권 검증 성공");
+            return true;
+        }
     }
 }

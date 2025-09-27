@@ -334,7 +334,7 @@ AnimatorController:
   m_Name: CombatAnimator
   serializedVersion: 5
   m_AnimatorParameters:
-  - m_Name: isguarding
+  - m_Name: isGuarding
     m_Type: 4
     m_DefaultFloat: 0
     m_DefaultInt: 0
@@ -655,7 +655,7 @@ AnimatorStateTransition:
   m_Name: 
   m_Conditions:
   - m_ConditionMode: 1
-    m_ConditionEvent: isguarding
+    m_ConditionEvent: isGuarding
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 4481488830200865384}
@@ -994,7 +994,7 @@ AnimatorStateTransition:
   m_Name: 
   m_Conditions:
   - m_ConditionMode: 2
-    m_ConditionEvent: isguarding
+    m_ConditionEvent: isGuarding
     m_EventTreshold: 0
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: -3684581626875803937}

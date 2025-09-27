@@ -332,6 +332,11 @@ public class CombatManager : MonoBehaviour
             defenderInputHandler.EnableInput(); // 방어자 입력 리스닝 시작
             Debug.Log("[CombatManager] 방어자 입력 허용됨");
         }
+        
+        // 🆕 방어자 입력도 항상 활성화 (AI 막기 시스템을 위해)
+        // BaseInputHandler의 isListening 상태를 확인하기 위해 EnableInput을 다시 호출
+        defenderInputHandler.EnableInput();
+        Debug.Log("[CombatManager] 🆕 방어자 입력 추가 활성화 (AI 막기 시스템)");
 
         // 1.1. 커맨드 유효성 확인
         if (selectedCommandIndex < 0 || selectedCommandIndex >= actor.AvailableCommands.Count)
@@ -583,15 +588,7 @@ public class CombatManager : MonoBehaviour
 
         // 1) 모든 히트에 대한 최종 적중 판정이 완료될 때까지 대기
         yield return StartCoroutine(EnsureAllHitJudgmentsCompleted(command.hitCount));
-
-        // 2) 입력 비활성화 및 상태 초기화
-        if(isPlayerAttacker)
-            attackerInputHandler.DisableInput();
-        else
-            defenderInputHandler.DisableInput();
-
-        attackerInputHandler.ResetInputState();
-        defenderInputHandler.ResetInputState();
+        Debug.Log("[CombatManager] 🆕 EnsureAllHitJudgmentsCompleted 완료 - 턴 종료 버퍼 대기 시작");
 
         // 3) 턴 종료 버퍼 시간 대기
         float turnEndBuffer = GlobalConfig.Instance.TurnEndBuffer;
@@ -600,6 +597,20 @@ public class CombatManager : MonoBehaviour
             Debug.Log($"[InputTrace][Turn] Waiting TurnEndBuffer - duration:{turnEndBuffer:F4}s, time:{Time.time:F4}");
             yield return new WaitForSeconds(turnEndBuffer);
         }
+        Debug.Log("[CombatManager] 🆕 턴 종료 버퍼 대기 완료 - 입력 비활성화 시작");
+
+        // 2) 입력 비활성화 및 상태 초기화
+        Debug.Log($"[CombatManager] 🆕 턴 종료 - 입력 비활성화 시작 (isPlayerAttacker:{isPlayerAttacker})");
+        
+        // 🆕 턴 종료 시 공격자와 방어자 모두 비활성화
+        Debug.Log("[CombatManager] 🆕 공격자 입력 비활성화");
+        attackerInputHandler.DisableInput();
+        
+        Debug.Log("[CombatManager] 🆕 방어자 입력 비활성화");
+        defenderInputHandler.DisableInput();
+
+        attackerInputHandler.ResetInputState();
+        defenderInputHandler.ResetInputState();
 
         // 4) 애니메이션 완료 대기
         yield return StartCoroutine(WaitForAnimationsComplete(actor, defender));
@@ -608,6 +619,8 @@ public class CombatManager : MonoBehaviour
     private IEnumerator EnsureAllHitJudgmentsCompleted(int hitCount)
     {
         float waitStart = Time.time;
+        Debug.Log($"[CombatManager] 🆕 모든 Hit 판정 완료 대기 시작 - hitCount:{hitCount}");
+        
         while (!AreAllHitJudgmentsCompleted(hitCount))
         {
             yield return null;
@@ -620,15 +633,20 @@ public class CombatManager : MonoBehaviour
     {
         if (hitJudgmentCompleted == null)
         {
+            Debug.Log($"[CombatManager] 🆕 hitJudgmentCompleted 배열이 null - hitCount:{hitCount}");
             return false;
         }
+        
         for (int i = 0; i < hitCount; i++)
         {
             if (i >= hitJudgmentCompleted.Length || !hitJudgmentCompleted[i])
             {
+                Debug.Log($"[CombatManager] 🆕 Hit {i} 판정 미완료 - 배열길이:{hitJudgmentCompleted.Length}, 완료상태:{hitJudgmentCompleted[i]}");
                 return false;
             }
         }
+        
+        Debug.Log($"[CombatManager] 🆕 모든 Hit 판정 완료 확인 - hitCount:{hitCount}");
         return true;
     }
     
@@ -1228,6 +1246,8 @@ public class CombatManager : MonoBehaviour
         // 🆕 히트 판정 완료 상태 기록
         hitJudgmentCompleted[hitIdx] = true;
         Debug.Log($"[CombatManager] 🚨 히트 {hitIdx} 발사체 기반 판정 완료");
+        
+        // 🆕 AI 막기 해제는 턴 종료 버퍼 이후에 DisableInput()에서 처리됨
     }
     
     // ❌ 제거: WaitForTurnEnd 코루틴 (PerformTurn에서 직접 처리)

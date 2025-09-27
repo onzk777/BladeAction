@@ -55,9 +55,16 @@ public class GlobalConfig : ScriptableObject
     [Range(0f, 1f)]
     [Tooltip("AI의 완벽 입력 시점. 숫자가 클 수록 늦음.")]
     [SerializeField] private float npcInputDifficulty = 0.5f;
+    [Range(0f, 1f)]
+    [Tooltip("AI가 막기를 시도할 확률(0~1)")]
+    [SerializeField] private float npcGuardAttemptRate = 0.3f;
+    [Tooltip("AI가 막기 중에도 쳐내기를 시도할지 여부")]
+    [SerializeField] private bool npcParryWhileGuarding = true;
     public float NpcActionPerfectRate => npcActionPerfectRate;
     public float NpcDefensePerfectRate => npcDefensePerfectRate;
     public float NpcInputDifficulty => npcInputDifficulty;
+    public float NpcGuardAttemptRate => npcGuardAttemptRate;
+    public bool NpcParryWhileGuarding => npcParryWhileGuarding;
 
     [Header("자세 포인트 시스템")]
     [Tooltip("플레이어와 AI가 보유할 수 있는 최대 자세 포인트")]

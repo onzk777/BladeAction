@@ -11,6 +11,7 @@ public class DefaultAIDefenseDecisionMaker : IAIDefenseDecisionMaker
     [Header("AI 설정 오버라이드")]
     [SerializeField] private bool useCustomSettings = false; // 커스텀 설정 사용 여부
     [SerializeField] private float customDefenseSuccessRate = 0.5f; // 커스텀 방어 성공률
+    [SerializeField] private float customGuardAttemptRate = 0.3f; // 커스텀 막기 시도 확률
     
     /// <summary>
     /// AI 방어 의사결정을 수행합니다
@@ -24,10 +25,21 @@ public class DefaultAIDefenseDecisionMaker : IAIDefenseDecisionMaker
         
         // 🆕 AI 설정 값 결정 (커스텀 설정 또는 GlobalConfig)
         float aiDefenseSuccessRate = useCustomSettings ? customDefenseSuccessRate : GlobalConfig.Instance.NpcDefensePerfectRate;
+        bool canParryWhileGuarding = GlobalConfig.Instance.NpcParryWhileGuarding;
         
         if (debugMode)
         {
-            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 AI 설정 값 - useCustom:{useCustomSettings}, 성공률:{aiDefenseSuccessRate:F2}");
+            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 AI 설정 값 - useCustom:{useCustomSettings}, 성공률:{aiDefenseSuccessRate:F2}, 막기중쳐내기:{canParryWhileGuarding}");
+        }
+        
+        // 🆕 막기 중일 때 쳐내기 시도 허용 여부 확인
+        if (context.isGuarding && !canParryWhileGuarding)
+        {
+            if (debugMode)
+            {
+                Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 막기 중이므로 쳐내기 시도 안함");
+            }
+            return new AIDefenseDecision(false, false, 0f);
         }
         
         // 🆕 AI 방어 시도 여부 결정
@@ -99,16 +111,57 @@ public class DefaultAIDefenseDecisionMaker : IAIDefenseDecisionMaker
     }
     
     /// <summary>
-    /// 커스텀 설정 사용 여부 설정
+    /// AI 막기 의사결정을 수행합니다
     /// </summary>
-    public void SetCustomSettings(bool useCustom, float successRate = 0.5f)
+    public bool MakeGuardDecision(AIContext context)
     {
-        useCustomSettings = useCustom;
-        customDefenseSuccessRate = successRate;
+        if (debugMode)
+        {
+            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 AI 막기 의사결정 시작 - turnTime:{context.turnElapsedTime:F2}");
+        }
+        
+        // 🆕 AI 설정 값 결정 (커스텀 설정 또는 GlobalConfig)
+        float aiGuardAttemptRate = useCustomSettings ? customGuardAttemptRate : GlobalConfig.Instance.NpcGuardAttemptRate;
         
         if (debugMode)
         {
-            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 커스텀 설정: {(useCustom ? "사용" : "미사용")}, 성공률:{successRate:F2}");
+            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 AI 막기 설정 값 - useCustom:{useCustomSettings}, 막기확률:{aiGuardAttemptRate:F2}");
+        }
+        
+        // 🆕 중단 상태에서는 막기 시도하지 않음
+        if (context.isInterrupted)
+        {
+            if (debugMode)
+            {
+                Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 중단 상태로 인해 막기 시도 안함");
+            }
+            return false;
+        }
+        
+        // 🆕 확률 기반 막기 시도 여부 결정
+        float randomValue = Random.value;
+        bool willGuard = randomValue < aiGuardAttemptRate;
+        
+        if (debugMode)
+        {
+            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 막기 시도 판정 - 확률:{aiGuardAttemptRate:F2}, 랜덤값:{randomValue:F2}, 결과:{willGuard}");
+        }
+        
+        return willGuard;
+    }
+    
+    /// <summary>
+    /// 커스텀 설정 사용 여부 설정
+    /// </summary>
+    public void SetCustomSettings(bool useCustom, float successRate = 0.5f, float guardRate = 0.3f)
+    {
+        useCustomSettings = useCustom;
+        customDefenseSuccessRate = successRate;
+        customGuardAttemptRate = guardRate;
+        
+        if (debugMode)
+        {
+            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 커스텀 설정: {(useCustom ? "사용" : "미사용")}, 성공률:{successRate:F2}, 막기확률:{guardRate:F2}");
         }
     }
 }

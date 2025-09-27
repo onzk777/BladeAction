@@ -12,6 +12,13 @@ public interface IAIDefenseDecisionMaker
     /// <param name="context">AI 컨텍스트 정보</param>
     /// <returns>AI 방어 의사결정 결과</returns>
     AIDefenseDecision MakeDefenseDecision(Projectile projectile, AIContext context);
+    
+    /// <summary>
+    /// AI 막기 의사결정을 수행합니다
+    /// </summary>
+    /// <param name="context">AI 컨텍스트 정보</param>
+    /// <returns>막기 시도 여부</returns>
+    bool MakeGuardDecision(AIContext context);
 }
 
 /// <summary>
@@ -44,9 +51,10 @@ public struct AIContext
     public int totalHitCount;               // 총 히트 수
     public float posturePoints;             // 현재 자세 포인트
     public bool isInterrupted;              // 중단 상태인지 여부
+    public bool isGuarding;                 // 현재 막기 상태인지 여부
     
     public AIContext(int hitIndex, float turnElapsedTime, bool isPlayerAttacker, 
-                     int totalHitCount, float posturePoints, bool isInterrupted)
+                     int totalHitCount, float posturePoints, bool isInterrupted, bool isGuarding = false)
     {
         this.hitIndex = hitIndex;
         this.turnElapsedTime = turnElapsedTime;
@@ -54,5 +62,6 @@ public struct AIContext
         this.totalHitCount = totalHitCount;
         this.posturePoints = posturePoints;
         this.isInterrupted = isInterrupted;
+        this.isGuarding = isGuarding;
     }
 }

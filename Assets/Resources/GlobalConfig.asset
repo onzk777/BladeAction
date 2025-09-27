@@ -16,11 +16,13 @@ MonoBehaviour:
   inputBufferEndSeconds: 0
   additionalTurnDuration: 0
   combatStartDelay: 2
-  turnEndBuffer: 0.1
+  turnEndBuffer: 1
   animationWaitTime: 0.5
-  npcActionPerfectRate: 0.475
-  npcDefensePerfectRate: 0.492
+  npcActionPerfectRate: 0
+  npcDefensePerfectRate: 1
   npcInputDifficulty: 1
+  npcGuardAttemptRate: 1
+  npcParryWhileGuarding: 1
   posturePointsMax: 100
   posturePointsLossOnParry: 50
   interruptWaitSec: 2
