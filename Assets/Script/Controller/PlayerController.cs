@@ -422,8 +422,34 @@ public class PlayerController : MonoBehaviour, ICombatController
             return;
         }
         
-        // Skeleton Mecanim을 통한 방어 애니메이션 재생
-        animator.SetTrigger("guard");
-        Debug.Log("[PlayerController] 방어 애니메이션 시작 (Skeleton Mecanim)");
+        // 🆕 Bool 파라미터로 막기 상태 지속 (Trigger 대신)
+        animator.SetBool("isGuarding", true);
+        Debug.Log("[PlayerController] 🆕 막기 애니메이션 지속 시작 (Bool 파라미터)");
+    }
+    
+    /// <summary>
+    /// 🆕 막기 애니메이션 중단
+    /// </summary>
+    public void OnStopDefence()
+    {
+        Debug.Log("[PlayerController] 🆕 플레이어 막기 애니메이션 중단");
+        
+        // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
+        if (combatAnimationObject == null)
+        {
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
+            return;
+        }
+        
+        var animator = combatAnimationObject.GetComponent<Animator>();
+        if (animator == null)
+        {
+            Debug.LogError("[PlayerController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
+            return;
+        }
+        
+        // 🆕 Bool 파라미터로 막기 상태 해제
+        animator.SetBool("isGuarding", false);
+        Debug.Log("[PlayerController] 🆕 막기 애니메이션 중단 (Bool 파라미터)");
     }
 }

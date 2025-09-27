@@ -604,12 +604,12 @@ public class DefenderInputHandler : BaseInputHandler
             if (IsPlayer)
             {
                 var playerController = CombatManager.Instance.GetPlayerController();
-                // 애니메이션 중단 로직이 필요하면 여기에 추가
+                playerController?.OnStopDefence(); // 🆕 막기 애니메이션 중단 호출
             }
             else
             {
                 var enemyController = CombatManager.Instance.GetEnemyController();
-                // 애니메이션 중단 로직이 필요하면 여기에 추가
+                enemyController?.OnStopDefence(); // 🆕 막기 애니메이션 중단 호출
             }
         }
     }
