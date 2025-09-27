@@ -35,6 +35,13 @@ public class DefenderInputHandler : BaseInputHandler
     private Dictionary<int, bool> projectileInPerfectZoneByHitIndex = new Dictionary<int, bool>();
     private Dictionary<int, bool> projectileInHitZoneByHitIndex = new Dictionary<int, bool>();
     
+    // 🆕 AI 방어 입력 처리
+    private Dictionary<int, bool> aiDefenseAttemptedByHitIndex = new Dictionary<int, bool>();
+    private Dictionary<int, float> aiDefenseTimeByHitIndex = new Dictionary<int, float>();
+    
+    // 🆕 AI 의사결정 시스템
+    private IAIDefenseDecisionMaker aiDefenseDecisionMaker;
+    
     // ❌ 제거: 기존 타이밍 윈도우 복제 방식
     // public void LoadFromOpponentCommand(ActionCommandData opponentCommand)
     // {
@@ -54,6 +61,10 @@ public class DefenderInputHandler : BaseInputHandler
         projectileInPerfectZoneByHitIndex[hitIndex] = true;
         projectileInHitZoneByHitIndex[hitIndex] = false;
         
+        // 🆕 AI 방어 입력 초기화
+        aiDefenseAttemptedByHitIndex[hitIndex] = false;
+        aiDefenseTimeByHitIndex[hitIndex] = -1f;
+        
         // 🆕 현재 발사체 정보 저장 (최종 판정 시 사용) - 가장 최근 발사체
         currentProjectile = projectile;
         
@@ -68,6 +79,12 @@ public class DefenderInputHandler : BaseInputHandler
         
         Debug.Log($"[InputTrace][Defender] 🆕 Projectile Enter PerfectZone - hitIndex:{hitIndex}, projectile:{projectile.name}, time:{perfectZoneEnterTime:F4}");
         Debug.Log($"[InputTrace][Defender] 🆕 현재 추적 중인 발사체 수: {projectilesByHitIndex.Count}");
+        
+        // 🆕 AI 방어자 처리: PerfectZone 진입 시 AI 방어 입력 시도
+        if (!IsPlayer)
+        {
+            StartCoroutine(AttemptAIDefenseInput(projectile));
+        }
     }
     
     private void OnProjectileEnterHitZone(Projectile projectile)
@@ -124,6 +141,16 @@ public class DefenderInputHandler : BaseInputHandler
             projectileInHitZoneByHitIndex.Remove(hitIndex);
         }
         
+        // 🆕 AI 방어 입력 상태 정리
+        if (aiDefenseAttemptedByHitIndex.ContainsKey(hitIndex))
+        {
+            aiDefenseAttemptedByHitIndex.Remove(hitIndex);
+        }
+        if (aiDefenseTimeByHitIndex.ContainsKey(hitIndex))
+        {
+            aiDefenseTimeByHitIndex.Remove(hitIndex);
+        }
+        
         // 🆕 현재 발사체가 나간 경우 정리
         if (currentProjectile == projectile)
         {
@@ -156,6 +183,9 @@ public class DefenderInputHandler : BaseInputHandler
         
         Debug.Log($"[DefenderInputHandler] CharacterHitSystem 자동 참조 성공: {characterHitSystem.name}");
         SubscribeToHitSystemEvents();
+        
+        // 🆕 AI 의사결정 시스템 초기화
+        InitializeAIDecisionSystem();
     }
     
     private void OnDestroy()
@@ -532,6 +562,10 @@ public class DefenderInputHandler : BaseInputHandler
         projectileInPerfectZoneByHitIndex.Clear();
         projectileInHitZoneByHitIndex.Clear();
         
+        // 🆕 AI 방어 입력 상태 초기화
+        aiDefenseAttemptedByHitIndex.Clear();
+        aiDefenseTimeByHitIndex.Clear();
+        
         Debug.Log("[DefenderInputHandler] 🆕 ResetDefenseState 호출됨 - 연타 공격 상태 초기화");
     }
     
@@ -612,5 +646,138 @@ public class DefenderInputHandler : BaseInputHandler
                 enemyController?.OnStopDefence(); // 🆕 막기 애니메이션 중단 호출
             }
         }
+    }
+    
+    /// <summary>
+    /// 🆕 AI 방어 입력 시도 코루틴 (확장 가능한 아키텍처)
+    /// </summary>
+    private System.Collections.IEnumerator AttemptAIDefenseInput(Projectile projectile)
+    {
+        int hitIndex = projectile.hitIndex;
+        
+        // 🆕 AI 방어 입력 시도 여부 확인
+        if (aiDefenseAttemptedByHitIndex.ContainsKey(hitIndex) && aiDefenseAttemptedByHitIndex[hitIndex])
+        {
+            Debug.Log($"[DefenderInputHandler] 🆕 AI 방어 입력 이미 시도됨 - hitIndex:{hitIndex}");
+            yield break;
+        }
+        
+        // 🆕 AI 의사결정 시스템을 통한 방어 입력 결정
+        var aiContext = CreateAIContext(projectile);
+        Debug.Log($"[DefenderInputHandler] 🆕 AI 의사결정 시스템 호출 - hitIndex:{hitIndex}, aiDefenseDecisionMaker null:{aiDefenseDecisionMaker == null}");
+        var defenseDecision = aiDefenseDecisionMaker.MakeDefenseDecision(projectile, aiContext);
+        
+        // 🆕 AI 반응 시간 시뮬레이션
+        yield return new WaitForSeconds(defenseDecision.reactionTime);
+        
+        // 🆕 발사체가 여전히 PerfectZone에 있는지 확인
+        if (!projectileInPerfectZoneByHitIndex.ContainsKey(hitIndex) || !projectileInPerfectZoneByHitIndex[hitIndex])
+        {
+            Debug.Log($"[DefenderInputHandler] 🆕 AI 방어 입력 취소 - 발사체가 PerfectZone을 벗어남 (hitIndex:{hitIndex})");
+            yield break;
+        }
+        
+        // 🆕 AI 방어 입력 시도 플래그 설정
+        aiDefenseAttemptedByHitIndex[hitIndex] = true;
+        aiDefenseTimeByHitIndex[hitIndex] = Time.time;
+        
+        Debug.Log($"[DefenderInputHandler] 🆕 AI 방어 입력 시도 - hitIndex:{hitIndex}, 시도:{defenseDecision.willAttempt}, 성공:{defenseDecision.willSucceed}");
+        
+        if (defenseDecision.willAttempt && defenseDecision.willSucceed)
+        {
+            // 🆕 AI 방어 성공 시 완벽 입력 성공 처리
+            perfectInputSucceededByHitIndex[hitIndex] = true;
+            hasPerfectInputSucceeded = true;
+            
+            // 🆕 AI 방어 성공 시 즉시 최종 판정 발생
+            Debug.Log($"[DefenderInputHandler] 🆕 AI 방어 성공 → 즉시 최종 판정 트리거 (hitIndex:{hitIndex})");
+            TriggerFinalJudgment(projectile, true);
+            
+            // 🆕 해당 Hit Index의 상태 업데이트
+            projectileInPerfectZoneByHitIndex[hitIndex] = false;
+            projectileInHitZoneByHitIndex[hitIndex] = true;
+            
+            // 🆕 전역 상태 업데이트
+            isProjectileInPerfectZone = false;
+            isProjectileInHitZone = true;
+        }
+        else
+        {
+            Debug.Log($"[DefenderInputHandler] 🆕 AI 방어 실패/무시 - CharacterHitBox 충돌 시 최종 판정 대기 (hitIndex:{hitIndex})");
+        }
+    }
+    
+    /// <summary>
+    /// 🆕 AI 의사결정 시스템 초기화
+    /// </summary>
+    private void InitializeAIDecisionSystem()
+    {
+        // 🆕 기본 AI 의사결정 시스템 생성
+        aiDefenseDecisionMaker = new DefaultAIDefenseDecisionMaker();
+        
+        Debug.Log("[DefenderInputHandler] 🆕 AI 의사결정 시스템 초기화 완료");
+    }
+    
+    /// <summary>
+    /// 🆕 AI 컨텍스트 생성
+    /// </summary>
+    private AIContext CreateAIContext(Projectile projectile)
+    {
+        // 🆕 CombatManager에서 현재 전투 상태 정보 가져오기
+        var combatManager = CombatManager.Instance;
+        if (combatManager == null)
+        {
+            Debug.LogError("[DefenderInputHandler] 🆕 CombatManager를 찾을 수 없습니다!");
+            return new AIContext();
+        }
+        
+        // 🆕 현재 턴 경과 시간 계산
+        float turnElapsedTime = combatManager.CurrentTurnDuration;
+        
+        // 🆕 현재 자세 포인트 가져오기
+        float posturePoints = 100f; // 기본값
+        if (combatManager.CurrentController?.Combatant != null)
+        {
+            posturePoints = combatManager.CurrentController.Combatant.CurrentPoise;
+        }
+        
+        // 🆕 중단 상태 확인
+        bool isInterrupted = combatManager.CurrentController?.Combatant?.IsInterrupted ?? false;
+        
+        // 🆕 총 히트 수 가져오기
+        int totalHitCount = combatManager.CurrentResult?.HitCount ?? 1;
+        
+        return new AIContext(
+            projectile.hitIndex,
+            turnElapsedTime,
+            combatManager.IsPlayerAttacker,
+            totalHitCount,
+            posturePoints,
+            isInterrupted
+        );
+    }
+    
+    /// <summary>
+    /// 🆕 AI 의사결정 시스템 교체 (확장성)
+    /// </summary>
+    public void SetAIDecisionMaker(IAIDefenseDecisionMaker newDecisionMaker)
+    {
+        aiDefenseDecisionMaker = newDecisionMaker;
+        Debug.Log("[DefenderInputHandler] 🆕 AI 의사결정 시스템 교체 완료");
+    }
+    
+    /// <summary>
+    /// 🆕 AI 방어 의사결정 메서드 (임시 구현 - 추후 제거 예정)
+    /// </summary>
+    private AIDefenseDecision MakeAIDefenseDecision(Projectile projectile)
+    {
+        // 🆕 임시 구현 - AI 의사결정 시스템이 완전히 통합되면 제거
+        float aiDefenseSuccessRate = GlobalConfig.Instance.NpcDefensePerfectRate;
+        
+        bool willAttempt = true;
+        bool willSucceed = Random.value < aiDefenseSuccessRate;
+        float reactionTime = 0f; // 즉시 반응
+        
+        return new AIDefenseDecision(willAttempt, willSucceed, reactionTime);
     }
 }
