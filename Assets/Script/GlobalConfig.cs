@@ -81,5 +81,14 @@ public class GlobalConfig : ScriptableObject
     [SerializeField] private float actionInputCooldown_Perfect = 0.25f;
     public float ActionInputCooldown_Perfect => actionInputCooldown_Perfect; // 플레이어가 턴 행동 중 완벽 타격에 성공한 입력을 하면 이 시간 동안 입력이 막힘
 
+    [Header("디버그 설정")]
+    [Tooltip("디버그 패널 표시 여부")]
+    [SerializeField] private bool debugMode = true;
+    public bool DebugMode 
+    { 
+        get => debugMode; 
+        set => debugMode = value; 
+    }
+
     // 향후 필요한 설정이 있으면 여기에 추가
 }

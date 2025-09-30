@@ -7,7 +7,7 @@ public class FloatingText : MonoBehaviour
 {
     [Header("플로팅 설정")]
     [SerializeField] private float lifetime = 0.8f;        // 텍스트가 살아있는 시간
-    [SerializeField] private float riseSpeed = 1.2f;       // 위로 상승하는 속도
+    [SerializeField] private float riseSpeed = 50f;        // 위로 상승하는 속도 (Canvas UI 좌표계에 맞게 조정)
     [SerializeField] private Vector2 startOffset = new Vector2(0, 0.5f); // 시작 위치 오프셋 (1.2f에서 0.5f로 감소)
     
     // Public 프로퍼티로 Lifetime 접근 허용
@@ -74,10 +74,13 @@ public class FloatingText : MonoBehaviour
         RectTransform rectTransform = GetComponent<RectTransform>();
         if (rectTransform != null)
         {
+            // 🆕 Scale 강제 설정 (Canvas Scaler 영향 제거)
+            rectTransform.localScale = Vector3.one;
+            
             // 시작 위치를 Canvas 좌표로 설정
             startPosition = canvasPosition + new Vector3(startOffset.x, startOffset.y, 0);
             rectTransform.anchoredPosition = new Vector2(startPosition.x, startPosition.y);
-            Debug.Log($"{logPrefix} Canvas 위치 설정: {rectTransform.anchoredPosition}");
+            Debug.Log($"{logPrefix} Canvas 위치 설정: {rectTransform.anchoredPosition}, Scale: {rectTransform.localScale}");
         }
         else
         {

@@ -47,33 +47,35 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57faa67b3675541499909f1257763a9a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  baseSpeed: 10
+  baseSpeed: 30
   speedCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
+      time: 0.0011940002
+      value: 0.49523926
+      inSlope: 0.06694409
+      outSlope: 0.06694409
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
-      outWeight: 0
+      outWeight: 0.19307734
     - serializedVersion: 3
       time: 1
-      value: 1
+      value: 2
       inSlope: 0
       outSlope: 0
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0
+      inWeight: 0.04430622
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
   direction: {x: 0, y: 0, z: 0}
   lifetime: 5
+  hitIndex: -1
+  attackerPerfectInput: 0
 --- !u!58 &5110079611559074414
 CircleCollider2D:
   m_ObjectHideFlags: 0

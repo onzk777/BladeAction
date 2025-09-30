@@ -40,7 +40,7 @@ public class ActionCommandData : ScriptableObject
     
     [Header("발사체 설정")]
     [Tooltip("일반 발사체 프리팹")]
-    public GameObject projectilePrefab;
+    public GameObject normalProjectilePrefab;
     
     [Tooltip("완벽 입력 성공 시 발사체 프리팹")]
     public GameObject perfectProjectilePrefab;

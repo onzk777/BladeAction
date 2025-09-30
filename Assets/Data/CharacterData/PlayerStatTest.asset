@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: PlayerStatTest
   m_EditorClassIdentifier: 
   characterName: Unknown
-  baseMaxHP: 100000
-  baseATK: 20
+  baseMaxHP: 100
+  baseATK: 50
   baseDR: 0
   baseCrit: 0
   baseCritRatio: 150
   baseMaxPoise: 100
-  baseParryPoiseDamage: 25
+  baseParryPoiseDamage: 50
   guardDRBonus: 5
   guardDamageReduction: 0.5
   tempDRBonus: 0

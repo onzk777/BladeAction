@@ -980,7 +980,11 @@ public class CombatManager : MonoBehaviour
         }
     }
 
-    private void EvaluateClashResult()
+    /// <summary>
+    /// 전투 판정을 처리하는 메서드
+    /// </summary>
+    /// <param name="hitIndex">히트 인덱스 (발사체에서 전달받은 값)</param>
+    private void EvaluateClashResult(int hitIndex)
     {
         bool atkPerfect = attackerPerfectInput ?? false;
         float atkTime = attackerInputTime ?? float.MaxValue;
@@ -994,7 +998,7 @@ public class CombatManager : MonoBehaviour
         var ivr = new InputVersusResult(atkPerfect, atkTime, defPerfect, defTime, guard); // 입력 결과 생성
         var resultVersus = ivr.GetResult(atkPerfect, atkTime, defPerfect, defTime, guard); // 입력 결과 생성
 
-        Debug.Log($"[CombatManager] 판정 결과: {resultVersus} (공격자 완벽: {atkPerfect}, 방어자 완벽: {defPerfect}, 막기: {guard})");
+        Debug.Log($"[CombatManager] 판정 결과: {resultVersus} (공격자 완벽: {atkPerfect}, 방어자 완벽: {defPerfect}, 막기: {guard}) - 히트 {hitIndex}");
 
         // 현재 공격자와 방어자 Combatant 찾기
         Combatant attacker = isPlayerAttacker ? CharacterManager.Instance.PlayerCombatant : CharacterManager.Instance.EnemyCombatant;
@@ -1008,8 +1012,8 @@ public class CombatManager : MonoBehaviour
             return;
         }
         
-        // 피해량 계산 및 적용
-        ProcessDamageCalculation(attacker, defender, currentCommand, resultVersus, CurrentHit);
+        // 피해량 계산 및 적용 - 올바른 히트 인덱스 사용
+        ProcessDamageCalculation(attacker, defender, currentCommand, resultVersus, hitIndex);
         
         // 쳐내기 판정 시 공격자 자세 포인트 감소
         if (resultVersus == InputVersusResult.ResultType.Parry || resultVersus == InputVersusResult.ResultType.HalfParry)
@@ -1034,7 +1038,7 @@ public class CombatManager : MonoBehaviour
             Debug.Log($"[CombatManager] {resultVersus} 판정 - Poise 감소 없음");
         }
 
-        ivr.OnHitVersusResult(CurrentHit, resultVersus); // 히트 결과 UI에 표시
+        ivr.OnHitVersusResult(hitIndex, resultVersus); // 히트 결과 UI에 표시 - 올바른 히트 인덱스 사용
         
         // 판정 결과에 따른 애니메이션 호출
         HandleClashResultAnimation(resultVersus);
@@ -1091,16 +1095,18 @@ public class CombatManager : MonoBehaviour
         var command = CurrentResult.Command;
         
         // 🆕 완벽 입력 여부에 따른 발사체 프리팹 선택
+        Debug.Log($"[PROJECTILE] 조건 확인: isPerfect={isPerfect}, perfectProjectilePrefab={command.perfectProjectilePrefab != null}");
+        
         GameObject projectilePrefab;
         if (isPerfect && command.perfectProjectilePrefab != null)
         {
             projectilePrefab = command.perfectProjectilePrefab;
-            Debug.Log($"[CombatManager] 완벽 입력 성공 - 완벽 발사체 프리팹 사용: {projectilePrefab.name}");
+            Debug.Log($"[PROJECTILE] ✅ Perfect 발사체 선택: {projectilePrefab.name}");
         }
         else
         {
-            projectilePrefab = command.projectilePrefab;
-            Debug.Log($"[CombatManager] 일반 입력 - 일반 발사체 프리팹 사용: {projectilePrefab.name}");
+            projectilePrefab = command.normalProjectilePrefab;
+            Debug.Log($"[PROJECTILE] ❌ 일반 발사체 선택: {projectilePrefab.name}");
         }
         
         if (projectilePrefab == null)
@@ -1144,14 +1150,15 @@ public class CombatManager : MonoBehaviour
             defenderPos = playerController.transform.position;
         }
         
-        // 🆕 발사체 초기 위치 설정
-        projectile.transform.position = attackerPos;
+        // 🆕 ProjectileManager를 통해 발사체 생성 위치 계산
+        Vector3 spawnPosition = ProjectileManager.Instance.CalculateSpawnPosition(attackerPos, defenderPos);
+        projectile.transform.position = spawnPosition;
         
         // 발사 방향 계산
         Vector3 direction = (defenderPos - attackerPos).normalized;
         
         // 🆕 디버그 로그 추가
-        Debug.Log($"[CombatManager] 발사체 생성: attackerPos={attackerPos}, defenderPos={defenderPos}, direction={direction}");
+        Debug.Log($"[CombatManager] 발사체 생성: attackerPos={attackerPos}, defenderPos={defenderPos}, spawnPos={spawnPosition}, direction={direction}");
         
         // 🆕 발사체 이벤트 구독
         projectile.OnProjectileHit += OnProjectileHit;
@@ -1196,8 +1203,8 @@ public class CombatManager : MonoBehaviour
         
         Debug.Log($"[CombatManager] 🚨 발사체 충돌 - 즉시 판정 발생 (히트 {hitIdx}, {currentCount}번째 호출)");
         
-        // 발사체 충돌 시 즉시 판정 발생
-        EvaluateClashResult();
+        // 발사체 충돌 시 즉시 판정 발생 - 올바른 히트 인덱스 전달
+        EvaluateClashResult(hitIdx);
         
         // 🆕 히트 판정 완료 상태 기록
         hitJudgmentCompleted[hitIdx] = true;
@@ -1240,8 +1247,18 @@ public class CombatManager : MonoBehaviour
         
         Debug.Log($"[CombatManager] 🚨 발사체 기반 판정 정보 설정 - 공격자: {attackerPerfectInput}, 방어자: {defenderPerfectInput}");
         
-        // 🆕 최종 판정 실행
-        EvaluateClashResult();
+        // 🆕 최종 판정 실행 - 올바른 히트 인덱스 전달
+        EvaluateClashResult(hitIdx);
+        
+        // 🆕 방어자 완벽 입력 성공 시 발사체 제거 (연출 개선)
+        if (defenderPerfectSuccess)
+        {
+            Debug.Log($"[CombatManager] 🚨 방어자 완벽 입력 성공 - 발사체 제거 (히트 {hitIdx})");
+            if (projectile != null)
+            {
+                Destroy(projectile.gameObject);
+            }
+        }
         
         // 🆕 히트 판정 완료 상태 기록
         hitJudgmentCompleted[hitIdx] = true;

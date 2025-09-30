@@ -95,9 +95,10 @@ public class FloatingTextManager : MonoBehaviour
         
         Debug.Log($"{logPrefix} === FloatingText 생성 시작 ===");
         
-        // Canvas 좌표로 변환
-        Vector3 canvasPosition = ConvertWorldToCanvasPosition(worldPosition);
-        Debug.Log($"{logPrefix} 월드 좌표: {worldPosition} → Canvas 좌표: {canvasPosition}");
+        // Canvas 좌표로 변환 (주석처리 - 캐릭터 위치 자체 사용)
+        // Vector3 canvasPosition = ConvertWorldToCanvasPosition(worldPosition);
+        Vector3 canvasPosition = worldPosition; // 캐릭터 월드 위치 그대로 사용
+        Debug.Log($"{logPrefix} 월드 좌표: {worldPosition} → Canvas 좌표: {canvasPosition} (변환 생략)");
         
         // FloatingText 생성 (Canvas 좌표 사용)
         GameObject floatingTextObj = Instantiate(floatingTextPrefab, Vector3.zero, Quaternion.identity);
@@ -288,6 +289,9 @@ public class FloatingTextManager : MonoBehaviour
     /// <returns>Canvas 좌표</returns>
     private Vector3 ConvertWorldToCanvasPosition(Vector3 worldPosition)
     {
+        Debug.Log($"[FLOATING_TEXT] ===== 좌표 변환 디버그 =====");
+        Debug.Log($"[FLOATING_TEXT] 월드 위치: {worldPosition}");
+        
         if (Camera.main == null)
         {
             Debug.LogWarning("[FloatingTextManager] 메인 카메라를 찾을 수 없습니다!");
@@ -307,17 +311,27 @@ public class FloatingTextManager : MonoBehaviour
             return Vector3.zero;
         }
         
+        Debug.Log($"[FLOATING_TEXT] Canvas: {canvas.name}, RenderMode: {canvas.renderMode}");
+        Debug.Log($"[FLOATING_TEXT] floatingTextParent: {floatingTextParent.name}");
+        
         // 1. 월드 좌표를 화면 좌표로 변환
         Vector3 screenPosition = Camera.main.WorldToScreenPoint(worldPosition);
+        Debug.Log($"[FLOATING_TEXT] 화면 좌표: {screenPosition}");
         
         // 2. Canvas 좌표로 변환 (해상도 독립적)
         Vector2 canvasPosition;
-        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
+        bool success = RectTransformUtility.ScreenPointToLocalPointInRectangle(
             floatingTextParent as RectTransform, 
             screenPosition, 
             canvas.worldCamera, 
-            out canvasPosition))
+            out canvasPosition);
+            
+        Debug.Log($"[FLOATING_TEXT] 변환 성공: {success}");
+        Debug.Log($"[FLOATING_TEXT] Canvas 좌표: {canvasPosition}");
+        
+        if (success)
         {
+            Debug.Log($"[FLOATING_TEXT] ================================");
             return canvasPosition;
         }
         else
@@ -325,7 +339,10 @@ public class FloatingTextManager : MonoBehaviour
             Debug.LogWarning("[FloatingTextManager] 좌표 변환 실패, 기본값 사용");
             // 기본값: 화면 중앙 (해상도 비율 고려)
             float screenRatio = (float)Screen.width / Screen.height;
-            return new Vector3(0, 100, 0); // 중앙에서 약간 위
+            Vector3 fallbackPosition = new Vector3(0, 100, 0);
+            Debug.Log($"[FLOATING_TEXT] 기본값 사용: {fallbackPosition}");
+            Debug.Log($"[FLOATING_TEXT] ================================");
+            return fallbackPosition;
         }
     }
     

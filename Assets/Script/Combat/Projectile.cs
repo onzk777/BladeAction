@@ -198,7 +198,7 @@ public class Projectile : MonoBehaviour
         Debug.Log($"[Projectile] 🚨 OnProjectileHit 이벤트 호출 완료");
     }
     
-    private void DestroyProjectile()
+    public void DestroyProjectile()
     {
         Debug.Log($"[Projectile] 🚨 DestroyProjectile 호출 - 발사체 소멸");
         // ❌ 제거: OnProjectileCompleted 호출 (발사체 소멸 후 이벤트 발생으로 인한 문제 방지)
