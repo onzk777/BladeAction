@@ -72,4 +72,37 @@ public class CharacterData : ScriptableObject
         public float guardDamageReduction;
     }
 
+    [Header("NPC AI 설정")]
+    [Tooltip("NPC 행동 확률 설정 (AI 전용)")]
+    public NPCBehaviorProbabilities npcBehavior = new NPCBehaviorProbabilities();
+    
+    [Header("Behavior Tree")]
+    [Tooltip("이 캐릭터가 사용할 Behavior Tree 리스트")]
+    public System.Collections.Generic.List<BehaviorTreeData> behaviorTrees = new System.Collections.Generic.List<BehaviorTreeData>();
+}
+
+/// <summary>
+/// NPC 행동 확률 데이터
+/// </summary>
+[System.Serializable]
+public class NPCBehaviorProbabilities
+{
+    [Tooltip("공격 성공률 (0~1)")]
+    [Range(0f, 1f)]
+    public float attackPerfectRate = 0f;
+    
+    [Tooltip("쳐내기 성공률 (0~1)")]
+    [Range(0f, 1f)]
+    public float parryPerfectRate = 0f;
+    
+    [Tooltip("막기 시도 확률 (0~1)")]
+    [Range(0f, 1f)]
+    public float guardAttemptRate = 0f;
+    
+    [Tooltip("막기 중 쳐내기 시도 여부")]
+    public bool parryWhileGuarding = false;
+    
+    [Tooltip("막기 중 쳐내기 성공률 (0~1)")]
+    [Range(0f, 1f)]
+    public float parryWhileGuardingRate = 0f;
 }

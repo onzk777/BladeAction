@@ -23,3 +23,10 @@ MonoBehaviour:
   guardDRBonus: 5
   guardDamageReduction: 0.5
   tempDRBonus: 0
+  npcBehavior:
+    attackPerfectRate: 0
+    parryPerfectRate: 0
+    guardAttemptRate: 0
+    parryWhileGuarding: 0
+    parryWhileGuardingRate: 0
+  behaviorTrees: []

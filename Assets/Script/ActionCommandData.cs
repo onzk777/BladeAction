@@ -47,6 +47,10 @@ public class ActionCommandData : ScriptableObject
     
     [Tooltip("발사체 크기")]
     public float projectileScale = 1f;
+    
+    [Header("검술 태그")]
+    [Tooltip("이 검술을 분류하는 태그들 (ActionCommandTagList에서 선택)")]
+    public List<string> tags = new List<string>();
 
     /// <summary>
     /// 특정 히트의 공격력 배율을 반환합니다
@@ -60,5 +64,13 @@ public class ActionCommandData : ScriptableObject
             return 1.0f; // 기본값
         }
         return perfectTimings[hitIndex].damageRatio;
+    }
+    
+    /// <summary>
+    /// 특정 태그를 포함하는지 확인
+    /// </summary>
+    public bool HasTag(string tag)
+    {
+        return tags != null && tags.Contains(tag);
     }
 }
