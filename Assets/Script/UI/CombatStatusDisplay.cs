@@ -15,6 +15,13 @@ public class CombatStatusDisplay : MonoBehaviour
     public TextMeshProUGUI turnLabel;
     [SerializeField] private GameObject resultLinePrefab; // TextMeshProUGUI prefab
     public TextMeshProUGUI inputPromptText;
+    
+    [Header("Turn Timer Progress Bar")]
+    [Tooltip("턴 타이머 진행률 바 (Image 컴포넌트, Type=Filled 권장)")]
+    [SerializeField] private Image turnTimerProgressBar;
+    
+    [Tooltip("턴 타이머 진행률 바 배경 (선택 사항)")]
+    [SerializeField] private Image turnTimerProgressBarBackground;
 
     [Header("Player UI")]
     public TextMeshProUGUI playerName;
@@ -266,9 +273,101 @@ public class CombatStatusDisplay : MonoBehaviour
         }
 
     }
-    public void updateTurnInfo(float turnTimer)
+    /// <summary>
+    /// 턴 정보를 업데이트합니다.
+    /// </summary>
+    /// <param name="remainingTime">잔여 시간</param>
+    /// <param name="totalTime">전체 턴 시간 (옵션)</param>
+    public void updateTurnInfo(float remainingTime, float totalTime = 0f)
     {
-        turnLabel.text = $"턴: {turnTimer.ToString("F2")}초";
+        if (totalTime > 0f)
+        {
+            // 전체 시간이 제공된 경우: 잔여/전체 + 진행률 표시
+            float elapsedTime = totalTime - remainingTime;
+            float progressPercent = (elapsedTime / totalTime) * 100f;
+            float progressNormalized = Mathf.Clamp01(elapsedTime / totalTime); // 0~1 범위
+            
+            // 텍스트 업데이트
+            if (turnLabel != null)
+            {
+                turnLabel.text = $"턴 타이머: {remainingTime:F2} / {totalTime:F2}초 ({progressPercent:F0}%)";
+            }
+            
+            // 프로그레스 바 업데이트
+            UpdateProgressBar(progressNormalized);
+        }
+        else
+        {
+            // 하위 호환성: 잔여 시간만 표시
+            if (turnLabel != null)
+            {
+                turnLabel.text = $"턴: {remainingTime:F2}초";
+            }
+            
+            // 프로그레스 바는 업데이트하지 않음 (또는 0으로 설정)
+            UpdateProgressBar(0f);
+        }
+    }
+    
+    /// <summary>
+    /// 프로그레스 바를 업데이트합니다.
+    /// </summary>
+    /// <param name="normalizedProgress">진행률 (0~1)</param>
+    private void UpdateProgressBar(float normalizedProgress)
+    {
+        if (turnTimerProgressBar == null) return;
+        
+        // Image의 타입에 따라 다르게 처리
+        // Type=Filled인 경우: fillAmount 사용 (권장)
+        if (turnTimerProgressBar.type == Image.Type.Filled)
+        {
+            turnTimerProgressBar.fillAmount = normalizedProgress;
+        }
+        // Type=Simple 등 다른 타입: RectTransform 크기 조정
+        else
+        {
+            RectTransform rectTransform = turnTimerProgressBar.rectTransform;
+            if (rectTransform != null)
+            {
+                // 원본 너비를 기준으로 조정 (부모의 너비 사용)
+                RectTransform parentRect = rectTransform.parent as RectTransform;
+                if (parentRect != null)
+                {
+                    float maxWidth = parentRect.rect.width;
+                    float currentWidth = maxWidth * normalizedProgress;
+                    
+                    // sizeDelta의 x값만 변경 (y는 유지)
+                    rectTransform.sizeDelta = new Vector2(currentWidth, rectTransform.sizeDelta.y);
+                }
+            }
+        }
+        
+        // 색상 변경 (선택 사항): 진행률에 따라 색상 그라데이션
+        // UpdateProgressBarColor(normalizedProgress);
+    }
+    
+    /// <summary>
+    /// 진행률에 따라 프로그레스 바 색상을 변경합니다. (선택 사항)
+    /// </summary>
+    /// <param name="normalizedProgress">진행률 (0~1)</param>
+    private void UpdateProgressBarColor(float normalizedProgress)
+    {
+        if (turnTimerProgressBar == null) return;
+        
+        // 0%: 초록색, 50%: 노란색, 100%: 빨간색
+        Color barColor;
+        if (normalizedProgress < 0.5f)
+        {
+            // 초록 → 노랑 (0 ~ 0.5)
+            barColor = Color.Lerp(Color.green, Color.yellow, normalizedProgress * 2f);
+        }
+        else
+        {
+            // 노랑 → 빨강 (0.5 ~ 1.0)
+            barColor = Color.Lerp(Color.yellow, Color.red, (normalizedProgress - 0.5f) * 2f);
+        }
+        
+        turnTimerProgressBar.color = barColor;
     }
     public void SetPlayerActionCommandName(string commandName)
         => playerActionCommandName.text = $"[액션] {commandName}";

@@ -48,9 +48,7 @@ public class CombatManager : MonoBehaviour
     [Header("전역 설정")]
     [SerializeField] private GlobalConfig globalConfig;
     
-    [Header("발사체 관리")]
-    // ❌ 제거: ProjectileManager는 싱글톤으로 접근
-    // [SerializeField] private ProjectileManager projectileManager;
+
     
     // 발사체 발사 상태 추적
     private bool[] projectileLaunched; // 각 히트별 발사 상태
@@ -284,12 +282,20 @@ public class CombatManager : MonoBehaviour
             Debug.Log($"[RunCombat] 턴 {CurrentTurnNumber} 계속 - 적 턴");
             yield return StartCoroutine(PerformTurn(enemyController));
             
+            // 적 턴 종료 후 NPC 확률 리셋 (BT 효과 제거)
+            ResetNPCProbabilities();
+            
             // 적 턴 후 전투 종료 체크
             if (isBattleEnded)
             {
                 Debug.Log("[RunCombat] 적 턴 후 전투 종료 감지");
                 break;
             }
+            
+            // 🆕 디버그: 턴 완료 확인
+            Debug.Log($"[RunCombat] ========== 턴 {CurrentTurnNumber} 완료 - 다음 턴으로 ==========");
+            Debug.Log($"[RunCombat] 플레이어 HP: {CharacterManager.Instance.PlayerCombatant.HP}, 적 HP: {CharacterManager.Instance.EnemyCombatant.HP}");
+            Debug.Log($"[RunCombat] isBattleEnded: {isBattleEnded}");
         }
         Debug.Log("전투 종료!");
     }
@@ -320,6 +326,42 @@ public class CombatManager : MonoBehaviour
         else
         {
             Debug.LogWarning("[CombatManager] CharacterManager.Instance가 null입니다 - BT 상태 리셋 건너뜀");
+        }
+    }
+    
+    /// <summary>
+    /// NPC의 런타임 확률을 원본으로 리셋합니다 (턴 종료 시 호출)
+    /// 
+    /// 역할:
+    /// - BT가 해당 턴에 적용한 확률 조정을 모두 제거
+    /// - CharacterData의 원본 확률로 복원
+    /// 
+    /// 호출 시점:
+    /// - 각 턴 종료 후 (RunCombat에서 호출)
+    /// - 다음 턴 시작 시 BT가 다시 새롭게 확률을 조정함
+    /// </summary>
+    private void ResetNPCProbabilities()
+    {
+        if (CharacterManager.Instance != null)
+        {
+            // 적 Combatant의 확률 리셋
+            var enemyCombatant = CharacterManager.Instance.EnemyCombatant as EnemyCombatant;
+            if (enemyCombatant != null)
+            {
+                enemyCombatant.ResetProbabilities();
+                Debug.Log("[CombatManager] 적 NPC 확률 리셋 완료");
+            }
+            
+            // TODO: 플레이어도 NPC일 수 있다면 여기에 추가
+            // var playerCombatant = CharacterManager.Instance.PlayerCombatant as EnemyCombatant;
+            // if (playerCombatant != null)
+            // {
+            //     playerCombatant.ResetProbabilities();
+            // }
+        }
+        else
+        {
+            Debug.LogWarning("[CombatManager] CharacterManager.Instance가 null입니다 - NPC 확률 리셋 건너뜀");
         }
     }
 
@@ -438,8 +480,10 @@ public class CombatManager : MonoBehaviour
         while (TurnTimer.ElapsedTime < turnDuration + turnDurationBuffer)
         {
             float elapsed = TurnTimer.ElapsedTime; // 현재 경과 시간
+            float remaining = turnDuration - elapsed; // 잔여 시간
 
-            CombatStatusDisplay.Instance?.updateTurnInfo(turnDuration - elapsed);
+            // 턴 타이머 UI 업데이트 (잔여 시간, 전체 시간)
+            CombatStatusDisplay.Instance?.updateTurnInfo(remaining, turnDuration);
             
             // ❌ 제거: 턴 종료 플래그 확인 (PerformTurn에서 직접 처리)
             // if (turnEndRequested)
@@ -625,6 +669,7 @@ public class CombatManager : MonoBehaviour
           
         Debug.Log($"[{actor.Name}] 커맨드 실행 완료: {command.commandName}");  // 최종 결과 로그
         Debug.Log($"[InputTrace][Turn] PerformTurn End - actor:{actor.Name}, Time:{Time.time:F4}, Frame:{Time.frameCount}");
+        Debug.Log($"[PerformTurn] 🔵 메인 루프 종료 - {actor.Name} 턴 완료");
         controller.ReceiveCommandResult(result);    // 커맨드 결과를 컨트롤러에 전달
 
         // 1) 모든 히트에 대한 최종 적중 판정이 완료될 때까지 대기
@@ -659,15 +704,51 @@ public class CombatManager : MonoBehaviour
 
     private IEnumerator EnsureAllHitJudgmentsCompleted(int hitCount)
     {
+        // hitCount가 0이면 즉시 반환
+        if (hitCount <= 0)
+        {
+            Debug.Log($"[CombatManager] 🔍 hitCount가 0 이하 - 대기 생략");
+            yield break;
+        }
+        
         float waitStart = Time.time;
-        Debug.Log($"[CombatManager] 🆕 모든 Hit 판정 완료 대기 시작 - hitCount:{hitCount}");
+        Debug.Log($"[CombatManager] 🔍 === Hit 판정 완료 대기 시작 === hitCount:{hitCount}");
+        
+        // 초기 상태 확인
+        Debug.Log($"[CombatManager] 🔍 초기 상태 체크:");
+        for (int i = 0; i < hitCount; i++)
+        {
+            bool isCompleted = (i < hitJudgmentCompleted.Length) && hitJudgmentCompleted[i];
+            Debug.Log($"  - Hit {i}: {(isCompleted ? "✅ 이미 완료" : "⏳ 대기 중")}");
+        }
+        
+        float lastLogTime = waitStart;
+        int frameCount = 0;
         
         while (!AreAllHitJudgmentsCompleted(hitCount))
         {
+            frameCount++;
+            float waited = Time.time - waitStart;
+            
+            // 1초마다 상태 로그
+            if (Time.time - lastLogTime >= 1.0f)
+            {
+                Debug.Log($"[CombatManager] 🔍 대기 중... 경과: {waited:F2}초, 프레임: {frameCount}");
+                for (int i = 0; i < hitCount; i++)
+                {
+                    if (i >= hitJudgmentCompleted.Length || !hitJudgmentCompleted[i])
+                    {
+                        Debug.Log($"  ⏳ Hit {i}: 미완료 (발사체 충돌 대기)");
+                    }
+                }
+                lastLogTime = Time.time;
+            }
+            
             yield return null;
         }
-        float waited = Time.time - waitStart;
-        Debug.Log($"[InputTrace][Turn] All hit judgments completed for {hitCount} hits (waited {waited:F4}s, time:{Time.time:F4}, frame:{Time.frameCount})");
+        
+        float finalWait = Time.time - waitStart;
+        Debug.Log($"[CombatManager] 🔍 === Hit 판정 완료 대기 종료 === 대기 시간: {finalWait:F4}초, 프레임: {frameCount}");
     }
 
     private bool AreAllHitJudgmentsCompleted(int hitCount)

@@ -9,13 +9,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4d3eef59e44c1774382c556c58857c66, type: 3}
-  m_Name: ProbabilityAdjustment
+  m_Script: {fileID: 11500000, guid: 27916a9b531177147baab120bf82956c, type: 3}
+  m_Name: HPMore0
   m_EditorClassIdentifier: 
-  description: 
+  description: "\uC790\uC2E0\uC758 HP% >= 0"
   isEnabled: 1
-  priority: 0
-  executeOnce: 0
-  targetProbability: 0
-  adjustmentType: 0
-  value: 0.5
+  invertResult: 0
+  target: 0
+  comparisonOperator: 2
+  valueType: 1
+  threshold: 0

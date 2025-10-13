@@ -9,11 +9,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 63151a28697232444a45031d9917b887, type: 3}
-  m_Name: ForceBehavior
+  m_Script: {fileID: 11500000, guid: e537f9731c49c9d4a930d75c4fd7a74c, type: 3}
+  m_Name: ActionCommand_1
   m_EditorClassIdentifier: 
-  description: "\uB9C9\uAE30 \uAC15\uC81C \uD65C\uC131\uD654"
+  description: "\uAC80\uC220 \uC778\uB371\uC2A4 0 \uC120\uD0DD"
   isEnabled: 1
   priority: 0
   executeOncePerCombat: 0
-  behaviorType: 1
+  selectionType: 0
+  commandIndex: 1
+  requiredTag: 

@@ -16,7 +16,16 @@ MonoBehaviour:
   entries:
   - condition: {fileID: 11400000, guid: 0559ff17e698acc4cb6e392f2f242c4f, type: 2}
     actions:
-    - {fileID: 11400000, guid: f18d43e9e4da95a48be8b024946c5150, type: 2}
+    - {fileID: 11400000, guid: 5498cd66254e7d846beb70956c88689b, type: 2}
     - {fileID: 11400000, guid: cc49240159dadf748bdf39968ed8d415, type: 2}
+    - {fileID: 11400000, guid: 206c76cc19fe7c046bfe3b97f4569bf5, type: 2}
+    - {fileID: 11400000, guid: 129aa27c5d034034a89f0db9e069f18f, type: 2}
     isEnabled: 1
-    description: 
+    description: "HP\uAC00 50% \uBBF8\uB9CC\uC774 \uB418\uBA74 \uC644\uBCBD \uCCD0\uB0B4\uAE30\uC640
+      \uB9C9\uAE30, \uB9C9\uAE30 \uC911 \uCCD0\uB0B4\uAE30 \uBAA8\uB450 \uAC15\uC81C\n2\uBC88
+      \uAC80\uC220 \uC0AC\uC6A9"
+  - condition: {fileID: 11400000, guid: a6bc521d3b65dce4fb45dcbf5c808c8d, type: 2}
+    actions:
+    - {fileID: 11400000, guid: ceb7c6bbbdec7fb4c83e427127bb7d7e, type: 2}
+    isEnabled: 1
+    description: "\uD3C9\uC18C\uC5D0 1\uBC88 \uAC80\uC220 \uC0AC\uC6A9"

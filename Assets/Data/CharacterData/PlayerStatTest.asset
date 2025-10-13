@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   characterName: Unknown
   baseMaxHP: 100
-  baseATK: 50
+  baseATK: 35
   baseDR: 0
   baseCrit: 0
   baseCritRatio: 150
@@ -30,3 +30,4 @@ MonoBehaviour:
     parryWhileGuarding: 0
     parryWhileGuardingRate: 0
   behaviorTrees: []
+  originalBehaviorTrees: []

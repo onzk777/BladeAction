@@ -9,13 +9,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e537f9731c49c9d4a930d75c4fd7a74c, type: 3}
-  m_Name: CommandSelection
+  m_Script: {fileID: 11500000, guid: 27916a9b531177147baab120bf82956c, type: 3}
+  m_Name: HPLess50
   m_EditorClassIdentifier: 
   description: 
   isEnabled: 1
-  priority: 0
-  executeOnce: 0
-  selectionType: 0
-  commandIndex: 0
-  requiredTag: 
+  invertResult: 0
+  target: 0
+  comparisonOperator: 1
+  valueType: 1
+  threshold: 0.5

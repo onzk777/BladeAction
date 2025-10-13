@@ -3,12 +3,49 @@ using UnityEngine;
 
 public class EnemyCombatant : Combatant
 {
+    // ========================================
+    // 필드 (Fields)
+    // ========================================
+    
     private EnemyController controller; // EnemyController 참조
     private BladeAction.BT.BehaviorTreeContext currentBTContext; // 현재 BT 컨텍스트
     
+    /// <summary>
+    /// 런타임 확률 관리 인스턴스
+    /// BT의 확률 Override 결과를 적용하는 확률 복사본
+    /// 
+    /// 왜 필요한가?
+    /// - CharacterData.npcBehavior는 원본 에셋이므로 직접 수정하면 안 됨
+    /// - 이 인스턴스는 각 NPC마다 독립적으로 생성됨
+    /// - 턴마다 확률을 조정하고 턴 종료 시 리셋 가능
+    /// </summary>
+    private NPCRuntimeProbabilities runtimeProbabilities;
+    
+    
+    // ========================================
+    // 생성자 (Constructor)
+    // ========================================
+    
+    /// <summary>
+    /// EnemyCombatant를 생성합니다.
+    /// </summary>
+    /// <param name="data">캐릭터 데이터 (원본 확률 포함)</param>
+    /// <param name="controller">EnemyController 참조</param>
     public EnemyCombatant(CharacterData data, EnemyController controller) : base(data)
     {
         this.controller = controller;
+        
+        // NPCRuntimeProbabilities 인스턴스 생성
+        // CharacterData의 npcBehavior를 복사하여 독립적인 확률 관리
+        if (data != null && data.npcBehavior != null)
+        {
+            runtimeProbabilities = new NPCRuntimeProbabilities(data.npcBehavior);
+            Debug.Log($"[EnemyCombatant] {Name} 런타임 확률 초기화 완료");
+        }
+        else
+        {
+            Debug.LogWarning($"[EnemyCombatant] {Name} CharacterData 또는 npcBehavior가 null입니다!");
+        }
     }
 
     public void SetController(EnemyController newController)
@@ -67,21 +104,88 @@ public class EnemyCombatant : Combatant
     
     /// <summary>
     /// BT 결과를 실제 NPC 확률에 적용합니다.
+    /// 
+    /// 작동 흐름:
+    /// 1. currentBTContext가 null이면 아무것도 하지 않음
+    /// 2. runtimeProbabilities.ApplyOverrides()로 확률 적용
+    /// 
+    /// 중요:
+    /// - 확률 적용은 runtimeProbabilities에만 영향을 줌
+    /// - CharacterData의 원본 확률은 절대 변경되지 않음
+    /// - 턴 종료 시 ResetProbabilities()로 원본 확률로 복원
     /// </summary>
     private void ApplyBehaviorTreeResults()
     {
-        if (currentBTContext == null) return;
-        
-        // 확률 Override 적용
-        foreach (var kvp in currentBTContext.probabilityOverrides)
+        if (currentBTContext == null)
         {
-            Debug.Log($"[EnemyCombatant] BT 확률 Override: {kvp.Key} = {kvp.Value:F2}");
-            // TODO: 실제 확률 적용 로직 구현 필요
+            Debug.Log("[EnemyCombatant] BT Context가 없음 - 확률 적용 생략");
+            return;
+        }
+        
+        // runtimeProbabilities가 초기화되지 않았으면 생략
+        if (runtimeProbabilities == null)
+        {
+            Debug.LogWarning("[EnemyCombatant] runtimeProbabilities가 null - 확률 적용 불가");
+            return;
+        }
+        
+        // BT의 확률 Override를 runtimeProbabilities에 적용
+        // 예: {"AttackPerfectRate": 0.8} → runtimeProbabilities.attackPerfectRate = 0.8
+        Debug.Log("[EnemyCombatant] === BT 확률 적용 시작 ===");
+        runtimeProbabilities.ApplyOverrides(currentBTContext.probabilityOverrides);
+        Debug.Log("[EnemyCombatant] === BT 확률 적용 완료 ===");
+        
+        // 적용된 확률 로그 (디버깅용)
+        LogCurrentProbabilities();
+    }
+    
+    /// <summary>
+    /// 현재 확률 상태를 로그로 출력합니다. (디버깅용)
+    /// </summary>
+    private void LogCurrentProbabilities()
+    {
+        if (runtimeProbabilities == null) return;
+        
+        Debug.Log($"[EnemyCombatant] 현재 확률 상태:");
+        Debug.Log($"  - 공격 성공률: {runtimeProbabilities.AttackPerfectRate:P0}");
+        Debug.Log($"  - 쳐내기 성공률: {runtimeProbabilities.ParryPerfectRate:P0}");
+        Debug.Log($"  - 막기 시도율: {runtimeProbabilities.GuardAttemptRate:P0}");
+        Debug.Log($"  - 막기 중 쳐내기 시도 여부: {runtimeProbabilities.ParryWhileGuarding}");
+        Debug.Log($"  - 막기 중 쳐내기 성공률: {runtimeProbabilities.ParryWhileGuardingRate:P0}");    
+    }
+    
+    /// <summary>
+    /// 런타임 확률을 원본으로 리셋합니다.
+    /// 턴 종료 시 호출하여 BT 효과를 제거합니다.
+    /// 
+    /// 사용 시점:
+    /// - 턴 종료 시 (CombatManager에서 호출)
+    /// - 전투 종료 시
+    /// 
+    /// 효과:
+    /// - 이전 턴의 모든 BT 확률 조정이 초기화됨
+    /// - CharacterData의 원본 확률로 복원
+    /// </summary>
+    public void ResetProbabilities()
+    {
+        if (runtimeProbabilities != null)
+        {
+            Debug.Log($"[EnemyCombatant] {Name} 확률 리셋 호출");
+            runtimeProbabilities.ResetToOriginal();
         }
     }
     
     /// <summary>
     /// BT 결과에서 검술을 선택합니다.
+    /// 
+    /// 우선순위:
+    /// 1. selectedCommandIndex - 특정 인덱스 지정
+    /// 2. selectedCommandTag - 특정 태그의 검술 중 선택
+    /// 3. 랜덤 선택 (기본)
+    /// 
+    /// 참고:
+    /// - forcedBehavior는 BTAction_ForceBehavior가 확률 조정용으로 사용
+    /// - 검술 강제 선택은 selectedCommandIndex/Tag를 사용
     /// </summary>
     private int GetSelectedCommandFromBT()
     {
@@ -91,15 +195,19 @@ public class EnemyCombatant : Combatant
             return Random.Range(0, AvailableCommands.Count);
         }
         
-        // BT에서 검술 인덱스가 지정된 경우
+        // ========================================
+        // 1. selectedCommandIndex 체크
+        // ========================================
         if (currentBTContext.selectedCommandIndex.HasValue)
         {
             int idx = Mathf.Clamp(currentBTContext.selectedCommandIndex.Value, 0, AvailableCommands.Count - 1);
-            Debug.Log($"[EnemyCombatant] BT 검술 인덱스 선택: {idx}");
+            Debug.Log($"[EnemyCombatant] BT 검술 인덱스 선택: {idx} ('{AvailableCommands[idx].commandName}')");
             return idx;
         }
         
-        // BT에서 검술 태그가 지정된 경우
+        // ========================================
+        // 3. selectedCommandTag 체크
+        // ========================================
         if (!string.IsNullOrEmpty(currentBTContext.selectedCommandTag))
         {
             var filteredCommands = new List<ActionCommandData>();
@@ -124,14 +232,20 @@ public class EnemyCombatant : Combatant
                         break;
                     }
                 }
-                Debug.Log($"[EnemyCombatant] BT 태그 검술 선택: '{currentBTContext.selectedCommandTag}' -> 인덱스 {idx}");
+                Debug.Log($"[EnemyCombatant] BT 태그 검술 선택: '{currentBTContext.selectedCommandTag}' -> '{selectedCommand.commandName}' (인덱스: {idx})");
                 return idx >= 0 ? idx : Random.Range(0, AvailableCommands.Count);
+            }
+            else
+            {
+                Debug.LogWarning($"[EnemyCombatant] 태그 '{currentBTContext.selectedCommandTag}'를 가진 검술이 없음 - 랜덤 선택");
             }
         }
         
-        // BT에서 검술 선택이 없으면 랜덤 선택
+        // ========================================
+        // 4. 랜덤 선택 (기본)
+        // ========================================
         int randomIdx = Random.Range(0, AvailableCommands.Count);
-        Debug.Log($"[EnemyCombatant] BT 검술 선택 없음 -> 랜덤 선택: {randomIdx}");
+        Debug.Log($"[EnemyCombatant] BT 검술 선택 없음 -> 랜덤 선택: {randomIdx} ('{AvailableCommands[randomIdx].commandName}')");
         return randomIdx;
     }
 }

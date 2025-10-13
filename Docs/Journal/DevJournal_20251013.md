@@ -383,17 +383,339 @@ if (!string.IsNullOrEmpty(context.forcedBehavior))
 ## 작업 로그
 
 ### 시작 (오전)
-- [ ] DevJournal 작성 완료
-- [ ] 구현 계획 검토 완료
-- [ ] 작업 시작
+- [x] DevJournal 작성 완료
+- [x] 구현 계획 검토 완료
+- [x] 작업 시작
 
-### 진행 중
-_여기에 진행 상황 기록_
-
-### 완료
-_여기에 완료 내역 기록_
+### 오전 완료 항목 ✅
+1. **NPCRuntimeProbabilities 클래스 구현 완료**
+   - 확률 데이터 관리 (원본 보호, 복사본 수정, 리셋)
+   
+2. **EnemyCombatant 확장 완료**
+   - runtimeProbabilities 필드 추가 및 초기화
+   - ApplyBehaviorTreeResults() TODO 제거 및 실제 구현
+   - ResetProbabilities() 구현
+   
+3. **CombatManager 연동 완료**
+   - ResetNPCProbabilities() 구현
+   - 턴 종료 시 확률 리셋 호출
+   
+4. **턴 타이머 UI 개선 완료**
+   - 잔여/전체 시간 + 진행률(%) 표시
+   - 프로그레스 바 구현 (Image Fill Amount 지원)
+   - Inspector 연결 가능
 
 ---
 
-**다음 목표**: Phase 4 - 디버깅 및 최적화
+## 🚨 발견된 문제점 및 분석 (저녁 작업 대기)
+
+### 문제 1: Enemy 검술이 UI에 표시되지 않음 ⚠️
+
+**증상:**
+- Enemy가 사용하는 검술이 검술 선택 UI에 표현되지 않음
+- 버튼이 비활성화되어 포커싱 표시 등이 제대로 표현되지 않음
+
+**원인 분석:**
+1. `EnemyActionSelectUI` 존재 여부 확인 필요
+2. PlayerController와 달리 EnemyController는 UI 업데이트 로직이 없을 가능성
+3. 검술 선택 후 UI에 반영하는 코드 누락 가능성
+
+**해결 계획:**
+```
+1. EnemyActionSelectUI 스크립트 확인
+   - 존재하는가?
+   - PlayerActionSelectUI와 유사한 구조인가?
+
+2. EnemyController에 UI 업데이트 로직 추가
+   - GetSelectedCommandIndex() 호출 후 UI 갱신
+   - 선택된 버튼 하이라이트 처리
+
+3. CombatManager에서 Enemy 턴 시작 시
+   - EnemyActionSelectUI.UpdateSelectedButton(index) 호출
+   - 시각적 피드백 제공
+```
+
+**관련 파일:**
+- `Assets/Script/UI/EnemyActionSelectUI.cs` (확인 필요)
+- `Assets/Script/Controller/EnemyController.cs`
+
+---
+
+### 문제 2: Enemy가 BT 선택 결과를 무시함 🔴 **CRITICAL**
+
+**증상:**
+- UseTestMode = false일 때도 BT의 검술 선택이 무시됨
+- testCommandIndex 값을 그대로 사용함
+
+**원인 분석:**
+`EnemyController.GetSelectedCommandIndex()` 라인 135-156에서 **치명적인 버그 발견:**
+
+```csharp
+public int GetSelectedCommandIndex()
+{
+    int index = 0;
+    if(useTestMode)
+    {
+        if (useRandomAction)
+        {
+            int len = equippedStyle.CommandSet.Count;
+            if (len == 0) return testCommandIndex;
+            int randomIndex = UnityEngine.Random.Range(0, len);
+            index = randomIndex;
+        }
+        else
+        {
+            index = testCommandIndex;
+        }
+    }
+    else
+        index = testCommandIndex;  // ← 🔴 버그! useTestMode=false여도 testCommandIndex 사용!
+    return index;
+}
+```
+
+**문제점:**
+- `else` 절이 잘못됨
+- useTestMode=false일 때 **BT의 선택 결과를 가져와야 하는데** testCommandIndex를 반환
+- `EnemyCombatant.ChooseCommand()`의 BT 결과가 완전히 무시됨
+
+**올바른 로직:**
+```csharp
+public int GetSelectedCommandIndex()
+{
+    if (useTestMode)
+    {
+        // 테스트 모드: testCommandIndex 사용
+        if (useRandomAction)
+            return Random.Range(0, CommandCount);
+        else
+            return testCommandIndex;
+    }
+    else
+    {
+        // 🔥 BT 모드: Combatant의 ChooseCommand() 사용!
+        var selection = Combatant?.ChooseCommand();
+        return Mathf.Clamp(selection?.selectedIndex ?? 0, 0, CommandCount - 1);
+    }
+}
+```
+
+**해결 계획:**
+```
+1. EnemyController.GetSelectedCommandIndex() 수정
+   - else 절에서 Combatant.ChooseCommand() 호출
+   - BT의 선택 결과 반영
+
+2. 테스트
+   - UseTestMode = true: testCommandIndex 사용 (기존 동작)
+   - UseTestMode = false: BT 결과 사용 (수정 후)
+   
+3. 로그 추가
+   - BT 선택 vs 테스트 모드 선택 구분 로그
+```
+
+**관련 파일:**
+- `Assets/Script/Controller/EnemyController.cs` (라인 135-156)
+
+---
+
+### 문제 3: Poise=0 중단 시 턴이 무한 대기 🔴 **CRITICAL**
+
+**증상:**
+- Poise를 0으로 만들어 행동을 중단시키면 턴이 넘어가지 않음
+- 무한 대기 상태에 빠짐
+
+**원인 분석:**
+1. **발사체 미발사 문제:**
+   ```
+   행동 중단 (Poise=0)
+       ↓
+   애니메이션 중단
+       ↓
+   발사체 발사 이벤트 실행 안 됨
+       ↓
+   OnProjectileHit() 호출 안 됨
+       ↓
+   hitJudgmentCompleted[i] = true 설정 안 됨
+       ↓
+   EnsureAllHitJudgmentsCompleted() 무한 대기 ⚠️
+   ```
+
+2. **근본 원인:**
+   - `CombatManager.EnsureAllHitJudgmentsCompleted()` (라인 703-750)
+   - 모든 히트 판정이 완료될 때까지 대기
+   - 중단 시 마지막 히트가 발사되지 않으면 영원히 대기
+
+**해결 계획:**
+```
+1. 중단 감지 시 hitJudgmentCompleted 강제 완료 처리
+   
+   CombatManager.PerformTurn():
+   - isInterrupted = true일 때 (라인 501)
+   - 남은 모든 hitJudgmentCompleted[i] = true 설정
+   - 즉시 턴 종료
+
+2. CheckInterruptCondition() 개선:
+   if (CheckInterruptCondition())
+   {
+       Debug.Log("턴이 중단되었습니다.");
+       
+       // 🔥 추가: 남은 히트 판정 강제 완료
+       for (int i = CurrentHit; i < hitCount; i++)
+       {
+           if (!hitJudgmentCompleted[i])
+           {
+               hitJudgmentCompleted[i] = true;
+               Debug.Log($"[중단] Hit {i} 판정 강제 완료");
+           }
+       }
+       
+       break; // 턴 종료
+   }
+
+3. isInterrupted 체크 위치 개선:
+   - 라인 501의 isInterrupted 체크에도 동일 로직 추가
+   - 중단 시 즉시 턴 종료 보장
+```
+
+**관련 파일:**
+- `Assets/Script/Combat/CombatManager.cs` (라인 501-511, 703-750)
+
+---
+
+## 📋 저녁 작업 계획 (우선순위 순)
+
+### 🔴 CRITICAL (반드시 수정)
+
+#### 1. EnemyController BT 선택 버그 수정
+**예상 소요:** 10분
+```csharp
+// 파일: Assets/Script/Controller/EnemyController.cs
+// 위치: GetSelectedCommandIndex() 메서드 (라인 135-156)
+
+public int GetSelectedCommandIndex()
+{
+    if (useTestMode)
+    {
+        // 테스트 모드
+        if (useRandomAction)
+            return Random.Range(0, CommandCount);
+        else
+            return testCommandIndex;
+    }
+    else
+    {
+        // BT 모드: Combatant의 ChooseCommand() 사용
+        var selection = Combatant?.ChooseCommand();
+        int btIndex = selection?.selectedIndex ?? 0;
+        Debug.Log($"[EnemyController] BT 모드 - 선택된 인덱스: {btIndex}");
+        return Mathf.Clamp(btIndex, 0, CommandCount - 1);
+    }
+}
+```
+
+#### 2. Poise 중단 시 무한 대기 해결
+**예상 소요:** 20분
+```csharp
+// 파일: Assets/Script/Combat/CombatManager.cs
+// 위치: PerformTurn() 메서드
+
+// 라인 501-511 수정:
+if (isInterrupted)
+{
+    Debug.LogWarning("[PerformTurn] 중단 발생으로 턴이 조기 종료됩니다.");
+    
+    // 남은 히트 판정 강제 완료
+    ForceCompleteRemainingHits(CurrentHit, hitCount);
+    
+    break;
+}
+
+if (CheckInterruptCondition())
+{
+    Debug.Log("턴이 중단되었습니다.");
+    
+    // 남은 히트 판정 강제 완료
+    ForceCompleteRemainingHits(CurrentHit, hitCount);
+    
+    break;
+}
+
+// 새 메서드 추가:
+private void ForceCompleteRemainingHits(int currentHit, int totalHits)
+{
+    Debug.Log($"[중단] 남은 히트 판정 강제 완료: {currentHit} ~ {totalHits-1}");
+    for (int i = currentHit; i < totalHits; i++)
+    {
+        if (i < hitJudgmentCompleted.Length && !hitJudgmentCompleted[i])
+        {
+            hitJudgmentCompleted[i] = true;
+            Debug.Log($"  - Hit {i}: 강제 완료");
+        }
+    }
+}
+```
+
+### ⚠️ HIGH (중요)
+
+#### 3. Enemy UI 표시 문제 해결
+**예상 소요:** 30분
+```
+1. EnemyActionSelectUI 스크립트 확인
+   - grep으로 검색: "EnemyActionSelectUI"
+   - 없으면 생성 필요
+
+2. EnemyController에 UI 업데이트 추가
+   - GetSelectedCommandIndex() 호출 후
+   - UI 갱신 메서드 호출
+
+3. CombatManager에서 Enemy 턴 시작 시
+   - Enemy 선택 UI 업데이트
+```
+
+---
+
+## 🚀 저녁 작업 재개 프롬프트
+
+```
+Phase 3 확률 Override 시스템 구현이 완료되었습니다.
+오전에 발견된 3가지 CRITICAL 버그를 수정하려고 합니다.
+
+발견된 버그:
+1. EnemyController.GetSelectedCommandIndex()에서 UseTestMode=false여도 BT 결과를 무시하고 testCommandIndex를 반환하는 버그
+2. Poise=0으로 중단 시 마지막 발사체가 발사되지 않아 hitJudgmentCompleted가 완료되지 않아 무한 대기하는 버그  
+3. Enemy 검술 선택이 UI에 표시되지 않는 문제
+
+우선순위에 따라 순서대로 수정해주세요:
+1. EnemyController BT 선택 버그 (CRITICAL)
+2. Poise 중단 무한 대기 버그 (CRITICAL)
+3. Enemy UI 표시 문제
+
+각 버그의 상세 분석과 수정 계획은 DevJournal_20251013.md의
+"🚨 발견된 문제점 및 분석" 섹션을 참고하세요.
+```
+
+---
+
+## 📊 Phase 3 완료 현황
+
+### ✅ 완료된 기능
+- NPCRuntimeProbabilities 클래스 (확률 관리)
+- EnemyCombatant 확장 (BT 결과 적용)
+- CombatManager 연동 (턴 종료 시 리셋)
+- 턴 타이머 UI 개선
+
+### 🔴 발견된 버그 (수정 대기)
+1. EnemyController BT 선택 무시
+2. Poise 중단 시 무한 대기
+3. Enemy UI 미표시
+
+### ⏳ 대기 중
+- 테스트 BT 에셋 생성
+- Unity 플레이 테스트
+- 버그 수정 후 최종 검증
+
+---
+
+**다음 목표**: 저녁에 CRITICAL 버그 3개 수정 후 Phase 3 완전 완료
 
