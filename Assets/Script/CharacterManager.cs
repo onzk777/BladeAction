@@ -49,11 +49,15 @@ public class CharacterManager : MonoBehaviour
         PlayerData = Instantiate(playerDataAsset);
         EnemyData = Instantiate(enemyDataAsset);
 
+        // BT 인스턴스화 (개체별 독립적인 BT 생성)
+        PlayerData.InstantiateBehaviorTrees();
+        EnemyData.InstantiateBehaviorTrees();
+
         // Combatant 인스턴스 생성 (CharacterData를 통해 1차 스탯 초기화)
         PlayerCombatant = new PlayerCombatant(PlayerData, null);
         EnemyCombatant = new EnemyCombatant(EnemyData, null);
 
-        Debug.Log("[CharacterManager] CharacterData 및 Combatant 초기화 완료.");
+        Debug.Log("[CharacterManager] CharacterData, BT 인스턴스화 및 Combatant 초기화 완료.");
     }
 
     /// <summary>

@@ -77,8 +77,85 @@ public class CharacterData : ScriptableObject
     public NPCBehaviorProbabilities npcBehavior = new NPCBehaviorProbabilities();
     
     [Header("Behavior Tree")]
-    [Tooltip("이 캐릭터가 사용할 Behavior Tree 리스트")]
-    public System.Collections.Generic.List<BehaviorTreeData> behaviorTrees = new System.Collections.Generic.List<BehaviorTreeData>();
+    [Tooltip("이 캐릭터가 사용할 Behavior Tree 리스트 (런타임 인스턴스)")]
+    public System.Collections.Generic.List<BladeAction.BT.BehaviorTreeData> behaviorTrees = new System.Collections.Generic.List<BladeAction.BT.BehaviorTreeData>();
+    
+    [Header("Behavior Tree 원본 (에디터용)")]
+    [Tooltip("에디터에서 설정할 원본 Behavior Tree 리스트")]
+    public System.Collections.Generic.List<BladeAction.BT.BehaviorTreeData> originalBehaviorTrees = new System.Collections.Generic.List<BladeAction.BT.BehaviorTreeData>();
+    
+    /// <summary>
+    /// Behavior Tree를 인스턴스화하여 개체별 독립적인 BT 생성
+    /// </summary>
+    public void InstantiateBehaviorTrees()
+    {
+        behaviorTrees.Clear();
+        
+        foreach (var originalTree in originalBehaviorTrees)
+        {
+            if (originalTree != null)
+            {
+                var instantiatedTree = UnityEngine.Object.Instantiate(originalTree);
+                behaviorTrees.Add(instantiatedTree);
+                Debug.Log($"[CharacterData] BT 인스턴스화 완료: {originalTree.name} → {instantiatedTree.name}");
+            }
+        }
+        
+        Debug.Log($"[CharacterData] {characterName} BT 인스턴스화 완료 - 총 {behaviorTrees.Count}개");
+    }
+    
+    /// <summary>
+    /// 모든 BT 노드의 전투 실행 상태를 리셋
+    /// </summary>
+    public void ResetBehaviorTreeExecutionStates()
+    {
+        foreach (var tree in behaviorTrees)
+        {
+            if (tree != null)
+            {
+                ResetTreeExecutionStates(tree);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 특정 BT의 모든 노드 실행 상태 리셋
+    /// </summary>
+    private void ResetTreeExecutionStates(BladeAction.BT.BehaviorTreeData tree)
+    {
+        if (tree == null) return;
+        
+        foreach (var entry in tree.entries)
+        {
+            if (entry == null) continue;
+            
+            // 조건 노드 리셋
+            if (entry.condition != null)
+            {
+                ResetNodeExecutionState(entry.condition);
+            }
+            
+            // 액션 노드들 리셋
+            foreach (var action in entry.actions)
+            {
+                if (action != null)
+                {
+                    ResetNodeExecutionState(action);
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// 개별 노드의 실행 상태 리셋
+    /// </summary>
+    private void ResetNodeExecutionState(BladeAction.BT.BTNode node)
+    {
+        if (node is BladeAction.BT.BTActionNode actionNode)
+        {
+            actionNode.ResetCombatExecution();
+        }
+    }
 }
 
 /// <summary>

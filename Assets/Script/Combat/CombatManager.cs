@@ -72,6 +72,12 @@ public class CombatManager : MonoBehaviour
 
     // 현재 턴 지속 시간 (전역 접근 가능)
     public float CurrentTurnDuration { get; private set; } = 0f;
+    
+    // 현재 턴 번호 (BT에서 사용)
+    public int CurrentTurnNumber { get; private set; } = 1;
+    
+    // NPC 공격 턴 여부 (BT에서 사용)
+    public bool IsNPCAttackTurn => !isPlayerAttacker;
 
     // CharacterManager를 통해 Combatant 인스턴스 접근
 
@@ -228,6 +234,9 @@ public class CombatManager : MonoBehaviour
         // 🆕 전투 시작 시 CombatStartDelay 적용
         yield return new WaitForSeconds(GlobalConfig.Instance.CombatStartDelay);
         
+        // 🆕 BT 상태 리셋 (새 전투 시작 시)
+        ResetBehaviorTreeStates();
+        
         // ❌ 제거: 턴 종료 대기 중 체크 (PerformTurn에서 직접 처리)
         // if (isWaitingForTurnEnd)
         // {
@@ -258,6 +267,8 @@ public class CombatManager : MonoBehaviour
             
             // 플레이어 턴
             CombatStartTime = Time.time;
+            CurrentTurnNumber++; // 턴 번호 증가
+            Debug.Log($"[RunCombat] 턴 {CurrentTurnNumber} 시작 - 플레이어 턴");
             // ❌ 제거: CombatStartDelay는 전투 시작 시에만 적용되어야 함
             // yield return new WaitForSeconds(GlobalConfig.Instance.CombatStartDelay); // 전투 시작 후 대기 시간
             yield return StartCoroutine(PerformTurn(playerController));
@@ -270,6 +281,7 @@ public class CombatManager : MonoBehaviour
             }
             
             // 적 턴 (애니메이션 대기 없이 즉시 시작)
+            Debug.Log($"[RunCombat] 턴 {CurrentTurnNumber} 계속 - 적 턴");
             yield return StartCoroutine(PerformTurn(enemyController));
             
             // 적 턴 후 전투 종료 체크
@@ -280,6 +292,35 @@ public class CombatManager : MonoBehaviour
             }
         }
         Debug.Log("전투 종료!");
+    }
+    
+    /// <summary>
+    /// 모든 캐릭터의 BT 실행 상태를 리셋 (새 전투 시작 시)
+    /// </summary>
+    private void ResetBehaviorTreeStates()
+    {
+        if (CharacterManager.Instance != null)
+        {
+            // 플레이어 BT 상태 리셋
+            if (CharacterManager.Instance.PlayerData != null)
+            {
+                CharacterManager.Instance.PlayerData.ResetBehaviorTreeExecutionStates();
+                Debug.Log("[CombatManager] 플레이어 BT 상태 리셋 완료");
+            }
+            
+            // 적 BT 상태 리셋
+            if (CharacterManager.Instance.EnemyData != null)
+            {
+                CharacterManager.Instance.EnemyData.ResetBehaviorTreeExecutionStates();
+                Debug.Log("[CombatManager] 적 BT 상태 리셋 완료");
+            }
+            
+            Debug.Log("[CombatManager] 모든 BT 상태 리셋 완료");
+        }
+        else
+        {
+            Debug.LogWarning("[CombatManager] CharacterManager.Instance가 null입니다 - BT 상태 리셋 건너뜀");
+        }
     }
 
     private IEnumerator PerformTurn(ICombatController controller)

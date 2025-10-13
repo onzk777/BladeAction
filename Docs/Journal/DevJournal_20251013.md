@@ -1,0 +1,399 @@
+# 개발 일지 - 2025년 10월 13일
+
+## 작업 개요
+- **주제**: BT 시스템 Phase 3 완료 - 확률 Override 실제 적용 및 통합 테스트
+- **목표**: Phase 3 완성하여 BT 시스템을 실제 전투에서 사용 가능한 상태로 만들기
+
+---
+
+## 현재 상황 요약
+
+### ✅ 완료된 Phase
+- **Phase 1 (10/1)**: 데이터 구조 확장 완료
+- **Phase 2 (10/2)**: BT Core 시스템 완전 구현 완료
+
+### 🔄 Phase 3 진행 상황 (60% 완료)
+| 작업 | 상태 |
+|------|------|
+| BT Executor 구현 | ✅ 완료 |
+| EnemyController BT 연동 | ✅ 완료 |
+| 확률 Override 시스템 | 🔴 **미완성 (TODO 상태)** |
+| 검술 선택 로직 수정 | ✅ 완료 |
+
+### 🎯 오늘의 핵심 과제
+**`EnemyCombatant.ApplyBehaviorTreeResults()` 메서드가 TODO 상태로 남아있음**
+- BT 평가는 완료되지만 결과가 실제 확률에 적용되지 않음
+- 이 부분을 완성해야 BT 시스템이 실제로 동작함
+
+---
+
+## 오늘의 구현 계획
+
+### Phase 3 완료 작업 목록
+
+#### 1단계: 확률 Override 시스템 구현 ⚠️ **최우선**
+
+##### 1.1 NPCRuntimeBehavior 클래스 구현
+**위치**: `Assets/Script/NPCRuntimeBehavior.cs` (신규 파일)
+
+**작업 내용**:
+- [ ] 원본 확률과 현재 확률을 분리 관리하는 클래스 생성
+- [ ] `ApplyOverrides(Dictionary<string, float>)`: BT 결과를 확률에 적용
+- [ ] `ResetToOriginal()`: 원본 확률로 복원
+- [ ] 확률 접근 프로퍼티 (AttackPerfectRate, ParryPerfectRate 등)
+
+**구현 세부사항**:
+```csharp
+public class NPCRuntimeBehavior
+{
+    private NPCBehaviorProbabilities original;  // 원본 (CharacterData)
+    private NPCBehaviorProbabilities current;   // 현재 (Override 적용)
+    
+    // 생성자: 원본 복사
+    // ApplyOverrides: Dictionary를 current에 반영
+    // ResetToOriginal: current = original 복사
+    // Get 프로퍼티: current 값 반환
+}
+```
+
+##### 1.2 EnemyCombatant 확장
+**파일**: `Assets/Script/EnemyCombatant.cs`
+
+**작업 내용**:
+- [ ] `runtimeBehavior` 필드 추가
+- [ ] `InitializeRuntimeBehavior()`: 전투 시작 시 호출
+- [ ] `ApplyBehaviorTreeResults()`: TODO 제거 및 실제 로직 구현
+- [ ] `ResetBehaviorOnTurnEnd()`: 턴 종료 시 확률 리셋
+- [ ] 기존 확률 참조 코드를 `runtimeBehavior`로 수정
+
+**구현 세부사항**:
+```csharp
+public class EnemyCombatant : Combatant
+{
+    public NPCRuntimeBehavior runtimeBehavior;
+    
+    // 초기화: CharacterData.npcBehavior를 기반으로 생성
+    // ApplyBehaviorTreeResults: context의 probabilityOverrides 적용
+    // 기존 npcBehavior 참조를 runtimeBehavior로 변경
+}
+```
+
+##### 1.3 CombatManager 연동
+**파일**: `Assets/Script/Combat/CombatManager.cs`
+
+**작업 내용**:
+- [ ] 전투 시작 시 `InitializeRuntimeBehavior()` 호출
+- [ ] 턴 종료 시 `ResetBehaviorOnTurnEnd()` 호출
+- [ ] BT 상태 리셋과 함께 호출되도록 통합
+
+---
+
+#### 2단계: 강제 행동(ForceBehavior) 시스템 구현
+
+##### 2.1 BehaviorTreeContext 확장
+**파일**: `Assets/Script/BT/Core/BehaviorTreeContext.cs`
+
+**작업 내용**:
+- [ ] `forcedBehavior` 필드 사용 여부 확인
+- [ ] 필요 시 enum 또는 string 정의 명확화
+
+##### 2.2 EnemyCombatant 강제 행동 처리
+**파일**: `Assets/Script/EnemyCombatant.cs`
+
+**작업 내용**:
+- [ ] `ApplyBehaviorTreeResults()` 내에서 `forcedBehavior` 처리
+- [ ] 강제 행동이 있으면 확률 무시하고 해당 행동 선택
+- [ ] `BTAction_ForceBehavior` 노드 결과 적용
+
+**구현 세부사항**:
+```csharp
+// ApplyBehaviorTreeResults 내부
+if (!string.IsNullOrEmpty(context.forcedBehavior))
+{
+    // 강제 행동 설정
+    // "Attack", "Guard", "Parry" 등
+}
+```
+
+---
+
+#### 3단계: BT 실행 로그 시스템 강화
+
+##### 3.1 디버그 로그 추가
+**파일**: 여러 BT 노드 파일들
+
+**작업 내용**:
+- [ ] `BehaviorTreeExecutor.cs`: BT 평가 시작/종료 로그
+- [ ] `EnemyCombatant.cs`: 확률 변경 전/후 로그
+- [ ] 각 Condition Node: 평가 결과 로그
+- [ ] 각 Action Node: 실행 내용 로그
+
+**로그 형식**:
+```
+[BT] === BT 평가 시작 (턴: 3, 타입: 공격) ===
+[BT Condition] HPComparison: True (Self HP: 45/100 = 45%)
+[BT Action] ProbabilityAdjustment: AttackPerfectRate 0.3 → 0.8
+[BT] === BT 평가 완료 ===
+[BT Apply] 확률 적용 완료
+  - AttackPerfectRate: 0.3 → 0.8
+  - ParryPerfectRate: 0.5 → 0.5 (변경 없음)
+```
+
+---
+
+#### 4단계: 테스트 BT 에셋 생성
+
+##### 4.1 공격형 NPC BT 생성
+**에셋**: `Assets/Data/BT/BT_AggressiveEnemy.asset`
+
+**패턴 설계**:
+- HP 50% 이상: 공격 성공률 80%
+- HP 50% 미만: 공격 성공률 50%, 막기 시도율 70%
+
+**작업 내용**:
+- [ ] HP Comparison Condition 노드 생성
+- [ ] Probability Adjustment Action 노드 생성
+- [ ] BehaviorTreeData 생성 및 Entry 구성
+
+##### 4.2 방어형 NPC BT 생성
+**에셋**: `Assets/Data/BT/BT_DefensiveEnemy.asset`
+
+**패턴 설계**:
+- 방어 턴: 막기 시도율 90%, 쳐내기 성공률 70%
+- 공격 턴: 공격 성공률 40%
+
+**작업 내용**:
+- [ ] Turn Type Condition 노드 생성
+- [ ] Probability Adjustment Action 노드 생성
+- [ ] BehaviorTreeData 생성 및 Entry 구성
+
+##### 4.3 특수 패턴 BT 생성
+**에셋**: `Assets/Data/BT/BT_SpecialPattern.asset`
+
+**패턴 설계**:
+- 턴 3 이상: 특정 검술(인덱스 0) 강제 사용
+- 턴 5 이상: "Ultimate" 태그 검술 강제 사용
+
+**작업 내용**:
+- [ ] Turn Count Condition 노드 생성
+- [ ] Command Selection Action 노드 생성
+- [ ] BehaviorTreeData 생성 및 Entry 구성
+
+---
+
+#### 5단계: 통합 테스트 및 검증
+
+##### 5.1 Unity 플레이 테스트
+**작업 내용**:
+- [ ] 테스트 BT를 CharacterData에 할당
+- [ ] 전투 진행하며 로그 확인
+- [ ] 확률이 실제로 변경되는지 확인
+- [ ] 검술 선택이 BT 결과대로 동작하는지 확인
+
+##### 5.2 검증 체크리스트
+- [ ] **BT 평가**: 턴 시작 시 BT가 정상적으로 평가됨
+- [ ] **확률 적용**: Override된 확률이 실제 행동에 반영됨
+- [ ] **검술 선택**: selectedCommandIndex/Tag가 정상 작동
+- [ ] **Priority 처리**: 같은 대상 확률 조정 시 최고 Priority만 적용
+- [ ] **강제 행동**: forcedBehavior가 확률보다 우선
+- [ ] **턴 리셋**: 턴 종료 시 확률이 원본으로 복원
+- [ ] **전투 리셋**: 새 전투 시작 시 BT 상태 초기화
+- [ ] **개체 독립성**: 같은 BT를 사용하는 다른 NPC가 서로 영향 없음
+
+##### 5.3 버그 수정 및 최적화
+**작업 내용**:
+- [ ] 발견된 버그 수정
+- [ ] 로그 출력 최적화
+- [ ] null 처리 강화
+- [ ] 예외 상황 처리
+
+---
+
+#### 6단계: Phase 4 사전 작업 (시간 여유 시)
+
+##### 6.1 BTLogger 클래스 구현
+**파일**: `Assets/Script/BT/BTLogger.cs` (신규)
+
+**작업 내용**:
+- [ ] 정적 로그 메서드 구현
+- [ ] 로그 활성화/비활성화 플래그
+- [ ] 조건부 로그 출력
+
+##### 6.2 런타임 모니터링 UI 설계
+**작업 내용**:
+- [ ] 현재 확률 표시 UI 설계
+- [ ] BT 실행 결과 표시 UI 설계
+- [ ] 다음 작업 시 구현 계획 수립
+
+---
+
+## 예상 작업 흐름
+
+### 우선순위 1: 핵심 기능 (필수)
+1. NPCRuntimeBehavior 클래스 구현 (30분)
+2. EnemyCombatant 확장 (1시간)
+3. 강제 행동 시스템 구현 (30분)
+4. 디버그 로그 추가 (30분)
+
+**예상 소요 시간**: 2.5시간
+
+### 우선순위 2: 테스트 (필수)
+5. 테스트 BT 에셋 생성 (1시간)
+6. Unity 플레이 테스트 (1시간)
+7. 버그 수정 (1시간)
+
+**예상 소요 시간**: 3시간
+
+### 우선순위 3: 추가 작업 (선택)
+8. Phase 4 사전 작업 (시간 여유 시)
+
+**총 예상 소요 시간**: 5.5시간 (Phase 3 완료 기준)
+
+---
+
+## 주요 파일 목록
+
+### 수정할 기존 파일
+- `Assets/Script/EnemyCombatant.cs`: 확률 Override 적용 로직
+- `Assets/Script/Combat/CombatManager.cs`: 초기화 및 리셋 호출
+- `Assets/Script/CharacterData.cs`: 필요 시 메서드 추가
+
+### 생성할 신규 파일
+- `Assets/Script/NPCRuntimeBehavior.cs`: 런타임 확률 관리 클래스
+- `Assets/Script/BT/BTLogger.cs`: 디버그 로그 시스템 (선택)
+
+### 생성할 테스트 에셋
+- `Assets/Data/BT/TestConditions/`: Condition 노드들
+- `Assets/Data/BT/TestActions/`: Action 노드들
+- `Assets/Data/BT/BT_AggressiveEnemy.asset`: 공격형 BT
+- `Assets/Data/BT/BT_DefensiveEnemy.asset`: 방어형 BT
+- `Assets/Data/BT/BT_SpecialPattern.asset`: 특수 패턴 BT
+
+---
+
+## 검증 포인트
+
+### 기능 검증
+1. **확률 적용**: BT 결과가 실제 NPC 행동 확률에 반영되는가?
+2. **턴 리셋**: 턴 종료 시 확률이 원본으로 복원되는가?
+3. **전투 리셋**: 새 전투 시 BT 상태가 초기화되는가?
+4. **Priority**: 여러 확률 조정 시 최고 Priority가 적용되는가?
+5. **강제 행동**: forcedBehavior가 확률을 무시하는가?
+6. **검술 선택**: BT에서 지정한 검술이 선택되는가?
+
+### 안정성 검증
+1. **null 처리**: BT가 없어도 오류 없이 동작하는가?
+2. **에셋 호환성**: 기존 CharacterData 에셋이 정상 동작하는가?
+3. **메모리**: 개체별 BT 인스턴스가 독립적으로 관리되는가?
+4. **성능**: BT 평가가 프레임 드롭을 일으키지 않는가?
+
+---
+
+## 예상 이슈 및 대응
+
+### 이슈 1: 확률 참조 위치 불일치
+**증상**: 기존 코드에서 `CharacterData.npcBehavior`를 직접 참조
+**대응**: 모든 참조를 `runtimeBehavior`로 변경
+
+### 이슈 2: 턴 리셋 타이밍
+**증상**: 확률이 리셋되지 않거나 너무 빨리 리셋됨
+**대응**: CombatManager의 턴 종료 시점 확인 및 명확한 호출
+
+### 이슈 3: Priority 충돌 처리
+**증상**: 여러 Action이 같은 확률을 조정할 때 충돌
+**대응**: BehaviorTreeExecutor에서 Priority 정렬 및 중복 제거
+
+### 이슈 4: 강제 행동 타입 불일치
+**증상**: forcedBehavior 문자열과 실제 행동 타입 매칭 실패
+**대응**: Enum 또는 명확한 문자열 규칙 정의
+
+---
+
+## 성공 기준
+
+### Phase 3 완료 조건
+✅ 모든 1-5단계 작업 완료
+✅ 통합 테스트 검증 체크리스트 모두 통과
+✅ 치명적인 버그 없이 안정적 동작
+✅ 테스트 BT 에셋으로 의도한 패턴 구현 가능
+
+### 추가 목표
+✅ 명확한 디버그 로그로 문제 추적 가능
+✅ 코드 문서화 및 주석 추가
+✅ Phase 4 작업 계획 수립
+
+---
+
+## 진행 상황 체크리스트
+
+### 1단계: 확률 Override 시스템 구현
+- [ ] NPCRuntimeBehavior.cs 생성
+- [ ] EnemyCombatant.cs 수정
+- [ ] CombatManager.cs 연동
+- [ ] 컴파일 오류 확인
+
+### 2단계: 강제 행동 시스템 구현
+- [ ] BehaviorTreeContext 확인
+- [ ] 강제 행동 처리 로직 구현
+- [ ] 테스트 준비
+
+### 3단계: 로그 시스템 강화
+- [ ] BehaviorTreeExecutor 로그 추가
+- [ ] EnemyCombatant 로그 추가
+- [ ] Condition/Action 노드 로그 추가
+
+### 4단계: 테스트 BT 에셋 생성
+- [ ] Condition 노드 에셋 생성
+- [ ] Action 노드 에셋 생성
+- [ ] BT 에셋 3종 생성
+
+### 5단계: 통합 테스트
+- [ ] Unity 플레이 테스트
+- [ ] 검증 체크리스트 확인
+- [ ] 버그 수정
+
+### 6단계: Phase 4 사전 작업 (선택)
+- [ ] BTLogger 구현
+- [ ] UI 설계
+
+---
+
+## 메모 및 참고사항
+
+### 설계 원칙
+1. **원본 보존**: CharacterData의 npcBehavior는 절대 수정하지 않음
+2. **턴별 리셋**: 매 턴 종료 시 확률을 원본으로 복원
+3. **전투별 격리**: 전투마다 BT 상태 완전 초기화
+4. **개체별 독립**: 같은 BT를 사용하는 NPC도 완전히 독립적
+
+### Phase 3 핵심 개념
+- **Runtime Behavior**: 원본과 현재 확률을 분리하여 BT가 안전하게 조작
+- **Override System**: BT 결과를 임시로 적용하고 턴 종료 시 자동 복원
+- **Priority System**: 여러 BT/Action이 같은 값을 조정해도 충돌 없이 처리
+
+---
+
+**작성자**: AI Assistant  
+**시작 시간**: 2025년 10월 13일  
+**Phase 3 목표**: BT 시스템을 실제 전투에서 사용 가능한 상태로 완성  
+**Phase 3 상태**: 🔄 진행 중 → ✅ 완료 목표  
+
+---
+
+## 작업 로그
+
+### 시작 (오전)
+- [ ] DevJournal 작성 완료
+- [ ] 구현 계획 검토 완료
+- [ ] 작업 시작
+
+### 진행 중
+_여기에 진행 상황 기록_
+
+### 완료
+_여기에 완료 내역 기록_
+
+---
+
+**다음 목표**: Phase 4 - 디버깅 및 최적화
+
