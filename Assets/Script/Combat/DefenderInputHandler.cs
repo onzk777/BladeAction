@@ -849,6 +849,11 @@ public class DefenderInputHandler : BaseInputHandler
         // 🆕 총 히트 수 가져오기
         int totalHitCount = combatManager.CurrentResult?.HitCount ?? 1;
         
+        // 방어자 Combatant 가져오기 (BT 확률 참조용)
+        Combatant defenderCombatant = combatManager.IsPlayerAttacker 
+            ? CharacterManager.Instance?.EnemyCombatant 
+            : CharacterManager.Instance?.PlayerCombatant;
+        
         return new AIContext(
             projectile.hitIndex,
             turnElapsedTime,
@@ -856,7 +861,8 @@ public class DefenderInputHandler : BaseInputHandler
             totalHitCount,
             posturePoints,
             isInterrupted,
-            aiIsGuarding
+            aiIsGuarding,
+            defenderCombatant  // ← 방어자 Combatant 전달!
         );
     }
     
@@ -940,6 +946,11 @@ public class DefenderInputHandler : BaseInputHandler
         // 🆕 총 히트 수 가져오기
         int totalHitCount = combatManager.CurrentResult?.HitCount ?? 1;
         
+        // 방어자 Combatant 가져오기 (BT 확률 참조용)
+        Combatant defenderCombatant = combatManager.IsPlayerAttacker 
+            ? CharacterManager.Instance?.EnemyCombatant 
+            : CharacterManager.Instance?.PlayerCombatant;
+        
         return new AIContext(
             0, // 막기 의사결정 시에는 hitIndex 0 사용
             turnElapsedTime,
@@ -947,7 +958,8 @@ public class DefenderInputHandler : BaseInputHandler
             totalHitCount,
             posturePoints,
             isInterrupted,
-            false // 막기 의사결정 시에는 아직 막기 중이 아님
+            false, // 막기 의사결정 시에는 아직 막기 중이 아님
+            defenderCombatant  // ← 방어자 Combatant 전달!
         );
     }
     

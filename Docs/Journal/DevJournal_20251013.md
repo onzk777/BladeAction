@@ -719,3 +719,224 @@ Phase 3 확률 Override 시스템 구현이 완료되었습니다.
 
 **다음 목표**: 저녁에 CRITICAL 버그 3개 수정 후 Phase 3 완전 완료
 
+---
+
+## 저녁 작업 완료 내역 ✅
+
+### 🔥 CRITICAL 버그 수정 완료
+
+#### 1. EnemyController BT 선택 버그 수정 ✅
+**문제:** UseTestMode=false여도 testCommandIndex 사용
+**해결:** `GetSelectedCommandIndex()`에서 BT 모드 시 `Combatant.ChooseCommand()` 호출
+- 선택 결과 캐싱 구현 (중복 BT 평가 방지)
+- `ResetSelectionCache()` 메서드 추가
+
+#### 2. Poise 중단 시 무한 대기 버그 수정 ✅
+**문제:** 행동 중단 시 마지막 발사체 미발사로 판정 대기 무한 루프
+**해결:** `ForceCompleteRemainingHits()` 메서드 구현
+- 중단 감지 시 남은 히트 판정 강제 완료
+- 턴 즉시 종료 보장
+
+#### 3. Enemy UI 표시 문제 해결 ✅
+**문제:** Enemy 선택 검술이 UI에 표시 안 됨
+**해결:** `EnemyActionSelectUI.SetSelectedButton()` 구현
+- `CombatManager.PerformTurn()`에서 Enemy 턴 시 UI 업데이트
+- 버튼 하이라이트 기능 추가
+
+---
+
+### 🎯 핵심 설계 문제 해결: BT 평가 타이밍
+
+#### 발견된 근본 문제
+**증상:**
+- Enemy 방어 턴에서 BT의 확률 조정이 적용 안 됨
+- "HP < 50%면 막기 100%" 같은 방어 조건이 무의미함
+
+**근본 원인:**
+```
+기존 설계:
+  - BT 평가 시점: ChooseCommand() (검술 선택 시)
+  - 호출 위치: GetSelectedCommandIndex() (공격 턴에만 호출)
+  
+문제:
+  - 방어 턴 = 검술 선택 불필요
+  - ChooseCommand() 호출 안 됨
+  - BT 평가 건너뜀
+  - 확률 조정 적용 안 됨! ❌
+```
+
+#### 해결: BT 평가와 검술 선택 분리
+
+**핵심 아이디어:**
+- **BT 평가**: 모든 턴 시작 시 실행 (공격/방어 무관)
+- **검술 선택**: 공격 턴에만 실행 (BT 결과 활용)
+
+**구현 변경:**
+
+1. **`EnemyCombatant.cs` & `PlayerCombatant.cs`**
+   ```csharp
+   // BT 평가 분리
+   public void ExecuteBehaviorTrees()  // public으로 노출
+   {
+       // BT 평가 및 확률 적용
+       // btEvaluatedThisTurn 플래그로 중복 방지
+   }
+   
+   public void ResetBTEvaluation()  // 턴 시작 시 플래그 리셋
+   
+   public override CommandSelection ChooseCommand()
+   {
+       // BT가 이미 평가되었으면 재평가 스킵
+       if (!btEvaluatedThisTurn) ExecuteBehaviorTrees();
+       // 검술 선택 로직...
+   }
+   ```
+
+2. **`CombatManager.PerformTurn()`**
+   ```csharp
+   // 공격자 BT 평가 (isAttackTurn=true)
+   if (actor is PlayerCombatant playerActor)
+   {
+       playerActor.ResetBTEvaluation();
+       playerActor.ExecuteBehaviorTrees();
+   }
+   else if (actor is EnemyCombatant enemyActor)
+   {
+       enemyActor.ResetBTEvaluation();
+       enemyActor.ExecuteBehaviorTrees();
+   }
+   
+   // 방어자 BT 평가 (isAttackTurn=false)
+   if (defender is PlayerCombatant playerDefender)
+   {
+       playerDefender.ResetBTEvaluation();
+       playerDefender.ExecuteBehaviorTrees();
+   }
+   else if (defender is EnemyCombatant enemyDefender)
+   {
+       enemyDefender.ResetBTEvaluation();
+       enemyDefender.ExecuteBehaviorTrees();
+   }
+   ```
+
+**결과:**
+```
+Player 공격 턴:
+  ✅ Player BT 평가 (isAttackTurn=true)
+  ✅ Enemy BT 평가 (isAttackTurn=false) ← 방어 턴 확률 조정!
+  
+Enemy 공격 턴:
+  ✅ Enemy BT 평가 (isAttackTurn=true)
+  ✅ Player BT 평가 (isAttackTurn=false)
+```
+
+---
+
+### 🔧 추가 수정 사항
+
+#### PlayerCombatant BT 구조 통일 ✅
+**목적:** Enemy와 동일한 구조로 향후 자동 전투 대비
+**변경:**
+- `btEvaluatedThisTurn` 플래그 추가
+- `ExecuteBehaviorTrees()` 메서드 추가
+- `ResetBTEvaluation()` 메서드 추가
+- BT가 없으면 로그만 남기고 스킵 (정상)
+
+#### CombatManager.IsPlayerAttackTurn 프로퍼티 추가 ✅
+**문제:** `IsNPCAttackTurn`만 있어서 Player BT에서 사용 불가
+**해결:** 
+```csharp
+public bool IsPlayerAttackTurn => isPlayerAttacker;
+public bool IsNPCAttackTurn => !isPlayerAttacker;
+```
+
+#### CombatManager 초기화 순서 수정 ✅
+**문제:** `defender` 계산 시 이전 턴의 `isPlayerAttacker` 사용
+**해결:** `isPlayerAttacker`를 먼저 계산 후 `defender` 계산
+```csharp
+// ✅ 올바른 순서
+isPlayerAttacker = (controller.Combatant == PlayerCombatant);  // 먼저!
+Combatant defender = isPlayerAttacker ? Enemy : Player;        // 나중!
+```
+
+#### DefaultAIDefenseDecisionMaker 우선순위 수정 ✅
+**문제:** BT 확률 조정이 적용되어도 `GlobalConfig` 하드코딩 값 사용
+**해결:** `EnemyCombatant.RuntimeProbabilities` 우선 참조
+```csharp
+private float GetGuardAttemptRate(AIContext context)
+{
+    // 1순위: RuntimeProbabilities (BT 조정 반영!)
+    if (context.defenderCombatant is EnemyCombatant enemy)
+        return enemy.RuntimeProbabilities.GuardAttemptRate;
+    
+    // 2순위: CustomSettings
+    // 3순위: GlobalConfig (Fallback)
+}
+```
+
+#### DefenderInputHandler AI 컨텍스트 개선 ✅
+**변경:** `AIContext`에 `defenderCombatant` 전달
+- AI가 자신의 `RuntimeProbabilities` 참조 가능
+
+---
+
+### 🎯 블랙보드 패턴 재검토 (기존 작업)
+오늘 오전에 이미 완료된 내용이지만 중요하므로 재정리:
+
+**문제:** BT ScriptableObject가 상태를 가지면 여러 NPC가 공유 시 충돌
+**해결:** Blackboard 패턴으로 상태 분리
+- `BTBlackboard`: 개체별 상태 저장 (executeOncePerCombat 등)
+- `BTActionNode`: 내부 상태 제거, Blackboard 사용
+- `EnemyCombatant`, `PlayerCombatant`: 각자 독립 Blackboard 소유
+
+---
+
+### 📊 Phase 3 최종 완료 현황
+
+#### ✅ 완료된 핵심 기능
+1. **NPCRuntimeProbabilities** - 확률 관리 (원본 보호)
+2. **BT 평가 시스템** - 공격/방어 턴 모두 평가
+3. **Player/Enemy 구조 통일** - 동일한 BT 시스템
+4. **확률 우선순위** - RuntimeProbabilities > CustomSettings > GlobalConfig
+5. **AI Defense 연동** - BT 확률 조정 실제 적용
+6. **Blackboard 패턴** - 개체별 독립 상태 관리
+
+#### ✅ 수정된 CRITICAL 버그
+1. BT 선택 무시 버그
+2. Poise 중단 무한 대기 버그
+3. Enemy UI 미표시 문제
+4. 방어 턴 BT 미평가 문제 (근본 설계 수정)
+5. 확률 조정 미적용 문제 (AI 우선순위 수정)
+
+#### ⏳ 남은 작업
+- 테스트 BT 에셋 생성 (공격형/방어형/특수 패턴)
+- Unity 통합 테스트
+- 최종 검증
+
+---
+
+### 🎓 배운 교훈
+
+1. **설계 원칙의 중요성**
+   - "BT Condition으로 isAttackTurn 체크"가 의미 있으려면
+   - 방어 턴에도 BT가 평가되어야 함
+   - 처음부터 설계 검토 필요
+
+2. **Player/Enemy 대칭성**
+   - 한쪽만 구현하면 나중에 확장 시 문제
+   - 처음부터 양쪽 동일 구조 유지
+
+3. **우선순위 시스템**
+   - GlobalConfig는 Fallback용
+   - BT 조정 값이 최우선
+   - 명확한 우선순위 문서화 필요
+
+4. **초기화 순서**
+   - 변수 참조 전에 먼저 계산
+   - 의존성 파악 중요
+
+---
+
+**Phase 3 상태**: ✅ **거의 완료** (테스트 에셋 & 검증 남음)  
+**다음 단계**: BT 구현 진행상황 문서 업데이트
+

@@ -15,50 +15,75 @@ public class DefaultAIDefenseDecisionMaker : IAIDefenseDecisionMaker
     
     /// <summary>
     /// AI 방어 의사결정을 수행합니다
+    /// 
+    /// 우선순위:
+    /// 1. EnemyCombatant.runtimeProbabilities (BT 적용 후)
+    /// 2. GlobalConfig (폴백)
     /// </summary>
     public AIDefenseDecision MakeDefenseDecision(Projectile projectile, AIContext context)
     {
-        if (debugMode)
-        {
-            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 AI 방어 의사결정 시작 - hitIndex:{context.hitIndex}, turnTime:{context.turnElapsedTime:F2}");
-        }
+        // 쳐내기 성공률 가져오기 (runtimeProbabilities 우선)
+        float aiDefenseSuccessRate = GetParrySuccessRate(context);
+        bool canParryWhileGuarding = GetParryWhileGuarding(context);
         
-        // 🆕 AI 설정 값 결정 (커스텀 설정 또는 GlobalConfig)
-        float aiDefenseSuccessRate = useCustomSettings ? customDefenseSuccessRate : GlobalConfig.Instance.NpcParryPerfectRate;
-        bool canParryWhileGuarding = GlobalConfig.Instance.NpcParryWhileGuarding;
-        
-        if (debugMode)
-        {
-            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 AI 설정 값 - useCustom:{useCustomSettings}, 성공률:{aiDefenseSuccessRate:F2}, 막기중쳐내기:{canParryWhileGuarding}");
-        }
-        
-        // 🆕 막기 중일 때 쳐내기 시도 허용 여부 확인
+        // 막기 중일 때 쳐내기 시도 허용 여부 확인
         if (context.isGuarding && !canParryWhileGuarding)
         {
-            if (debugMode)
-            {
-                Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 막기 중이므로 쳐내기 시도 안함");
-            }
+            Debug.Log($"[AIDefense] 막기 중 - 쳐내기 불가");
             return new AIDefenseDecision(false, false, 0f);
         }
         
-        // 🆕 AI 방어 시도 여부 결정
+        // AI 방어 시도 여부 결정
         bool willAttempt = DetermineDefenseAttempt(projectile, context, aiDefenseSuccessRate);
         
-        // 🆕 AI 방어 성공 여부 결정
+        // AI 방어 성공 여부 결정
         bool willSucceed = DetermineDefenseSuccess(projectile, context, aiDefenseSuccessRate);
         
-        // 🆕 AI 반응 시간 결정 (즉시 반응)
+        // AI 반응 시간 결정 (즉시 반응)
         float reactionTime = 0f;
         
         var decision = new AIDefenseDecision(willAttempt, willSucceed, reactionTime);
         
-        if (debugMode)
-        {
-            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 AI 방어 의사결정 완료 - 시도:{decision.willAttempt}, 성공:{decision.willSucceed}, 반응시간:{decision.reactionTime:F2}초");
-        }
+        Debug.Log($"[AIDefense] 쳐내기 판정: 확률 {aiDefenseSuccessRate:P0} → {(willSucceed ? "성공" : "실패")}");
         
         return decision;
+    }
+    
+    /// <summary>
+    /// 쳐내기 성공률을 가져옵니다 (우선순위: runtimeProbabilities > GlobalConfig)
+    /// </summary>
+    private float GetParrySuccessRate(AIContext context)
+    {
+        // 1순위: EnemyCombatant.runtimeProbabilities (BT 적용 후!)
+        if (context.defenderCombatant is EnemyCombatant enemyCombatant)
+        {
+            if (enemyCombatant.RuntimeProbabilities != null)
+            {
+                float rate = enemyCombatant.RuntimeProbabilities.ParryPerfectRate;
+                return rate;
+            }
+        }
+        
+        // 2순위: GlobalConfig (폴백)
+        return useCustomSettings ? customDefenseSuccessRate : GlobalConfig.Instance.NpcParryPerfectRate;
+    }
+    
+    /// <summary>
+    /// 막기 중 쳐내기 여부를 가져옵니다
+    /// </summary>
+    private bool GetParryWhileGuarding(AIContext context)
+    {
+        // 1순위: EnemyCombatant.runtimeProbabilities (BT 적용 후!)
+        if (context.defenderCombatant is EnemyCombatant enemyCombatant)
+        {
+            if (enemyCombatant.RuntimeProbabilities != null)
+            {
+                return enemyCombatant.RuntimeProbabilities.ParryWhileGuarding;
+            }
+        }
+        
+        // 2순위: GlobalConfig (폴백)
+        return GlobalConfig.Instance.NpcParryWhileGuarding;
     }
     
     /// <summary>
@@ -112,42 +137,63 @@ public class DefaultAIDefenseDecisionMaker : IAIDefenseDecisionMaker
     
     /// <summary>
     /// AI 막기 의사결정을 수행합니다
+    /// 
+    /// 우선순위:
+    /// 1. EnemyCombatant.runtimeProbabilities (BT 적용 후)
+    /// 2. CharacterData.npcBehavior (원본)
+    /// 3. GlobalConfig (폴백)
     /// </summary>
     public bool MakeGuardDecision(AIContext context)
     {
-        if (debugMode)
-        {
-            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 AI 막기 의사결정 시작 - turnTime:{context.turnElapsedTime:F2}");
-        }
-        
-        // 🆕 AI 설정 값 결정 (커스텀 설정 또는 GlobalConfig)
-        float aiGuardAttemptRate = useCustomSettings ? customGuardAttemptRate : GlobalConfig.Instance.NpcGuardAttemptRate;
-        
-        if (debugMode)
-        {
-            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 AI 막기 설정 값 - useCustom:{useCustomSettings}, 막기확률:{aiGuardAttemptRate:F2}");
-        }
-        
-        // 🆕 중단 상태에서는 막기 시도하지 않음
+        // 중단 상태에서는 막기 시도하지 않음
         if (context.isInterrupted)
         {
-            if (debugMode)
-            {
-                Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 중단 상태로 인해 막기 시도 안함");
-            }
+            Debug.Log($"[AIDefense] 중단 상태 - 막기 불가");
             return false;
         }
         
-        // 🆕 확률 기반 막기 시도 여부 결정
+        // 막기 시도 확률 결정 (우선순위 순서)
+        float aiGuardAttemptRate = GetGuardAttemptRate(context);
+        
+        // 확률 기반 막기 시도 여부 결정
         float randomValue = Random.value;
         bool willGuard = randomValue < aiGuardAttemptRate;
         
-        if (debugMode)
-        {
-            Debug.Log($"[DefaultAIDefenseDecisionMaker] 🆕 막기 시도 판정 - 확률:{aiGuardAttemptRate:F2}, 랜덤값:{randomValue:F2}, 결과:{willGuard}");
-        }
+        Debug.Log($"[AIDefense] 막기 판정: 확률 {aiGuardAttemptRate:P0}, 랜덤 {randomValue:F2} → {(willGuard ? "시도" : "무시")}");
         
         return willGuard;
+    }
+    
+    /// <summary>
+    /// 막기 시도 확률을 가져옵니다 (우선순위: runtimeProbabilities > npcBehavior > GlobalConfig)
+    /// </summary>
+    private float GetGuardAttemptRate(AIContext context)
+    {
+        // 1순위: EnemyCombatant.runtimeProbabilities (BT 적용 후!) ⭐
+        if (context.defenderCombatant is EnemyCombatant enemyCombatant)
+        {
+            if (enemyCombatant.RuntimeProbabilities != null)
+            {
+                float rate = enemyCombatant.RuntimeProbabilities.GuardAttemptRate;
+                Debug.Log($"[AIDefense] ✅ RuntimeProbabilities 사용 (BT 적용): {rate:P0}");
+                return rate;
+            }
+            else
+            {
+                Debug.LogWarning($"[AIDefense] RuntimeProbabilities가 null - 폴백 사용");
+            }
+        }
+        
+        // 2순위: 커스텀 설정
+        if (useCustomSettings)
+        {
+            Debug.Log($"[AIDefense] 커스텀 설정 사용: {customGuardAttemptRate:P0}");
+            return customGuardAttemptRate;
+        }
+        
+        // 3순위: GlobalConfig (최종 폴백)
+        Debug.Log($"[AIDefense] GlobalConfig 사용 (폴백): {GlobalConfig.Instance.NpcGuardAttemptRate:P0}");
+        return GlobalConfig.Instance.NpcGuardAttemptRate;
     }
     
     /// <summary>

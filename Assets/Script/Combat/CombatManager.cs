@@ -74,8 +74,9 @@ public class CombatManager : MonoBehaviour
     // 현재 턴 번호 (BT에서 사용)
     public int CurrentTurnNumber { get; private set; } = 1;
     
-    // NPC 공격 턴 여부 (BT에서 사용)
+    // 공격 턴 여부 (BT에서 사용)
     public bool IsNPCAttackTurn => !isPlayerAttacker;
+    public bool IsPlayerAttackTurn => isPlayerAttacker;
 
     // CharacterManager를 통해 Combatant 인스턴스 접근
 
@@ -381,18 +382,55 @@ public class CombatManager : MonoBehaviour
     {
         Debug.Log($"[턴 시작] PerformTurn 호출, currentCommandIndex 초기화");
         
-        // Enemy 턴이면 선택 캐시 리셋 (턴 시작 전에!)
+        // 초기화 (순서 중요! isPlayerAttacker를 먼저 계산해야 defender가 올바름)
+        Combatant actor = controller.Combatant; // 현재 턴을 수행하는 Combatant (공격자)
+        isPlayerAttacker = (controller.Combatant == CharacterManager.Instance?.PlayerCombatant) ? true : false; // 플레이어 여부 (먼저 계산!)
+        Combatant defender = isPlayerAttacker ? CharacterManager.Instance.EnemyCombatant : CharacterManager.Instance.PlayerCombatant; // 피격자 (isPlayerAttacker 사용)
+        
+        // 🆕 BT 평가 (공격자 + 방어자 모두!)
+        // 왜 필요한가?
+        // - BT Condition에서 isAttackTurn을 체크하려면 방어 턴에도 평가되어야 함
+        // - 예: "방어 턴이면서 HP < 50%면 막기 확률 100%"
+        
+        Debug.Log($"[CombatManager] 🌳 BT 평가 시작 - 공격자: {actor.Name}, 방어자: {defender.Name}");
+        
+        // 1. 공격자 BT 평가 (isAttackTurn = true)
+        if (actor is PlayerCombatant playerActor)
+        {
+            Debug.Log($"[CombatManager]   → Player 공격 턴 BT 평가");
+            playerActor.ResetBTEvaluation();
+            playerActor.ExecuteBehaviorTrees();
+        }
+        else if (actor is EnemyCombatant enemyActor)
+        {
+            Debug.Log($"[CombatManager]   → Enemy 공격 턴 BT 평가");
+            enemyActor.ResetBTEvaluation();
+            enemyActor.ExecuteBehaviorTrees();
+        }
+        
+        // 2. 방어자 BT 평가 (isAttackTurn = false)
+        if (defender is PlayerCombatant playerDefender)
+        {
+            Debug.Log($"[CombatManager]   → Player 방어 턴 BT 평가");
+            playerDefender.ResetBTEvaluation();
+            playerDefender.ExecuteBehaviorTrees();
+        }
+        else if (defender is EnemyCombatant enemyDefender)
+        {
+            Debug.Log($"[CombatManager]   → Enemy 방어 턴 BT 평가");
+            enemyDefender.ResetBTEvaluation();
+            enemyDefender.ExecuteBehaviorTrees();
+        }
+        
+        // 3. Enemy 공격 턴이면 선택 캐시 리셋
         if (controller is EnemyController enemyCtrl)
         {
             enemyCtrl.ResetSelectionCache();
         }
 
-        // 초기화        
-        Combatant actor = controller.Combatant; // 현재 턴을 수행하는 Combatant
-        Combatant defender = isPlayerAttacker ? CharacterManager.Instance.EnemyCombatant : CharacterManager.Instance.PlayerCombatant; // 피격자
-        int selectedCommandIndex = controller.GetSelectedCommandIndex(); // 선택된 커맨드 인덱스 (BT 평가 시점!)
+        // 검술 선택 (공격자만 필요, BT는 이미 평가됨!)
+        int selectedCommandIndex = controller.GetSelectedCommandIndex();
         ActionCommandData command = actor.AvailableCommands[selectedCommandIndex];
-        isPlayerAttacker = (controller.Combatant == CharacterManager.Instance?.PlayerCombatant) ? true : false; // 플레이어 여부
         
         // Enemy 턴일 때 UI 업데이트 (선택된 검술 표시)
         if (!isPlayerAttacker)

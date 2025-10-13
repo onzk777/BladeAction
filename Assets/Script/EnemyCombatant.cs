@@ -36,6 +36,12 @@ public class EnemyCombatant : Combatant
     /// </summary>
     private BladeAction.BT.BTBlackboard btBlackboard;
     
+    /// <summary>
+    /// 이번 턴에 BT를 이미 평가했는지 여부 (중복 평가 방지)
+    /// CombatManager에서 턴 시작 시 ResetBTEvaluation()으로 리셋
+    /// </summary>
+    private bool btEvaluatedThisTurn = false;
+    
     
     // ========================================
     // 생성자 (Constructor)
@@ -72,11 +78,23 @@ public class EnemyCombatant : Combatant
     {
         controller = newController;
     }
+    
+    // ========================================
+    // Public 프로퍼티 (Properties)
+    // ========================================
+    
+    /// <summary>
+    /// 런타임 확률 접근 (AI Defense Decision Maker가 사용)
+    /// </summary>
+    public NPCRuntimeProbabilities RuntimeProbabilities => runtimeProbabilities;
 
     public override CommandSelection ChooseCommand()
     {
-        // BT 실행 및 결과 적용
-        ExecuteBehaviorTrees();
+        // BT 실행 및 결과 적용 (이미 평가되었으면 스킵)
+        if (!btEvaluatedThisTurn)
+        {
+            ExecuteBehaviorTrees();
+        }
         
         // BT 결과에 따른 검술 선택
         int selectedIndex = GetSelectedCommandFromBT();
@@ -88,8 +106,16 @@ public class EnemyCombatant : Combatant
     
     /// <summary>
     /// Behavior Tree를 실행하고 결과를 적용합니다.
+    /// 
+    /// 호출 시점:
+    /// 1. CombatManager.PerformTurn() - 턴 시작 시 (공격/방어 무관)
+    /// 2. EnemyCombatant.ChooseCommand() - 검술 선택 시 (중복 방지됨)
+    /// 
+    /// 중복 방지:
+    /// - btEvaluatedThisTurn 플래그로 한 턴에 한 번만 실행
+    /// - ResetBTEvaluation()으로 턴 시작 시 리셋
     /// </summary>
-    private void ExecuteBehaviorTrees()
+    public void ExecuteBehaviorTrees()
     {
         Debug.Log($"[EnemyCombatant] 🔍 ExecuteBehaviorTrees 호출");
         Debug.Log($"  - CharacterData: {CharacterData?.name ?? "null"}");
@@ -132,6 +158,10 @@ public class EnemyCombatant : Combatant
         
         // BT 결과를 실제 확률에 적용
         ApplyBehaviorTreeResults();
+        
+        // 평가 완료 플래그 설정 (이번 턴에는 재평가 안 함)
+        btEvaluatedThisTurn = true;
+        Debug.Log($"[EnemyCombatant] 🎯 BT 평가 완료 - 이번 턴에는 재평가 안 함");
     }
     
     /// <summary>
@@ -224,6 +254,22 @@ public class EnemyCombatant : Combatant
             Debug.Log($"[EnemyCombatant] {Name} 블랙보드 리셋 호출");
             btBlackboard.ResetCombat();
         }
+    }
+    
+    /// <summary>
+    /// BT 평가 플래그를 리셋합니다 (새 턴 시작 시 호출)
+    /// 
+    /// 사용 시점:
+    /// - CombatManager.PerformTurn() 시작 시
+    /// 
+    /// 효과:
+    /// - 새 턴에서 BT를 다시 평가 가능하게 만듦
+    /// - 중복 평가 방지 해제
+    /// </summary>
+    public void ResetBTEvaluation()
+    {
+        btEvaluatedThisTurn = false;
+        Debug.Log($"[EnemyCombatant] {Name} BT 평가 플래그 리셋 - 새 턴 준비 완료");
     }
     
     /// <summary>

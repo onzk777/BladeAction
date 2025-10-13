@@ -6,13 +6,13 @@ Behavior Tree 시스템의 구현 진행상황을 추적하는 문서입니다.
 
 ---
 
-## 전체 진행률: 88% (Phase 2 완료, Phase 3 거의 완료)
+## 전체 진행률: 95% (Phase 3 거의 완료, 테스트만 남음)
 
 | Phase | 상태 | 진행률 | 완료일 |
 |-------|------|--------|--------|
 | Phase 1 | ✅ 완료 | 100% | 2025-10-01 |
 | Phase 2 | ✅ 완료 | 100% | 2025-10-02 |
-| Phase 3 | 🔄 진행 중 | 90% | - |
+| Phase 3 | 🔄 진행 중 | 98% | - |
 | Phase 4 | ⏳ 대기 | 0% | - |
 | Phase 5 | ⏳ 대기 | 0% | - |
 
@@ -40,7 +40,7 @@ Behavior Tree 시스템의 구현 진행상황을 추적하는 문서입니다.
 
 ---
 
-## Phase 3: BT 실행 및 AI 연동 🔄 (90%)
+## Phase 3: BT 실행 및 AI 연동 🔄 (98%)
 
 | 작업 | 상태 | 비고 |
 |------|------|------|
@@ -48,7 +48,12 @@ Behavior Tree 시스템의 구현 진행상황을 추적하는 문서입니다.
 | 3.2 EnemyController BT 연동 | ✅ 완료 | BT 실행 흐름 구현 |
 | 3.3 확률 Override 시스템 | ✅ 완료 | NPCRuntimeProbabilities, 턴별 리셋 |
 | 3.4 검술 선택 로직 수정 | ✅ 완료 | BT 결과에 따른 검술 선택 |
-| 3.5 버그 수정 | 🔄 진행 중 | EnemyController BT 선택, Poise 중단, UI 표시 |
+| 3.5 CRITICAL 버그 수정 | ✅ 완료 | BT 선택, Poise 중단, UI 표시, 평가 타이밍 |
+| 3.6 BT 평가 타이밍 개선 | ✅ 완료 | 공격/방어 턴 모두 평가, isAttackTurn 조건 의미화 |
+| 3.7 Player/Enemy 구조 통일 | ✅ 완료 | 동일한 BT 시스템, 향후 자동 전투 대비 |
+| 3.8 AI 확률 우선순위 수정 | ✅ 완료 | RuntimeProbabilities 우선 참조 |
+| 3.9 테스트 BT 에셋 생성 | ⏳ 대기 | 공격형/방어형/특수 패턴 |
+| 3.10 통합 테스트 및 검증 | ⏳ 대기 | Unity 플레이 테스트 |
 
 ---
 
@@ -98,25 +103,30 @@ Behavior Tree 시스템의 구현 진행상황을 추적하는 문서입니다.
 
 ## 현재 상태 요약
 
-### ✅ 완료된 기능
-- BT Core 시스템 (모든 노드 타입)
-- BT 인스턴스화 시스템
-- BT 실행 흐름 (기본 구조)
-- 검술 선택 로직
-- 전투 시작 시 BT 상태 리셋
-- **NPCRuntimeProbabilities 시스템** (2025-10-13)
-- **확률 Override 및 턴별 리셋** (2025-10-13)
-- **턴 타이머 UI 개선** (2025-10-13)
+### ✅ 완료된 핵심 기능
+1. **BT Core 시스템** - 모든 노드 타입 (Condition, Action, Composite)
+2. **BT 인스턴스화 & Blackboard 패턴** - 개체별 독립 상태 관리
+3. **BT 실행 흐름** - Executor 및 컨텍스트 시스템
+4. **검술 선택 로직** - BT 결과 기반 선택
+5. **전투 시작/종료 BT 상태 리셋** - 완전 초기화
+6. **NPCRuntimeProbabilities 시스템** - 확률 관리 (원본 보호)
+7. **확률 Override 및 턴별 리셋** - BT 조정 적용 및 복원
+8. **턴 타이머 UI 개선** - 잔여/전체 시간 + 진행률 바
+9. **BT 평가 타이밍 시스템** - 공격/방어 턴 모두 평가 (2025-10-13 저녁)
+10. **Player/Enemy 구조 통일** - 동일한 BT 구조 (자동 전투 대비)
+11. **AI 확률 우선순위 시스템** - RuntimeProbabilities > CustomSettings > GlobalConfig
 
-### 🔴 발견된 버그 (수정 대기)
-1. **EnemyController BT 선택 무시**: UseTestMode=false여도 testCommandIndex 사용
-2. **Poise 중단 시 무한 대기**: hitJudgmentCompleted 미완료로 턴 진행 안 됨
-3. **Enemy UI 미표시**: 검술 선택이 UI에 반영 안 됨
+### ✅ 수정 완료된 CRITICAL 버그 (2025-10-13 저녁)
+1. **EnemyController BT 선택 무시** - GetSelectedCommandIndex() 수정, 캐싱 구현
+2. **Poise 중단 시 무한 대기** - ForceCompleteRemainingHits() 구현
+3. **Enemy UI 미표시** - EnemyActionSelectUI.SetSelectedButton() 구현
+4. **방어 턴 BT 미평가** - BT 평가와 검술 선택 분리, 양쪽 모두 평가
+5. **확률 조정 미적용** - AI Defense가 RuntimeProbabilities 우선 참조
 
 ### ⏳ 다음 작업
-- 🔴 CRITICAL 버그 3개 수정
-- BT 에셋 생성 (공격형/방어형/특수 패턴)
-- Unity 플레이 테스트 및 검증
+- ✅ 핵심 기능 모두 완료
+- ⏳ 테스트 BT 에셋 생성 (공격형/방어형/특수 패턴)
+- ⏳ Unity 플레이 테스트 및 최종 검증
 
 ---
 
@@ -132,21 +142,39 @@ Behavior Tree 시스템의 구현 진행상황을 추적하는 문서입니다.
 
 ## 최근 업데이트 (2025-10-13)
 
-### 완료된 작업
+### 오전 작업 완료 ✅
 - NPCRuntimeProbabilities 클래스 구현
 - EnemyCombatant 확률 Override 적용
 - CombatManager 턴별 확률 리셋 연동
 - 턴 타이머 UI 개선 (잔여/전체 시간, 진행률 바)
 
-### 발견된 이슈
-- EnemyController.GetSelectedCommandIndex() 버그
-- Poise 중단 시 무한 대기 버그
-- Enemy UI 표시 누락
+### 저녁 작업 완료 ✅
+- **CRITICAL 버그 5개 수정 완료**
+  - EnemyController BT 선택 무시 버그
+  - Poise 중단 시 무한 대기 버그
+  - Enemy UI 미표시 문제
+  - 방어 턴 BT 미평가 문제 (근본 설계 수정)
+  - 확률 조정 미적용 문제 (AI 우선순위 수정)
+
+- **BT 평가 타이밍 시스템 개선**
+  - 공격자/방어자 모두 BT 평가 (공격/방어 턴 무관)
+  - isAttackTurn 조건이 의미 있게 작동
+  - BT 평가와 검술 선택 분리
+
+- **Player/Enemy 구조 통일**
+  - PlayerCombatant에 BT 시스템 완전 구현
+  - ExecuteBehaviorTrees(), ResetBTEvaluation() 추가
+  - 향후 자동 전투 시스템 대비 완료
+
+- **AI Defense 시스템 개선**
+  - DefaultAIDefenseDecisionMaker가 RuntimeProbabilities 우선 참조
+  - AIContext에 defenderCombatant 전달
+  - BT 확률 조정이 막기/쳐내기에 실제 적용
 
 **상세 내용**: DevJournal_20251013.md 참조
 
 ---
 
-**문서 버전**: 1.1  
-**최종 업데이트**: 2025년 10월 13일  
-**다음 업데이트**: 버그 수정 완료 시
+**문서 버전**: 1.2  
+**최종 업데이트**: 2025년 10월 13일 저녁  
+**다음 업데이트**: 테스트 BT 에셋 생성 후

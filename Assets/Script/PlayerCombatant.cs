@@ -8,6 +8,7 @@ public class PlayerCombatant : Combatant
     public bool useTestMode;  // true면 테스트 모드로 동작
 
     private PlayerController controller; // PlayerController 인스턴스 참조
+    private BehaviorTreeContext currentBTContext; // 현재 BT 컨텍스트
     
     /// <summary>
     /// BT 블랙보드 - 개체별 BT 실행 상태 저장소
@@ -21,6 +22,12 @@ public class PlayerCombatant : Combatant
     /// - 하지만 구조적으로 준비되어 있음 (향후 확장 가능)
     /// </summary>
     private BTBlackboard btBlackboard;
+    
+    /// <summary>
+    /// 이번 턴에 BT를 이미 평가했는지 여부 (중복 평가 방지)
+    /// CombatManager에서 턴 시작 시 ResetBTEvaluation()으로 리셋
+    /// </summary>
+    private bool btEvaluatedThisTurn = false;
     
     public PlayerCombatant(CharacterData data, PlayerController controller) : base(data)
     {
@@ -74,6 +81,63 @@ public class PlayerCombatant : Combatant
     }
     
     /// <summary>
+    /// Behavior Tree를 실행하고 결과를 적용합니다.
+    /// 
+    /// 호출 시점:
+    /// 1. CombatManager.PerformTurn() - 턴 시작 시 (공격/방어 무관)
+    /// 
+    /// 중복 방지:
+    /// - btEvaluatedThisTurn 플래그로 한 턴에 한 번만 실행
+    /// - ResetBTEvaluation()으로 턴 시작 시 리셋
+    /// 
+    /// 현재 상태:
+    /// - CharacterData에 BT가 설정되어 있으면 평가 실행
+    /// - 없으면 로그만 남기고 스킵
+    /// </summary>
+    public void ExecuteBehaviorTrees()
+    {
+        Debug.Log($"[PlayerCombatant] 🔍 ExecuteBehaviorTrees 호출");
+        
+        if (CharacterData?.behaviorTrees == null || CharacterData.behaviorTrees.Count == 0)
+        {
+            Debug.Log("[PlayerCombatant] BT가 설정되지 않음 - 스킵 (정상, Player는 UI 기반)");
+            btEvaluatedThisTurn = true; // 평가 완료 처리
+            return;
+        }
+        
+        Debug.Log($"[PlayerCombatant] ✅ BT 발견: {CharacterData.behaviorTrees.Count}개");
+        
+        // BT 실행 컨텍스트 생성
+        var enemyCombatant = CharacterManager.Instance?.EnemyCombatant;
+        if (enemyCombatant == null)
+        {
+            Debug.LogWarning("[PlayerCombatant] EnemyCombatant를 찾을 수 없습니다.");
+            btEvaluatedThisTurn = true;
+            return;
+        }
+        
+        int currentTurn = CombatManager.Instance != null ? CombatManager.Instance.CurrentTurnNumber : 1;
+        bool isAttackTurn = CombatManager.Instance != null ? CombatManager.Instance.IsPlayerAttackTurn : false;
+        
+        // BT 실행 (블랙보드 패턴: 원본 BT 사용, 상태는 blackboard에 저장)
+        currentBTContext = BehaviorTreeExecutor.EvaluateMultipleTrees(
+            CharacterData.behaviorTrees,
+            this,
+            enemyCombatant,
+            currentTurn,
+            isAttackTurn,
+            btBlackboard
+        );
+        
+        // BT 결과 로그
+        BehaviorTreeExecutor.LogExecutionResult(currentBTContext);
+        
+        // 평가 완료 플래그 설정
+        btEvaluatedThisTurn = true;
+        Debug.Log($"[PlayerCombatant] 🎯 BT 평가 완료 - 이번 턴에는 재평가 안 함");
+    }
+    
+    /// <summary>
     /// 블랙보드를 리셋합니다 (새 전투 시작 시 호출)
     /// 
     /// 사용 시점:
@@ -90,5 +154,21 @@ public class PlayerCombatant : Combatant
             Debug.Log($"[PlayerCombatant] {Name} 블랙보드 리셋 호출");
             btBlackboard.ResetCombat();
         }
+    }
+    
+    /// <summary>
+    /// BT 평가 플래그를 리셋합니다 (새 턴 시작 시 호출)
+    /// 
+    /// 사용 시점:
+    /// - CombatManager.PerformTurn() 시작 시
+    /// 
+    /// 효과:
+    /// - 새 턴에서 BT를 다시 평가 가능하게 만듦
+    /// - 중복 평가 방지 해제
+    /// </summary>
+    public void ResetBTEvaluation()
+    {
+        btEvaluatedThisTurn = false;
+        Debug.Log($"[PlayerCombatant] {Name} BT 평가 플래그 리셋 - 새 턴 준비 완료");
     }
 }
