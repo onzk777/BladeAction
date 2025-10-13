@@ -374,7 +374,18 @@ public class CombatManager : MonoBehaviour
         Combatant defender = isPlayerAttacker ? CharacterManager.Instance.EnemyCombatant : CharacterManager.Instance.PlayerCombatant; // 피격자
         int selectedCommandIndex = controller.GetSelectedCommandIndex(); // 선택된 커맨드 인덱스
         ActionCommandData command = actor.AvailableCommands[selectedCommandIndex];
-        isPlayerAttacker = (controller.Combatant == CharacterManager.Instance?.PlayerCombatant) ? true : false; // 플레이어 여부      
+        isPlayerAttacker = (controller.Combatant == CharacterManager.Instance?.PlayerCombatant) ? true : false; // 플레이어 여부
+        
+        // Enemy 턴일 때 UI 업데이트 (선택된 검술 표시)
+        if (!isPlayerAttacker)
+        {
+            var enemyUI = FindFirstObjectByType<EnemyActionSelectUI>();
+            if (enemyUI != null)
+            {
+                enemyUI.SetSelectedButton(selectedCommandIndex);
+                Debug.Log($"[CombatManager] Enemy UI 업데이트 - 선택된 검술: {selectedCommandIndex}번");
+            }
+        }      
         CombatantCommandResult result = new CombatantCommandResult(command); // 커맨드 결과 객체 생성
         attackerInputHandler.SetIsPlayer(isPlayerAttacker); // 공격자 입력 핸들러 설정
         defenderInputHandler.SetIsPlayer(!isPlayerAttacker); // 방어자 입력 핸들러 설정
@@ -503,12 +514,20 @@ public class CombatManager : MonoBehaviour
             if (isInterrupted)
             {
                 Debug.LogWarning("[PerformTurn] 중단 발생으로 턴이 조기 종료됩니다.");
+                
+                // 남은 히트 판정 강제 완료 (무한 대기 방지)
+                ForceCompleteRemainingHits(CurrentHit, hitCount);
+                
                 break;
             }
             
             if (CheckInterruptCondition())
             {
                 Debug.Log("턴이 중단되었습니다.");
+                
+                // 남은 히트 판정 강제 완료 (무한 대기 방지)
+                ForceCompleteRemainingHits(CurrentHit, hitCount);
+                
                 break;
             }
             // 초기화
@@ -770,6 +789,54 @@ public class CombatManager : MonoBehaviour
         
         Debug.Log($"[CombatManager] 🆕 모든 Hit 판정 완료 확인 - hitCount:{hitCount}");
         return true;
+    }
+    
+    /// <summary>
+    /// 남은 히트 판정을 강제로 완료 처리합니다.
+    /// 
+    /// 역할:
+    /// - 중단 발생 시 더 이상 발사되지 않을 히트들을 "완료"로 표시
+    /// - EnsureAllHitJudgmentsCompleted()의 무한 대기를 방지
+    /// 
+    /// 호출 시점:
+    /// - isInterrupted = true일 때
+    /// - CheckInterruptCondition()이 true일 때
+    /// 
+    /// 예시:
+    /// - hitCount = 3, currentHit = 1 (2번째 히트 중단)
+    /// - hitJudgmentCompleted[1], [2]를 강제로 true로 설정
+    /// </summary>
+    /// <param name="currentHit">현재 히트 인덱스</param>
+    /// <param name="totalHits">총 히트 수</param>
+    private void ForceCompleteRemainingHits(int currentHit, int totalHits)
+    {
+        if (hitJudgmentCompleted == null)
+        {
+            Debug.LogWarning("[중단] hitJudgmentCompleted 배열이 null - 강제 완료 생략");
+            return;
+        }
+        
+        Debug.Log($"[중단] 남은 히트 판정 강제 완료 시작: Hit {currentHit} ~ {totalHits - 1}");
+        
+        int completedCount = 0;
+        for (int i = currentHit; i < totalHits; i++)
+        {
+            if (i < hitJudgmentCompleted.Length)
+            {
+                if (!hitJudgmentCompleted[i])
+                {
+                    hitJudgmentCompleted[i] = true;
+                    completedCount++;
+                    Debug.Log($"  - Hit {i}: 강제 완료 처리");
+                }
+                else
+                {
+                    Debug.Log($"  - Hit {i}: 이미 완료됨");
+                }
+            }
+        }
+        
+        Debug.Log($"[중단] 강제 완료 처리 완료 - {completedCount}개 히트 처리됨");
     }
     
     /// <summary>

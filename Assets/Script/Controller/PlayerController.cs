@@ -203,39 +203,53 @@ public class PlayerController : MonoBehaviour, ICombatController
         UpdateCommandDisplay();
     }
 
-    // 현재 턴에 사용할 커맨드를 반환
+    /// <summary>
+    /// 현재 턴에 사용할 검술 인덱스를 반환합니다.
+    /// 
+    /// 모드별 동작:
+    /// - TestMode = true: testCommandIndex 또는 랜덤 사용
+    /// - TestMode = false: Combatant.ChooseCommand() 호출 (현재는 UI 기반, 향후 BT 지원 가능)
+    /// 
+    /// 중요:
+    /// - EnemyController와 동일한 구조로 설계
+    /// - 향후 자동 전투 시스템 추가 시 BT 지원 가능
+    /// </summary>
     public int GetSelectedCommandIndex()
     {
         if (useTestMode)
         {
+            // ========================================
+            // 테스트 모드: 에디터에서 설정한 값 사용
+            // ========================================
             if (useRandomAction)
             {
                 int len = equippedStyle.CommandSet.Count;
                 if (len == 0) return testCommandIndex; // 보호 코드
-
+                
                 int randomIndex = UnityEngine.Random.Range(0, len);
+                Debug.Log($"[PlayerController] 테스트 모드 - 랜덤 선택: {randomIndex}");
                 return randomIndex;
             }
             else
             {
+                Debug.Log($"[PlayerController] 테스트 모드 - 고정 인덱스: {testCommandIndex}");
                 return testCommandIndex;
             }
         }
         else
         {
-            // UI에서 현재 선택된 버튼의 인덱스 사용
-            var playerActionSelectUI = FindFirstObjectByType<PlayerActionSelectUI>();
-            if (playerActionSelectUI != null)
-            {
-                int selectedIndex = playerActionSelectUI.GetCurrentSelectedButtonIndex();
-                Debug.Log($"[PlayerController] GetSelectedCommandIndex 호출: UI에서 선택된 버튼 = {selectedIndex}번");
-                return selectedIndex;
-            }
-            else
-            {
-                Debug.LogWarning("[PlayerController] PlayerActionSelectUI를 찾을 수 없어서 기본값 0 사용");
-                return 0;
-            }
+            // ========================================
+            // 일반 모드: Combatant의 ChooseCommand() 호출
+            // ========================================
+            // PlayerCombatant.ChooseCommand()가 실행되며:
+            // - 현재: UI 기반 선택
+            // - 향후: BT 기반 선택 가능 (자동 전투 등)
+            
+            var selection = Combatant?.ChooseCommand();
+            int selectedIndex = selection?.selectedIndex ?? 0;
+            
+            Debug.Log($"[PlayerController] 일반 모드 - 선택된 인덱스: {selectedIndex}");
+            return Mathf.Clamp(selectedIndex, 0, CommandCount - 1);
         }
     }
 

@@ -132,27 +132,55 @@ public class EnemyController : MonoBehaviour, ICombatController
         return Combatant?.AvailableCommands[idx];
     }
     
+    /// <summary>
+    /// 현재 턴에 사용할 검술 인덱스를 반환합니다.
+    /// 
+    /// 모드별 동작:
+    /// - TestMode = true: testCommandIndex 또는 랜덤 사용
+    /// - TestMode = false: BT 시스템 사용 (Combatant.ChooseCommand() 호출)
+    /// 
+    /// 중요:
+    /// - BT 모드에서는 EnemyCombatant.ChooseCommand()가 호출됨
+    /// - ChooseCommand()는 BT 평가 → 확률 적용 → 검술 선택을 모두 수행
+    /// </summary>
     public int GetSelectedCommandIndex()
     {
-        int index = 0;
-        if(useTestMode)
+        if (useTestMode)
         {
+            // ========================================
+            // 테스트 모드: 에디터에서 설정한 값 사용
+            // ========================================
             if (useRandomAction)
             {
                 int len = equippedStyle.CommandSet.Count;
                 if (len == 0) return testCommandIndex; // 보호 코드
-
+                
                 int randomIndex = UnityEngine.Random.Range(0, len);
-                index = randomIndex;
+                Debug.Log($"[EnemyController] 테스트 모드 - 랜덤 선택: {randomIndex}");
+                return randomIndex;
             }
             else
             {
-                index = testCommandIndex;
+                Debug.Log($"[EnemyController] 테스트 모드 - 고정 인덱스: {testCommandIndex}");
+                return testCommandIndex;
             }
         }
         else
-            index = testCommandIndex;
-        return index;
+        {
+            // ========================================
+            // BT 모드: Combatant의 ChooseCommand() 호출
+            // ========================================
+            // EnemyCombatant.ChooseCommand()가 실행되며:
+            // 1. BT 평가 (ExecuteBehaviorTrees)
+            // 2. 확률 적용 (ApplyBehaviorTreeResults)
+            // 3. 검술 선택 (GetSelectedCommandFromBT)
+            
+            var selection = Combatant?.ChooseCommand();
+            int btIndex = selection?.selectedIndex ?? 0;
+            
+            Debug.Log($"[EnemyController] BT 모드 - BT가 선택한 인덱스: {btIndex}");
+            return Mathf.Clamp(btIndex, 0, CommandCount - 1);
+        }
     }
 
     public ActionCommandData GetSelectedCommand()

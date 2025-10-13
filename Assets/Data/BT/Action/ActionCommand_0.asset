@@ -17,5 +17,5 @@ MonoBehaviour:
   priority: 0
   executeOncePerCombat: 0
   selectionType: 0
-  commandIndex: 1
+  commandIndex: 0
   requiredTag: 
