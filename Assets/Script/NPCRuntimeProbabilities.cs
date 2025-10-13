@@ -134,6 +134,13 @@ public class NPCRuntimeProbabilities
                     Debug.Log($"  - 막기 시도율: {oldGuard:F2} → {current.guardAttemptRate:F2}");
                     break;
                     
+                case "DoParryWhileGuarding":
+                    // bool 필드: float 값을 bool로 변환 (0.5 이상이면 true)
+                    bool oldParryWhileGuarding = current.parryWhileGuarding;
+                    current.parryWhileGuarding = value >= 0.5f;
+                    Debug.Log($"  - 막기 중 쳐내기 시도: {oldParryWhileGuarding} → {current.parryWhileGuarding} (입력: {value:F2})");
+                    break;
+                    
                 case "ParryWhileGuardingRate":
                     float oldParryGuard = current.parryWhileGuardingRate;
                     current.parryWhileGuardingRate = Mathf.Clamp01(value);
@@ -168,6 +175,7 @@ public class NPCRuntimeProbabilities
         Debug.Log($"  - 공격 성공률: {current.attackPerfectRate:F2}");
         Debug.Log($"  - 쳐내기 성공률: {current.parryPerfectRate:F2}");
         Debug.Log($"  - 막기 시도율: {current.guardAttemptRate:F2}");
+        Debug.Log($"  - 막기 중 쳐내기 시도: {current.parryWhileGuarding}");
     }
     
     

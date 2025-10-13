@@ -276,7 +276,100 @@ priority: 8
 
 ---
 
-**문서 버전**: 1.0  
+## 5. 막기 중 쳐내기 활성화 액션 (Do Parry While Guarding Action)
+
+### 사양
+```yaml
+NodeType: Action
+Name: DoParryWhileGuardingAction
+ScriptName: BTAction_DoParryWhileGuarding
+MenuPath: BT/Actions/Do Parry While Guarding
+```
+
+### 설정 데이터
+- **enableParryWhileGuarding**: bool
+  - `true`: 막기 중 쳐내기 시도 활성화
+  - `false`: 막기 중 쳐내기 시도 비활성화
+  
+- **priority**: int (0 이상, 상속)
+  - 우선순위 (높을수록 우선)
+  
+- **executeOncePerCombat**: bool (상속)
+  - 전투 중 1회만 실행 여부
+
+### 동작 방식
+1. `enableParryWhileGuarding` bool 값을 float로 변환
+   - `true` → `1.0`
+   - `false` → `0.0`
+2. `DoParryWhileGuarding` 키로 Context에 저장
+3. `NPCRuntimeProbabilities`에서 `parryWhileGuarding` bool 필드에 적용
+4. AI Defense 시스템에서 참조하여 막기 중 쳐내기 시도 여부 결정
+
+### 사용 예시
+```yaml
+# 예시 1: 막기 중 쳐내기 활성화
+enableParryWhileGuarding: true
+executeOncePerCombat: false
+
+# 예시 2: 막기 중 쳐내기 비활성화 (원본값 복원용)
+enableParryWhileGuarding: false
+executeOncePerCombat: false
+
+# 예시 3: HP 50% 미만 시 1회만 활성화
+Condition: HP < 50%
+Action: DoParryWhileGuarding
+  enableParryWhileGuarding: true
+  executeOncePerCombat: true
+```
+
+### Unity 인스펙터 표시
+```
+[Header("막기 중 쳐내기 설정")]
+Enable Parry While Guarding: ☑  (체크박스)
+
+Description: "막기 중 쳐내기 시도: 활성화"
+```
+
+### BT 구성 예시
+```
+Entry (HP < 50%):
+  Condition: HPLess50
+  Actions:
+    1. Prob100Guard (막기 시도율 100%)
+    2. DoParryWhileGuarding (막기 중 쳐내기 활성화) ✅
+    3. Prob100ParryWhileGuardRate (막기 중 쳐내기 성공률 100%)
+```
+
+### 설계 의도
+**단일 책임 원칙 (Single Responsibility Principle):**
+- `BTAction_ProbabilityAdjustment`: float 확률 조정 전용
+- `BTAction_DoParryWhileGuarding`: bool 행동 활성화 전용
+
+**사용자 경험 개선:**
+- float 슬라이더 대신 직관적인 **체크박스** 사용
+- "막기 중 쳐내기를 허용할 것인가?" 명확한 의미 전달
+
+### 관련 시스템
+1. **NPCRuntimeProbabilities**: bool → bool 변환 처리
+2. **DefaultAIDefenseDecisionMaker**: `GetParryWhileGuarding()` 참조
+3. **BehaviorTreeContext**: `DoParryWhileGuarding` 키 관리
+
+### 주의사항
+1. **Bool 타입**: float 확률이 아닌 On/Off 토글
+2. **성공률과 별개**: `ParryWhileGuardingRate`(성공률)는 별도 조정 필요
+3. **AI Defense에서만 사용**: 공격 턴에는 영향 없음
+4. **원본 값 복원**: 턴 종료 시 자동으로 원본 값으로 리셋
+
+### 디버깅 로그
+```
+[BTAction_DoParryWhileGuarding] 막기 중 쳐내기 시도: 활성화
+[NPCRuntimeProbabilities] 막기 중 쳐내기 시도: False → True (입력: 1.00)
+[AIDefense] 막기 중 - 쳐내기 가능
+```
+
+---
+
+**문서 버전**: 2.0 (DoParryWhileGuarding 추가)  
 **작성일**: 2024년  
-**최종 수정일**: 2024년
+**최종 수정일**: 2025년 10월 13일
 

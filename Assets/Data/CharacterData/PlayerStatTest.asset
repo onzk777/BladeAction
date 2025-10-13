@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ce2c8125804a2d47b2b798428fc9b3a, type: 3}
   m_Name: PlayerStatTest
   m_EditorClassIdentifier: 
-  characterName: Unknown
+  characterName: "\uD50C\uB808\uC774\uC5B4"
   baseMaxHP: 100
   baseATK: 35
   baseDR: 0
@@ -30,4 +30,3 @@ MonoBehaviour:
     parryWhileGuarding: 0
     parryWhileGuardingRate: 0
   behaviorTrees: []
-  originalBehaviorTrees: []

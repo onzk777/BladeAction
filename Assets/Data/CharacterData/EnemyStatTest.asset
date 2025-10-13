@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2ce2c8125804a2d47b2b798428fc9b3a, type: 3}
   m_Name: EnemyStatTest
   m_EditorClassIdentifier: 
-  characterName: Unknown
+  characterName: "\uBAAC\uC2A4\uD130"
   baseMaxHP: 120
   baseATK: 30
   baseDR: 0
@@ -31,4 +31,3 @@ MonoBehaviour:
     parryWhileGuardingRate: 0
   behaviorTrees:
   - {fileID: 11400000, guid: 99ad250825a248a4c9ef2e587909837a, type: 2}
-  originalBehaviorTrees: []

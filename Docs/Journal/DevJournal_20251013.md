@@ -937,6 +937,107 @@ private float GetGuardAttemptRate(AIContext context)
 
 ---
 
-**Phase 3 상태**: ✅ **거의 완료** (테스트 에셋 & 검증 남음)  
-**다음 단계**: BT 구현 진행상황 문서 업데이트
+### 🎯 추가 개선 작업: DoParryWhileGuarding 액션 노드 분리
+
+#### 발견된 설계 문제
+**증상:**
+- `ParryWhileGuarding`은 bool 타입 (시도 여부)
+- `BTAction_ProbabilityAdjustment`는 float 확률 조정 전용
+- bool 값을 float로 변환하여 처리하는 것은 부자연스러움
+
+**개선 방향:**
+- **단일 책임 원칙** 적용
+- `BTAction_ProbabilityAdjustment`: float 확률만 조정
+- `BTAction_DoParryWhileGuarding`: bool 행동 활성화 전용
+
+#### 구현 내용
+
+##### 1. **새 액션 노드 생성** 🆕
+**파일**: `Assets/Script/BT/Actions/BTAction_DoParryWhileGuarding.cs`
+
+```csharp
+[CreateAssetMenu(fileName = "DoParryWhileGuarding", menuName = "BT/Actions/Do Parry While Guarding")]
+public class BTAction_DoParryWhileGuarding : BTActionNode
+{
+    [Header("막기 중 쳐내기 설정")]
+    public bool enableParryWhileGuarding = true;  // 체크박스로 표시
+    
+    public override void Execute(BehaviorTreeContext context)
+    {
+        float value = enableParryWhileGuarding ? 1f : 0f;
+        context.SetProbabilityOverride("DoParryWhileGuarding", value);
+    }
+}
+```
+
+**특징:**
+- Unity 인스펙터에서 **체크박스**로 표시
+- 직관적인 On/Off 제어
+- 자동 설명 생성: "막기 중 쳐내기 시도: 활성화"
+
+##### 2. **BTAction_ProbabilityAdjustment 정리** 🧹
+- `DoParryWhileGuarding` enum 제거
+- `boolValue` 필드 제거
+- bool 관련 조건문 제거
+- **순수하게 float 확률만 조정**하도록 단순화
+
+**결과:**
+```csharp
+public enum TargetProbability
+{
+    AttackPerfectRate,           // ✅ float
+    ParryPerfectRate,            // ✅ float
+    GuardAttemptRate,            // ✅ float
+    ParryWhileGuardingRate       // ✅ float
+    // DoParryWhileGuarding 제거됨!
+}
+```
+
+#### 설계 개선 효과
+
+**Before (이전):**
+```
+BTAction_ProbabilityAdjustment:
+  - float 확률 조정 (AttackPerfectRate, ParryPerfectRate, ...)
+  - bool 행동 활성화 (DoParryWhileGuarding)
+  → 두 가지 역할 혼재 ❌
+```
+
+**After (개선):**
+```
+BTAction_ProbabilityAdjustment:
+  ✅ float 확률 조정 전용
+  
+BTAction_DoParryWhileGuarding:
+  ✅ bool 행동 활성화 전용
+  
+→ 단일 책임 원칙 준수 ✅
+→ 더 직관적인 인스펙터 UI ✅
+```
+
+#### Unity 사용 예시
+
+**BT 에셋 구성:**
+```
+Entry 0 (HP < 50%):
+  Condition: HPLess50
+  Actions:
+    1. Prob100Guard (막기 시도율 100%)
+    2. EnableParryWhileGuarding (막기 중 쳐내기 시도: ☑)  ← 🆕 체크박스!
+    3. Prob100ParryWhileGuard (막기 중 쳐내기 성공률 100%)
+    4. ActionCommand_1 (검술 1 사용)
+```
+
+---
+
+**Phase 3 상태**: ✅ **완료**  
+**완료 항목:**
+- NPCRuntimeProbabilities 시스템
+- BT 평가 타이밍 개선 (공격/방어 턴 모두)
+- Player/Enemy 구조 통일
+- AI 확률 우선순위 시스템
+- CRITICAL 버그 5개 수정
+- DoParryWhileGuarding 액션 노드 분리
+
+**다음 단계**: Phase 4 (디버깅 도구) 또는 Phase 3 통합 테스트
 
