@@ -31,20 +31,29 @@ namespace BladeAction.BT
         public override void Execute(BehaviorTreeContext context)
         {
             if (context == null)
+            {
+                Debug.LogWarning("[BT CommandSel] Context null");
                 return;
+            }
             
             switch (selectionType)
             {
                 case SelectionType.ByIndex:
                     context.selectedCommandIndex = commandIndex;
-                    context.selectedCommandTag = null; // 인덱스 선택 시 태그 초기화
+                    context.selectedCommandTag = null;
+                    Debug.Log($"[BT] 검술 선택: Index {commandIndex}");
                     break;
                     
                 case SelectionType.ByTag:
                     if (!string.IsNullOrEmpty(requiredTag))
                     {
                         context.selectedCommandTag = requiredTag;
-                        context.selectedCommandIndex = null; // 태그 선택 시 인덱스 초기화
+                        context.selectedCommandIndex = null;
+                        Debug.Log($"[BT] 검술 선택: Tag '{requiredTag}'");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[BT CommandSel] Tag 비어있음");
                     }
                     break;
             }

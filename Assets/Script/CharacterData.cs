@@ -76,85 +76,46 @@ public class CharacterData : ScriptableObject
     [Tooltip("NPC 행동 확률 설정 (AI 전용)")]
     public NPCBehaviorProbabilities npcBehavior = new NPCBehaviorProbabilities();
     
-    [Header("Behavior Tree")]
-    [Tooltip("이 캐릭터가 사용할 Behavior Tree 리스트 (런타임 인스턴스)")]
+    [Header("Behavior Tree 설정")]
+    [Tooltip("이 캐릭터가 사용할 Behavior Tree 리스트 (BT 에셋을 여기에 할당하세요)")]
     public System.Collections.Generic.List<BladeAction.BT.BehaviorTreeData> behaviorTrees = new System.Collections.Generic.List<BladeAction.BT.BehaviorTreeData>();
     
-    [Header("Behavior Tree 원본 (에디터용)")]
-    [Tooltip("에디터에서 설정할 원본 Behavior Tree 리스트")]
-    public System.Collections.Generic.List<BladeAction.BT.BehaviorTreeData> originalBehaviorTrees = new System.Collections.Generic.List<BladeAction.BT.BehaviorTreeData>();
-    
     /// <summary>
-    /// Behavior Tree를 인스턴스화하여 개체별 독립적인 BT 생성
+    /// Behavior Tree 인스턴스화 메서드
+    /// 
+    /// 변경 사항 (블랙보드 패턴):
+    /// - BT 복사를 하지 않음 (BT는 순수 로직, 공유 가능)
+    /// - 상태는 BTBlackboard에서 개체별로 관리
+    /// - 이 메서드는 하위 호환성을 위해 유지 (아무것도 하지 않음)
     /// </summary>
     public void InstantiateBehaviorTrees()
     {
-        behaviorTrees.Clear();
+        // 블랙보드 패턴으로 변경되어 BT 복사가 불필요함
+        // behaviorTrees를 그대로 사용 (읽기 전용)
         
-        foreach (var originalTree in originalBehaviorTrees)
+        if (behaviorTrees == null || behaviorTrees.Count == 0)
         {
-            if (originalTree != null)
-            {
-                var instantiatedTree = UnityEngine.Object.Instantiate(originalTree);
-                behaviorTrees.Add(instantiatedTree);
-                Debug.Log($"[CharacterData] BT 인스턴스화 완료: {originalTree.name} → {instantiatedTree.name}");
-            }
+            Debug.LogWarning($"[CharacterData] {characterName} - Behavior Tree가 설정되지 않았습니다!");
         }
-        
-        Debug.Log($"[CharacterData] {characterName} BT 인스턴스화 완료 - 총 {behaviorTrees.Count}개");
+        else
+        {
+            Debug.Log($"[CharacterData] {characterName} - Behavior Tree {behaviorTrees.Count}개 확인 (블랙보드 패턴, 복사 불필요)");
+        }
     }
     
     /// <summary>
     /// 모든 BT 노드의 전투 실행 상태를 리셋
+    /// 
+    /// 변경 사항 (블랙보드 패턴):
+    /// - BT 자체는 상태가 없으므로 리셋 불필요
+    /// - Blackboard.ResetCombat()을 대신 호출해야 함
+    /// - 이 메서드는 하위 호환성을 위해 유지 (아무것도 하지 않음)
     /// </summary>
     public void ResetBehaviorTreeExecutionStates()
     {
-        foreach (var tree in behaviorTrees)
-        {
-            if (tree != null)
-            {
-                ResetTreeExecutionStates(tree);
-            }
-        }
-    }
-    
-    /// <summary>
-    /// 특정 BT의 모든 노드 실행 상태 리셋
-    /// </summary>
-    private void ResetTreeExecutionStates(BladeAction.BT.BehaviorTreeData tree)
-    {
-        if (tree == null) return;
-        
-        foreach (var entry in tree.entries)
-        {
-            if (entry == null) continue;
-            
-            // 조건 노드 리셋
-            if (entry.condition != null)
-            {
-                ResetNodeExecutionState(entry.condition);
-            }
-            
-            // 액션 노드들 리셋
-            foreach (var action in entry.actions)
-            {
-                if (action != null)
-                {
-                    ResetNodeExecutionState(action);
-                }
-            }
-        }
-    }
-    
-    /// <summary>
-    /// 개별 노드의 실행 상태 리셋
-    /// </summary>
-    private void ResetNodeExecutionState(BladeAction.BT.BTNode node)
-    {
-        if (node is BladeAction.BT.BTActionNode actionNode)
-        {
-            actionNode.ResetCombatExecution();
-        }
+        // 블랙보드 패턴으로 변경되어 BT 상태 리셋이 불필요함
+        // 각 Combatant의 Blackboard.ResetCombat()을 호출해야 함
+        Debug.Log($"[CharacterData] {characterName} - BT 상태 리셋 (블랙보드 패턴, BT 리셋 불필요)");
     }
 }
 

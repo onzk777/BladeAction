@@ -58,18 +58,27 @@ namespace BladeAction.BT
         public override bool Evaluate(BehaviorTreeContext context)
         {
             if (context?.self == null || context?.target == null)
+            {
+                Debug.LogWarning("[BTCondition_HPComparison] Context의 self 또는 target이 null");
                 return false;
+            }
             
             Combatant targetCombatant = (target == ComparisonTarget.Self) ? context.self : context.target;
             
             if (targetCombatant == null)
+            {
+                Debug.LogWarning("[BTCondition_HPComparison] targetCombatant이 null");
                 return false;
+            }
             
             float currentHP = targetCombatant.HP;
             float maxHP = targetCombatant.MaxHP;
             
             if (maxHP <= 0)
+            {
+                Debug.LogWarning("[BTCondition_HPComparison] maxHP가 0 이하");
                 return false;
+            }
             
             float compareValue;
             if (valueType == ValueType.Absolute)
@@ -81,7 +90,14 @@ namespace BladeAction.BT
                 compareValue = currentHP / maxHP;
             }
             
-            return CompareValues(compareValue, threshold, comparisonOperator);
+            bool result = CompareValues(compareValue, threshold, comparisonOperator);
+            
+            // 간소화된 로그 (필요 시에만)
+            // string targetName = (target == ComparisonTarget.Self) ? "Self" : "Target";
+            // string operatorSymbol = GetOperatorSymbol(comparisonOperator);
+            // Debug.Log($"[BT HP] {targetName} {compareValue:F2} {operatorSymbol} {threshold:F2} = {result}");
+            
+            return result;
         }
         
         private bool CompareValues(float value, float threshold, ComparisonOperator op)
@@ -102,6 +118,23 @@ namespace BladeAction.BT
                     return !Mathf.Approximately(value, threshold);
                 default:
                     return false;
+            }
+        }
+        
+        /// <summary>
+        /// 연산자 기호 반환 (로그용)
+        /// </summary>
+        private string GetOperatorSymbol(ComparisonOperator op)
+        {
+            switch (op)
+            {
+                case ComparisonOperator.Greater: return ">";
+                case ComparisonOperator.Less: return "<";
+                case ComparisonOperator.GreaterOrEqual: return ">=";
+                case ComparisonOperator.LessOrEqual: return "<=";
+                case ComparisonOperator.Equal: return "==";
+                case ComparisonOperator.NotEqual: return "!=";
+                default: return "?";
             }
         }
         

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using BladeAction.BT;
 
 public class EnemyCombatant : Combatant
 {
@@ -20,6 +21,20 @@ public class EnemyCombatant : Combatant
     /// - 턴마다 확률을 조정하고 턴 종료 시 리셋 가능
     /// </summary>
     private NPCRuntimeProbabilities runtimeProbabilities;
+    
+    /// <summary>
+    /// BT 블랙보드 - 개체별 BT 실행 상태 저장소
+    /// 
+    /// 역할:
+    /// - executeOncePerCombat 같은 BT 실행 상태를 개체별로 관리
+    /// - 같은 BT를 사용하는 다른 NPC에게 영향을 주지 않음
+    /// 
+    /// 예시:
+    /// - Goblin A, B가 모두 BT_Goblin.asset 사용
+    /// - 하지만 각자 독립적인 blackboard 소유
+    /// - A가 궁극기를 써도 B는 쓸 수 있음
+    /// </summary>
+    private BladeAction.BT.BTBlackboard btBlackboard;
     
     
     // ========================================
@@ -46,6 +61,11 @@ public class EnemyCombatant : Combatant
         {
             Debug.LogWarning($"[EnemyCombatant] {Name} CharacterData 또는 npcBehavior가 null입니다!");
         }
+        
+        // BTBlackboard 인스턴스 생성
+        // 개체별 BT 실행 상태 관리 (executeOncePerCombat 등)
+        btBlackboard = new BladeAction.BT.BTBlackboard(data?.characterName ?? "Unknown");
+        Debug.Log($"[EnemyCombatant] {Name} BT 블랙보드 초기화 완료");
     }
 
     public void SetController(EnemyController newController)
@@ -61,6 +81,8 @@ public class EnemyCombatant : Combatant
         // BT 결과에 따른 검술 선택
         int selectedIndex = GetSelectedCommandFromBT();
         
+        Debug.Log($"[EnemyCombatant] ✅ {Name} 검술 선택: {selectedIndex}번");
+        
         return new CommandSelection { selectedIndex = selectedIndex };
     }
     
@@ -69,11 +91,20 @@ public class EnemyCombatant : Combatant
     /// </summary>
     private void ExecuteBehaviorTrees()
     {
+        Debug.Log($"[EnemyCombatant] 🔍 ExecuteBehaviorTrees 호출");
+        Debug.Log($"  - CharacterData: {CharacterData?.name ?? "null"}");
+        Debug.Log($"  - BT 수: {CharacterData?.behaviorTrees?.Count ?? 0}");
+        
         if (CharacterData?.behaviorTrees == null || CharacterData.behaviorTrees.Count == 0)
         {
-            Debug.LogWarning("[EnemyCombatant] BT가 설정되지 않았습니다.");
+            Debug.LogWarning("[EnemyCombatant] ⚠️ BT가 설정되지 않았습니다!");
+            Debug.LogWarning($"  - CharacterData: {(CharacterData == null ? "null" : CharacterData.name)}");
+            Debug.LogWarning($"  - behaviorTrees: {(CharacterData?.behaviorTrees == null ? "null" : $"Count={CharacterData.behaviorTrees.Count}")}");
+            Debug.LogError("  → Unity Inspector에서 'Behavior Tree 설정'에 BT 에셋을 할당하세요!");
             return;
         }
+        
+        Debug.Log($"[EnemyCombatant] ✅ BT 발견: {CharacterData.behaviorTrees.Count}개");
         
         // BT 실행 컨텍스트 생성
         var playerCombatant = CharacterManager.Instance?.PlayerCombatant;
@@ -86,13 +117,14 @@ public class EnemyCombatant : Combatant
         int currentTurn = CombatManager.Instance != null ? CombatManager.Instance.CurrentTurnNumber : 1;
         bool isAttackTurn = CombatManager.Instance != null ? CombatManager.Instance.IsNPCAttackTurn : false;
         
-        // BT 실행
+        // BT 실행 (블랙보드 패턴: 원본 BT 사용, 상태는 blackboard에 저장)
         currentBTContext = BladeAction.BT.BehaviorTreeExecutor.EvaluateMultipleTrees(
             CharacterData.behaviorTrees,
             this,
             playerCombatant,
             currentTurn,
-            isAttackTurn
+            isAttackTurn,
+            btBlackboard  // ← 블랙보드 전달!
         );
         
         // BT 결과 로그
@@ -172,6 +204,25 @@ public class EnemyCombatant : Combatant
         {
             Debug.Log($"[EnemyCombatant] {Name} 확률 리셋 호출");
             runtimeProbabilities.ResetToOriginal();
+        }
+    }
+    
+    /// <summary>
+    /// 블랙보드를 리셋합니다 (새 전투 시작 시 호출)
+    /// 
+    /// 사용 시점:
+    /// - 새 전투 시작 시 (CombatManager에서 호출)
+    /// 
+    /// 효과:
+    /// - executeOncePerCombat 상태가 모두 초기화됨
+    /// - 전투 시작 시 모든 BT 액션을 다시 사용 가능
+    /// </summary>
+    public void ResetBlackboard()
+    {
+        if (btBlackboard != null)
+        {
+            Debug.Log($"[EnemyCombatant] {Name} 블랙보드 리셋 호출");
+            btBlackboard.ResetCombat();
         }
     }
     

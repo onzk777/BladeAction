@@ -41,6 +41,7 @@ public class EnemyController : MonoBehaviour, ICombatController
     public int CommandCount => Combatant?.AvailableCommands.Count ?? 0;
     
     private int currentCommandIndex;
+    private int? cachedSelectedIndex = null; // 선택 결과 캐시 (턴당 한 번만 계산)
     
     public void SetSelectedCommandIndex(int commandIndex)
     {
@@ -142,9 +143,18 @@ public class EnemyController : MonoBehaviour, ICombatController
     /// 중요:
     /// - BT 모드에서는 EnemyCombatant.ChooseCommand()가 호출됨
     /// - ChooseCommand()는 BT 평가 → 확률 적용 → 검술 선택을 모두 수행
+    /// - 캐싱: 한 턴에 여러 번 호출되어도 첫 번째 결과를 재사용 (BT 재평가 방지)
     /// </summary>
     public int GetSelectedCommandIndex()
     {
+        // 이미 이번 턴에 선택했으면 캐시된 값 반환
+        if (cachedSelectedIndex.HasValue)
+        {
+            return cachedSelectedIndex.Value;
+        }
+        
+        int selectedIndex;
+        
         if (useTestMode)
         {
             // ========================================
@@ -153,16 +163,18 @@ public class EnemyController : MonoBehaviour, ICombatController
             if (useRandomAction)
             {
                 int len = equippedStyle.CommandSet.Count;
-                if (len == 0) return testCommandIndex; // 보호 코드
-                
-                int randomIndex = UnityEngine.Random.Range(0, len);
-                Debug.Log($"[EnemyController] 테스트 모드 - 랜덤 선택: {randomIndex}");
-                return randomIndex;
+                if (len == 0) 
+                {
+                    selectedIndex = testCommandIndex;
+                }
+                else
+                {
+                    selectedIndex = UnityEngine.Random.Range(0, len);
+                }
             }
             else
             {
-                Debug.Log($"[EnemyController] 테스트 모드 - 고정 인덱스: {testCommandIndex}");
-                return testCommandIndex;
+                selectedIndex = testCommandIndex;
             }
         }
         else
@@ -176,11 +188,22 @@ public class EnemyController : MonoBehaviour, ICombatController
             // 3. 검술 선택 (GetSelectedCommandFromBT)
             
             var selection = Combatant?.ChooseCommand();
-            int btIndex = selection?.selectedIndex ?? 0;
-            
-            Debug.Log($"[EnemyController] BT 모드 - BT가 선택한 인덱스: {btIndex}");
-            return Mathf.Clamp(btIndex, 0, CommandCount - 1);
+            selectedIndex = selection?.selectedIndex ?? 0;
+            selectedIndex = Mathf.Clamp(selectedIndex, 0, CommandCount - 1);
         }
+        
+        // 선택 결과 캐싱 (이번 턴에는 재사용)
+        cachedSelectedIndex = selectedIndex;
+        
+        return selectedIndex;
+    }
+    
+    /// <summary>
+    /// 새 턴 시작 시 캐시 초기화 (CombatManager에서 호출)
+    /// </summary>
+    public void ResetSelectionCache()
+    {
+        cachedSelectedIndex = null;
     }
 
     public ActionCommandData GetSelectedCommand()

@@ -18,13 +18,15 @@ namespace BladeAction.BT
         /// <param name="target">상대방 (플레이어)</param>
         /// <param name="currentTurn">현재 턴 번호</param>
         /// <param name="isAttackTurn">공격 턴 여부</param>
+        /// <param name="blackboard">개체별 상태 저장소 (블랙보드)</param>
         /// <returns>실행 결과 컨텍스트</returns>
         public static BehaviorTreeContext EvaluateTree(
             BehaviorTreeData tree, 
             Combatant self, 
             Combatant target,
             int currentTurn,
-            bool isAttackTurn)
+            bool isAttackTurn,
+            BTBlackboard blackboard = null)
         {
             if (tree == null || !tree.IsValid())
             {
@@ -33,17 +35,24 @@ namespace BladeAction.BT
             }
             
             var context = new BehaviorTreeContext();
-            context.Initialize(self, target, currentTurn, isAttackTurn);
+            context.Initialize(self, target, currentTurn, isAttackTurn, blackboard);
             
             // BT Entry를 순차적으로 평가 (우선순위 순서)
+            int entryIndex = 0;
+            bool foundMatch = false;
+            
             foreach (var entry in tree.entries)
             {
                 if (entry == null || !entry.isEnabled)
+                {
+                    entryIndex++;
                     continue;
+                }
                 
                 if (entry.condition == null)
                 {
-                    Debug.LogWarning($"[BT Executor] Entry의 조건이 null입니다: {entry.description}");
+                    Debug.LogWarning($"[BT] Entry [{entryIndex}] 조건 null");
+                    entryIndex++;
                     continue;
                 }
                 
@@ -53,11 +62,18 @@ namespace BladeAction.BT
                 if (conditionResult)
                 {
                     // 조건 만족 시 Actions 실행
+                    Debug.Log($"[BT] ✅ '{tree.name}' Entry[{entryIndex}] 실행: {entry.description}");
                     ExecuteActions(entry.actions, context);
-                    
-                    // 상위 조건 만족 시 하위 미체크 (우선순위 처리)
+                    foundMatch = true;
                     break;
                 }
+                
+                entryIndex++;
+            }
+            
+            if (!foundMatch)
+            {
+                Debug.LogWarning($"[BT] ⚠️ '{tree.name}' 매칭된 Entry 없음");
             }
             
             return context;
@@ -71,16 +87,18 @@ namespace BladeAction.BT
         /// <param name="target">상대방</param>
         /// <param name="currentTurn">현재 턴 번호</param>
         /// <param name="isAttackTurn">공격 턴 여부</param>
+        /// <param name="blackboard">개체별 상태 저장소 (블랙보드)</param>
         /// <returns>병합된 실행 결과 컨텍스트</returns>
         public static BehaviorTreeContext EvaluateMultipleTrees(
             List<BehaviorTreeData> trees,
             Combatant self,
             Combatant target,
             int currentTurn,
-            bool isAttackTurn)
+            bool isAttackTurn,
+            BTBlackboard blackboard = null)
         {
             var finalContext = new BehaviorTreeContext();
-            finalContext.Initialize(self, target, currentTurn, isAttackTurn);
+            finalContext.Initialize(self, target, currentTurn, isAttackTurn, blackboard);
             
             if (trees == null || trees.Count == 0)
                 return finalContext;
@@ -91,7 +109,7 @@ namespace BladeAction.BT
                 if (tree == null)
                     continue;
                 
-                var context = EvaluateTree(tree, self, target, currentTurn, isAttackTurn);
+                var context = EvaluateTree(tree, self, target, currentTurn, isAttackTurn, blackboard);
                 finalContext.MergeFrom(context);
             }
             
@@ -106,7 +124,10 @@ namespace BladeAction.BT
         private static void ExecuteActions(List<BTActionNode> actions, BehaviorTreeContext context)
         {
             if (actions == null || actions.Count == 0)
+            {
+                Debug.LogWarning("[BT] 액션 없음");
                 return;
+            }
             
             // Priority별로 그룹화
             var groupedActions = actions
@@ -125,7 +146,7 @@ namespace BladeAction.BT
                     }
                     catch (System.Exception e)
                     {
-                        Debug.LogError($"[BT Executor] 액션 실행 중 오류 발생: {action.name}\n{e}");
+                        Debug.LogError($"[BT] 액션 오류: {action.name}\n{e}");
                     }
                 }
             }
@@ -148,4 +169,5 @@ namespace BladeAction.BT
         }
     }
 }
+
 

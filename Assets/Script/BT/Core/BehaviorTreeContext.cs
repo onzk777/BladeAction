@@ -23,6 +23,10 @@ namespace BladeAction.BT
         [Tooltip("공격 턴 여부 (true: 공격 턴, false: 방어 턴)")]
         public bool isAttackTurn;
         
+        [Header("블랙보드 (상태 저장소)")]
+        [Tooltip("개체별 BT 실행 상태 저장 (executeOncePerCombat 등)")]
+        public BTBlackboard blackboard;
+        
         [Header("실행 결과 저장")]
         [Tooltip("확률 Override 딕셔너리 (키: 확률 타입, 값: 새로운 확률)")]
         public Dictionary<string, float> probabilityOverrides = new Dictionary<string, float>();
@@ -39,12 +43,29 @@ namespace BladeAction.BT
         /// <summary>
         /// 컨텍스트 초기화
         /// </summary>
-        public void Initialize(Combatant selfCombatant, Combatant targetCombatant, int turnNumber, bool attackTurn)
+        /// <param name="selfCombatant">NPC 자신</param>
+        /// <param name="targetCombatant">상대방</param>
+        /// <param name="turnNumber">현재 턴 번호</param>
+        /// <param name="attackTurn">공격 턴 여부</param>
+        /// <param name="btBlackboard">개체별 상태 저장소 (null이면 임시 생성)</param>
+        public void Initialize(Combatant selfCombatant, Combatant targetCombatant, int turnNumber, bool attackTurn, BTBlackboard btBlackboard = null)
         {
             self = selfCombatant;
             target = targetCombatant;
             currentTurn = turnNumber;
             isAttackTurn = attackTurn;
+            
+            // 블랙보드 설정 (제공되지 않으면 임시 생성)
+            if (btBlackboard != null)
+            {
+                blackboard = btBlackboard;
+            }
+            else
+            {
+                // 임시 블랙보드 생성 (테스트용)
+                blackboard = new BTBlackboard(selfCombatant?.Name ?? "Temp");
+                Debug.LogWarning($"[BehaviorTreeContext] 블랙보드가 제공되지 않아 임시 생성함");
+            }
             
             // 결과 저장소 초기화
             probabilityOverrides.Clear();

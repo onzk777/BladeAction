@@ -285,6 +285,12 @@ public class CombatManager : MonoBehaviour
             // 적 턴 종료 후 NPC 확률 리셋 (BT 효과 제거)
             ResetNPCProbabilities();
             
+            // 적 턴 종료 후 선택 캐시 초기화 (PerformTurn 시작 시에도 리셋하므로 이중 안전장치)
+            // if (enemyController != null)
+            // {
+            //     enemyController.ResetSelectionCache();
+            // }
+            
             // 적 턴 후 전투 종료 체크
             if (isBattleEnded)
             {
@@ -302,26 +308,32 @@ public class CombatManager : MonoBehaviour
     
     /// <summary>
     /// 모든 캐릭터의 BT 실행 상태를 리셋 (새 전투 시작 시)
+    /// 
+    /// 블랙보드 패턴:
+    /// - Combatant의 Blackboard.ResetCombat() 호출
+    /// - BT 자체는 상태가 없으므로 리셋 불필요
     /// </summary>
     private void ResetBehaviorTreeStates()
     {
         if (CharacterManager.Instance != null)
         {
-            // 플레이어 BT 상태 리셋
-            if (CharacterManager.Instance.PlayerData != null)
+            // 플레이어 블랙보드 리셋
+            var playerCombatant = CharacterManager.Instance.PlayerCombatant as PlayerCombatant;
+            if (playerCombatant != null)
             {
-                CharacterManager.Instance.PlayerData.ResetBehaviorTreeExecutionStates();
-                Debug.Log("[CombatManager] 플레이어 BT 상태 리셋 완료");
+                playerCombatant.ResetBlackboard();
+                Debug.Log("[CombatManager] 플레이어 블랙보드 리셋 완료");
             }
             
-            // 적 BT 상태 리셋
-            if (CharacterManager.Instance.EnemyData != null)
+            // 적 블랙보드 리셋
+            var enemyCombatant = CharacterManager.Instance.EnemyCombatant as EnemyCombatant;
+            if (enemyCombatant != null)
             {
-                CharacterManager.Instance.EnemyData.ResetBehaviorTreeExecutionStates();
-                Debug.Log("[CombatManager] 적 BT 상태 리셋 완료");
+                enemyCombatant.ResetBlackboard();
+                Debug.Log("[CombatManager] 적 블랙보드 리셋 완료");
             }
             
-            Debug.Log("[CombatManager] 모든 BT 상태 리셋 완료");
+            Debug.Log("[CombatManager] 모든 BT 블랙보드 리셋 완료");
         }
         else
         {
@@ -368,11 +380,17 @@ public class CombatManager : MonoBehaviour
     private IEnumerator PerformTurn(ICombatController controller)
     {
         Debug.Log($"[턴 시작] PerformTurn 호출, currentCommandIndex 초기화");
+        
+        // Enemy 턴이면 선택 캐시 리셋 (턴 시작 전에!)
+        if (controller is EnemyController enemyCtrl)
+        {
+            enemyCtrl.ResetSelectionCache();
+        }
 
         // 초기화        
         Combatant actor = controller.Combatant; // 현재 턴을 수행하는 Combatant
         Combatant defender = isPlayerAttacker ? CharacterManager.Instance.EnemyCombatant : CharacterManager.Instance.PlayerCombatant; // 피격자
-        int selectedCommandIndex = controller.GetSelectedCommandIndex(); // 선택된 커맨드 인덱스
+        int selectedCommandIndex = controller.GetSelectedCommandIndex(); // 선택된 커맨드 인덱스 (BT 평가 시점!)
         ActionCommandData command = actor.AvailableCommands[selectedCommandIndex];
         isPlayerAttacker = (controller.Combatant == CharacterManager.Instance?.PlayerCombatant) ? true : false; // 플레이어 여부
         
