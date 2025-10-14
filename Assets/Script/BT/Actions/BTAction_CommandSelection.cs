@@ -32,7 +32,7 @@ namespace BladeAction.BT
         {
             if (context == null)
             {
-                Debug.LogWarning("[BT CommandSel] Context null");
+                BTLogger.LogWarning("CommandSelection: Context null");
                 return;
             }
             
@@ -41,7 +41,6 @@ namespace BladeAction.BT
                 case SelectionType.ByIndex:
                     context.selectedCommandIndex = commandIndex;
                     context.selectedCommandTag = null;
-                    Debug.Log($"[BT] 검술 선택: Index {commandIndex}");
                     break;
                     
                 case SelectionType.ByTag:
@@ -49,11 +48,10 @@ namespace BladeAction.BT
                     {
                         context.selectedCommandTag = requiredTag;
                         context.selectedCommandIndex = null;
-                        Debug.Log($"[BT] 검술 선택: Tag '{requiredTag}'");
                     }
                     else
                     {
-                        Debug.LogWarning("[BT CommandSel] Tag 비어있음");
+                        BTLogger.LogWarning("CommandSelection: Tag 비어있음");
                     }
                     break;
             }

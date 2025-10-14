@@ -30,31 +30,43 @@ namespace BladeAction.BT
         {
             if (tree == null || !tree.IsValid())
             {
-                Debug.LogWarning("[BT Executor] 유효하지 않은 Behavior Tree입니다.");
+                BTLogger.LogWarning("유효하지 않은 Behavior Tree입니다.");
                 return new BehaviorTreeContext();
             }
             
             var context = new BehaviorTreeContext();
             context.Initialize(self, target, currentTurn, isAttackTurn, blackboard);
             
+            // BT 평가 시작 로그
+            BTLogger.LogTreeEvaluationStart(tree, context);
+            
             // BT Entry를 순차적으로 평가 (우선순위 순서)
             int entryIndex = 0;
             bool foundMatch = false;
+            int matchedEntryIndex = -1;
+            string matchedEntryDescription = null;
             
             foreach (var entry in tree.entries)
             {
                 if (entry == null || !entry.isEnabled)
                 {
+                    if (entry != null)
+                    {
+                        BTLogger.LogEntryEvaluation(entryIndex, entry.description ?? "이름 없음", false);
+                    }
                     entryIndex++;
                     continue;
                 }
                 
                 if (entry.condition == null)
                 {
-                    Debug.LogWarning($"[BT] Entry [{entryIndex}] 조건 null");
+                    BTLogger.LogWarning($"Entry [{entryIndex}] 조건 null");
                     entryIndex++;
                     continue;
                 }
+                
+                // Entry 평가 시작 로그
+                BTLogger.LogEntryEvaluation(entryIndex, entry.description ?? "이름 없음", true);
                 
                 // 조건 평가
                 bool conditionResult = entry.condition.EvaluateCondition(context);
@@ -62,19 +74,19 @@ namespace BladeAction.BT
                 if (conditionResult)
                 {
                     // 조건 만족 시 Actions 실행
-                    Debug.Log($"[BT] ✅ '{tree.name}' Entry[{entryIndex}] 실행: {entry.description}");
+                    BTLogger.LogDebug($"'{tree.name}' Entry[{entryIndex}] 조건 만족 - Actions 실행");
                     ExecuteActions(entry.actions, context);
                     foundMatch = true;
+                    matchedEntryIndex = entryIndex;
+                    matchedEntryDescription = entry.description;
                     break;
                 }
                 
                 entryIndex++;
             }
             
-            if (!foundMatch)
-            {
-                Debug.LogWarning($"[BT] ⚠️ '{tree.name}' 매칭된 Entry 없음");
-            }
+            // BT 평가 종료 로그
+            BTLogger.LogTreeEvaluationEnd(tree, context, foundMatch, matchedEntryIndex, matchedEntryDescription);
             
             return context;
         }
@@ -125,7 +137,7 @@ namespace BladeAction.BT
         {
             if (actions == null || actions.Count == 0)
             {
-                Debug.LogWarning("[BT] 액션 없음");
+                BTLogger.LogWarning("액션 없음");
                 return;
             }
             
@@ -135,18 +147,26 @@ namespace BladeAction.BT
                 .GroupBy(action => action.priority)
                 .OrderByDescending(group => group.Key); // 높은 우선순위부터
             
+            BTLogger.LogDebug($"총 {actions.Count}개 액션 중 {groupedActions.Sum(g => g.Count())}개 유효");
+            
             // 각 우선순위 그룹에서 실행
             foreach (var group in groupedActions)
             {
+                BTLogger.LogDebug($"Priority {group.Key} 그룹: {group.Count()}개 액션");
+                
                 foreach (var action in group)
                 {
                     try
                     {
+                        // 액션 실행 전 로그
+                        BTLogger.LogActionExecution(action, context);
+                        
+                        // 액션 실행
                         action.ExecuteAction(context);
                     }
                     catch (System.Exception e)
                     {
-                        Debug.LogError($"[BT] 액션 오류: {action.name}\n{e}");
+                        BTLogger.LogError($"액션 오류: {action.name}\n{e}");
                     }
                 }
             }

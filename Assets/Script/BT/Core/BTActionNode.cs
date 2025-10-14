@@ -57,7 +57,7 @@ namespace BladeAction.BT
             string actionKey = GetActionKey();
             if (executeOncePerCombat && context.blackboard.HasExecuted(actionKey))
             {
-                Debug.Log($"[BTActionNode] '{name}' 이미 실행됨 - 건너뜀 (executeOncePerCombat)");
+                BTLogger.LogActionSkipped(this, "이미 실행됨 (executeOncePerCombat)");
                 return;
             }
             
@@ -68,6 +68,7 @@ namespace BladeAction.BT
             if (executeOncePerCombat)
             {
                 context.blackboard.MarkAsExecuted(actionKey);
+                BTLogger.LogDebug($"'{name}' Blackboard에 실행 기록됨");
             }
         }
         

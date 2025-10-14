@@ -28,7 +28,12 @@ namespace BladeAction.BT
                 return false;
                 
             bool result = Evaluate(context);
-            return invertResult ? !result : result;
+            bool finalResult = invertResult ? !result : result;
+            
+            // 조건 평가 결과 로그
+            BTLogger.LogConditionResult(this, finalResult, context);
+            
+            return finalResult;
         }
         
         /// <summary>

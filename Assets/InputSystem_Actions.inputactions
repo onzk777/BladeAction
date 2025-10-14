@@ -1,4 +1,5 @@
 {
+    "version": 1,
     "name": "InputSystem_Actions",
     "maps": [
         {
@@ -568,15 +569,6 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
-                },
-                {
-                    "name": "DebugPanel",
-                    "type": "Button",
-                    "id": "e4726864-e1c3-41e4-99e4-a11f75fcc04b",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -997,17 +989,6 @@
                     "action": "TrackedDeviceOrientation",
                     "isComposite": false,
                     "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "90b67e1a-72ff-4b63-b00b-a44d1fcacefd",
-                    "path": "<Keyboard>/f3",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "DebugPanel",
-                    "isComposite": false,
-                    "isPartOfComposite": false
                 }
             ]
         },
@@ -1111,6 +1092,34 @@
                     "action": "ActionSelect",
                     "isComposite": false,
                     "isPartOfComposite": true
+                }
+            ]
+        },
+        {
+            "name": "Debug",
+            "id": "2378bf3a-46e6-4a39-8087-7b88fcf213ee",
+            "actions": [
+                {
+                    "name": "DebugPanel",
+                    "type": "Button",
+                    "id": "b13c71bc-51fc-4f22-9aee-f20a015ee577",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "496658ae-95c5-47a3-9031-82ad2029e7ff",
+                    "path": "<Keyboard>/f3",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "DebugPanel",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 }
             ]
         }

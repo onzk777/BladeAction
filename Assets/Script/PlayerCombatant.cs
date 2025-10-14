@@ -29,6 +29,15 @@ public class PlayerCombatant : Combatant
     /// </summary>
     private bool btEvaluatedThisTurn = false;
     
+    // ========================================
+    // Public 프로퍼티 (Properties)
+    // ========================================
+    
+    /// <summary>
+    /// 현재 BT 실행 컨텍스트 (디버그/UI용)
+    /// </summary>
+    public BehaviorTreeContext CurrentBTContext => currentBTContext;
+    
     public PlayerCombatant(CharacterData data, PlayerController controller) : base(data)
     {
         this.controller = controller;
@@ -151,7 +160,7 @@ public class PlayerCombatant : Combatant
     {
         if (btBlackboard != null)
         {
-            Debug.Log($"[PlayerCombatant] {Name} 블랙보드 리셋 호출");
+            BladeAction.BT.BTLogger.LogBlackboardReset(Name);
             btBlackboard.ResetCombat();
         }
     }

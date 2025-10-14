@@ -21,8 +21,6 @@ namespace BladeAction.BT
             // float로 변환하여 context에 저장 (0 = false, 1 = true)
             float value = enableParryWhileGuarding ? 1f : 0f;
             context.SetProbabilityOverride("DoParryWhileGuarding", value);
-            
-            Debug.Log($"[BTAction_DoParryWhileGuarding] 막기 중 쳐내기 시도: {(enableParryWhileGuarding ? "활성화" : "비활성화")}");
         }
         
         /// <summary>

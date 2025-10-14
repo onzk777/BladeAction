@@ -87,6 +87,11 @@ public class EnemyCombatant : Combatant
     /// 런타임 확률 접근 (AI Defense Decision Maker가 사용)
     /// </summary>
     public NPCRuntimeProbabilities RuntimeProbabilities => runtimeProbabilities;
+    
+    /// <summary>
+    /// 현재 BT 실행 컨텍스트 (디버그/UI용)
+    /// </summary>
+    public BladeAction.BT.BehaviorTreeContext CurrentBTContext => currentBTContext;
 
     public override CommandSelection ChooseCommand()
     {
@@ -180,22 +185,23 @@ public class EnemyCombatant : Combatant
     {
         if (currentBTContext == null)
         {
-            Debug.Log("[EnemyCombatant] BT Context가 없음 - 확률 적용 생략");
+            BladeAction.BT.BTLogger.LogDebug($"[{Name}] BT Context가 없음 - 확률 적용 생략");
             return;
         }
         
         // runtimeProbabilities가 초기화되지 않았으면 생략
         if (runtimeProbabilities == null)
         {
-            Debug.LogWarning("[EnemyCombatant] runtimeProbabilities가 null - 확률 적용 불가");
+            BladeAction.BT.BTLogger.LogWarning($"[{Name}] runtimeProbabilities가 null - 확률 적용 불가");
             return;
         }
         
         // BT의 확률 Override를 runtimeProbabilities에 적용
         // 예: {"AttackPerfectRate": 0.8} → runtimeProbabilities.attackPerfectRate = 0.8
-        Debug.Log("[EnemyCombatant] === BT 확률 적용 시작 ===");
         runtimeProbabilities.ApplyOverrides(currentBTContext.probabilityOverrides);
-        Debug.Log("[EnemyCombatant] === BT 확률 적용 완료 ===");
+        
+        // 확률 적용 로그
+        BladeAction.BT.BTLogger.LogProbabilityApplied(Name, currentBTContext.probabilityOverrides);
         
         // 적용된 확률 로그 (디버깅용)
         LogCurrentProbabilities();
@@ -232,7 +238,7 @@ public class EnemyCombatant : Combatant
     {
         if (runtimeProbabilities != null)
         {
-            Debug.Log($"[EnemyCombatant] {Name} 확률 리셋 호출");
+            BladeAction.BT.BTLogger.LogProbabilityReset(Name);
             runtimeProbabilities.ResetToOriginal();
         }
     }
@@ -251,7 +257,7 @@ public class EnemyCombatant : Combatant
     {
         if (btBlackboard != null)
         {
-            Debug.Log($"[EnemyCombatant] {Name} 블랙보드 리셋 호출");
+            BladeAction.BT.BTLogger.LogBlackboardReset(Name);
             btBlackboard.ResetCombat();
         }
     }

@@ -323,22 +323,17 @@ public class CombatStatusDisplay : MonoBehaviour
         {
             turnTimerProgressBar.fillAmount = normalizedProgress;
         }
-        // Type=Simple 등 다른 타입: RectTransform 크기 조정
+        // Type=Simple 등 다른 타입: Scale 조정 (0~1)
         else
         {
             RectTransform rectTransform = turnTimerProgressBar.rectTransform;
             if (rectTransform != null)
             {
-                // 원본 너비를 기준으로 조정 (부모의 너비 사용)
-                RectTransform parentRect = rectTransform.parent as RectTransform;
-                if (parentRect != null)
-                {
-                    float maxWidth = parentRect.rect.width;
-                    float currentWidth = maxWidth * normalizedProgress;
-                    
-                    // sizeDelta의 x값만 변경 (y는 유지)
-                    rectTransform.sizeDelta = new Vector2(currentWidth, rectTransform.sizeDelta.y);
-                }
+                // Scale의 x값만 변경 (y, z는 유지)
+                // normalizedProgress: 0 = 0%, 1 = 100%
+                Vector3 scale = rectTransform.localScale;
+                scale.x = normalizedProgress;
+                rectTransform.localScale = scale;
             }
         }
         
