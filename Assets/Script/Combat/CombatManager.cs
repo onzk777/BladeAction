@@ -471,6 +471,9 @@ public class CombatManager : MonoBehaviour
         
         CombatStatusDisplay.Instance.ClearResults(); // 결과 표시 초기화        
         CombatStatusDisplay.Instance.whosTurnText(isPlayerAttacker); // 현재 턴 표시
+        
+        // Perfect Timing 가이드 표시
+        CombatStatusDisplay.Instance.ShowPerfectTimingGuides(command, turnDuration);
 
         if (isPlayerAttacker)
         {

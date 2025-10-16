@@ -22,6 +22,16 @@ public class CombatStatusDisplay : MonoBehaviour
     
     [Tooltip("턴 타이머 진행률 바 배경 (선택 사항)")]
     [SerializeField] private Image turnTimerProgressBarBackground;
+    
+    [Header("Perfect Timing Guide")]
+    [Tooltip("Perfect Timing 가이드 Prefab")]
+    [SerializeField] private GameObject perfectTimingGuidePrefab;
+    
+    [Tooltip("가이드를 배치할 부모 Transform (turnTimerProgressBar의 부모가 적절)")]
+    [SerializeField] private RectTransform guideContainer;
+    
+    // 생성된 가이드들을 추적
+    private System.Collections.Generic.List<PerfectTimingGuide> activeGuides = new System.Collections.Generic.List<PerfectTimingGuide>();
 
     [Header("Player UI")]
     public TextMeshProUGUI playerName;
@@ -437,9 +447,160 @@ public class CombatStatusDisplay : MonoBehaviour
         foreach (Transform child in playerHitResultContainer) Destroy(child.gameObject);
         foreach (Transform child in enemyHitResultContainer) Destroy(child.gameObject);
         foreach (Transform child in TurnResultContainer) Destroy(child.gameObject);
-
+        
+        // Perfect Timing 가이드도 함께 제거
+        ClearPerfectTimingGuides();
     }
 
+    /// <summary>
+    /// Perfect Timing 가이드들을 생성합니다
+    /// </summary>
+    /// <param name="actionData">현재 공격자가 사용한 검술 데이터</param>
+    /// <param name="totalTurnTime">전체 턴 시간</param>
+    public void ShowPerfectTimingGuides(ActionCommandData actionData, float totalTurnTime)
+    {
+        // 이전 가이드들 제거
+        ClearPerfectTimingGuides();
+        
+        if (actionData == null || actionData.perfectTimings == null || actionData.perfectTimings.Count == 0)
+        {
+            Debug.Log("[CombatStatusDisplay] Perfect Timing 데이터가 없습니다.");
+            return;
+        }
+        
+        if (perfectTimingGuidePrefab == null)
+        {
+            Debug.LogWarning("[CombatStatusDisplay] perfectTimingGuidePrefab이 할당되지 않았습니다!");
+            return;
+        }
+        
+        if (guideContainer == null)
+        {
+            Debug.LogWarning("[CombatStatusDisplay] guideContainer가 할당되지 않았습니다!");
+            return;
+        }
+        
+        if (totalTurnTime <= 0f)
+        {
+            Debug.LogWarning("[CombatStatusDisplay] totalTurnTime이 유효하지 않습니다!");
+            return;
+        }
+        
+        // 게이지 바의 실제 픽셀 width 가져오기
+        float gaugeWidth = GetGaugeWidth();
+        if (gaugeWidth <= 0f)
+        {
+            Debug.LogWarning("[CombatStatusDisplay] 게이지 바의 width를 가져올 수 없습니다!");
+            return;
+        }
+        
+        // 각 Hit의 Perfect Timing에 대해 가이드 생성
+        for (int i = 0; i < actionData.perfectTimings.Count; i++)
+        {
+            PerfectTimingWindow timing = actionData.perfectTimings[i];
+            CreatePerfectTimingGuide(timing, totalTurnTime, gaugeWidth, i);
+        }
+        
+        Debug.Log($"[CombatStatusDisplay] {actionData.perfectTimings.Count}개의 Perfect Timing 가이드 생성 완료");
+    }
+    
+    /// <summary>
+    /// 개별 Perfect Timing 가이드를 생성합니다
+    /// </summary>
+    private void CreatePerfectTimingGuide(PerfectTimingWindow timing, float totalTurnTime, float gaugeWidth, int hitIndex)
+    {
+        // Prefab 인스턴스화
+        GameObject guideObj = Instantiate(perfectTimingGuidePrefab, guideContainer);
+        PerfectTimingGuide guide = guideObj.GetComponent<PerfectTimingGuide>();
+        
+        if (guide == null)
+        {
+            Debug.LogError("[CombatStatusDisplay] Prefab에 PerfectTimingGuide 컴포넌트가 없습니다!");
+            Destroy(guideObj);
+            return;
+        }
+        
+        // Start 시간 기준으로 상대적 위치 계산 (Debug.Log에서도 사용하기 위해 밖에서 선언)
+        float startRatio = timing.start / totalTurnTime;
+        float startPositionX = gaugeWidth * startRatio;
+        
+        // RectTransform 설정 (Anchor를 Left로)
+        RectTransform guideRect = guideObj.GetComponent<RectTransform>();
+        if (guideRect != null)
+        {
+            // Anchor를 Left-Center로 설정
+            guideRect.anchorMin = new Vector2(0f, 0.5f);
+            guideRect.anchorMax = new Vector2(0f, 0.5f);
+            guideRect.pivot = new Vector2(0f, 0.5f);
+            
+            // 위치 설정
+            guideRect.anchoredPosition = new Vector2(startPositionX, 0f);
+        }
+        
+        // Perfect 구간의 width 계산
+        float durationRatio = timing.duration / totalTurnTime;
+        float guideWidth = gaugeWidth * durationRatio;
+        
+        // 가이드 width 설정
+        guide.SetGuideWidth(guideWidth);
+        
+        // 히트마다 약간 다른 색상 적용 (옵션)
+        Color guideColor = GetGuideColorForHit(hitIndex);
+        guide.SetGuideColor(guideColor);
+        
+        // 리스트에 추가
+        activeGuides.Add(guide);
+        
+        Debug.Log($"[CombatStatusDisplay] Hit {hitIndex + 1} 가이드 생성: Start={timing.start:F3}초, Duration={timing.duration:F3}초, X={startPositionX:F1}px, Width={guideWidth:F1}px");
+    }
+    
+    /// <summary>
+    /// 게이지 바의 실제 픽셀 width를 반환합니다
+    /// </summary>
+    private float GetGaugeWidth()
+    {
+        if (turnTimerProgressBar == null) return 0f;
+        
+        RectTransform gaugeRect = turnTimerProgressBar.rectTransform;
+        if (gaugeRect == null) return 0f;
+        
+        return gaugeRect.rect.width;
+    }
+    
+    /// <summary>
+    /// 히트 인덱스에 따라 가이드 색상을 반환합니다
+    /// </summary>
+    private Color GetGuideColorForHit(int hitIndex)
+    {
+        // 기본 색상: 반투명 노란색
+        Color baseColor = new Color(1f, 0.8f, 0f, 0.7f);
+        
+        // 히트마다 색조를 약간씩 변경 (선택 사항)
+        float hueShift = (hitIndex % 3) * 0.1f; // 0, 0.1, 0.2 순환
+        
+        // HSV로 변환하여 색조 조정
+        Color.RGBToHSV(baseColor, out float h, out float s, out float v);
+        h = (h + hueShift) % 1f; // 색조 회전
+        Color adjustedColor = Color.HSVToRGB(h, s, v);
+        adjustedColor.a = baseColor.a; // 알파값 유지
+        
+        return adjustedColor;
+    }
+    
+    /// <summary>
+    /// 모든 Perfect Timing 가이드를 제거합니다
+    /// </summary>
+    public void ClearPerfectTimingGuides()
+    {
+        foreach (var guide in activeGuides)
+        {
+            if (guide != null)
+            {
+                guide.Cleanup();
+            }
+        }
+        activeGuides.Clear();
+    }
 
 
 }
