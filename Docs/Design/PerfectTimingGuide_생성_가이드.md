@@ -14,18 +14,34 @@
   - Position: (0, 0, 0)
   
 - `PerfectTimingGuide` 스크립트
-  - Start Marker: (아래 참조)
-  - End Marker: (아래 참조)
-  - Fill Rect: (아래 참조)
-  - Marker Size: 10
-  - Fill Height: 20
-  - Guide Color: RGBA(1, 0.8, 0, 0.7) - 반투명 노란색
+  - Guide Container: (아래 참조)
+  - Guide Start Marker: (아래 참조)
+  - Guide End Marker: (아래 참조)
+  - Guide Fill Rect: (아래 참조)
+  - Already Container: (아래 참조)
+  - Already Start Marker: (아래 참조)
+  - Already End Marker: (아래 참조)
+  - Already Fill Rect: (아래 참조)
+  
+**참고:** 
+- Guide 세트는 대기 상태(아직 입력하지 않음)를 표시
+- Already 세트는 완료 상태(완벽 입력 성공)를 표시
+- 색상, 크기, 투명도 등 시각적 속성은 스크립트가 아닌 Prefab에서 직접 설정
 
-### 2. 자식 오브젝트 1: StartMarker
+### 2. 자식 오브젝트 1: Guide (GameObject 컨테이너)
+
+**컴포넌트:**
+- GameObject (빈 오브젝트)
+- `RectTransform`
+  - Anchors: Left-Center (Min: 0, 0.5 / Max: 0, 0.5)
+  - Pivot: Left-Center (0, 0.5)
+  - Position: (0, 0, 0)
+
+### 3. Guide의 자식 오브젝트 1-1: StartMarker
 
 **컴포넌트:**
 - `RectTransform`
-  - Anchors: Center (Min: 0.5, 0.5 / Max: 0.5, 0.5)
+  - Anchors: Left-Center (Min: 0, 0.5 / Max: 0, 0.5)
   - Pivot: Center (0.5, 0.5)
   - Width: 10, Height: 10
   - Position: (0, 0, 0)
@@ -36,22 +52,22 @@
   - Sprite: UI Sprite Circle (Built-in) 또는 Knob 등 원형 스프라이트
   - Raycast Target: 체크 해제
 
-### 3. 자식 오브젝트 2: EndMarker
+### 4. Guide의 자식 오브젝트 1-2: EndMarker
 
 **컴포넌트:**
 - `RectTransform`
-  - Anchors: Center (Min: 0.5, 0.5 / Max: 0.5, 0.5)
+  - Anchors: Left-Center (Min: 0, 0.5 / Max: 0, 0.5)
   - Pivot: Center (0.5, 0.5)
   - Width: 10, Height: 10
   - Position: (0, 0, 0)
 
 - `Image`
-  - Color: RGBA(1, 0.8, 0, 0.7)
+  - Color: RGBA(1, 0.8, 0, 0.7) - 예시: 노란색 반투명
   - Image Type: Simple
   - Sprite: UI Sprite Circle (Built-in) 또는 Knob 등 원형 스프라이트
   - Raycast Target: 체크 해제
 
-### 4. 자식 오브젝트 3: FillRect
+### 5. Guide의 자식 오브젝트 1-3: FillRect
 
 **컴포넌트:**
 - `RectTransform`
@@ -62,12 +78,87 @@
   - Position: (0, 0, 0)
 
 - `Image`
-  - Color: RGBA(1, 0.8, 0, 0.35) - Fill은 더 투명하게
+  - Color: RGBA(1, 0.8, 0, 0.35) - 예시: 노란색 더 투명
   - Image Type: Simple
   - Sprite: UI Sprite (Built-in) 또는 단순 사각형 스프라이트
   - Raycast Target: 체크 해제
 
+### 6. 자식 오브젝트 2: Already (GameObject 컨테이너)
+
+**컴포넌트:**
+- GameObject (빈 오브젝트)
+- `RectTransform`
+  - Anchors: Left-Center (Min: 0, 0.5 / Max: 0, 0.5)
+  - Pivot: Left-Center (0, 0.5)
+  - Position: (0, 0, 0)
+
+### 7. Already의 자식 오브젝트 2-1: StartMarker
+
+**컴포넌트:**
+- `RectTransform`
+  - Anchors: Left-Center (Min: 0, 0.5 / Max: 0, 0.5)
+  - Pivot: Center (0.5, 0.5)
+  - Width: 10, Height: 10
+  - Position: (0, 0, 0)
+
+- `Image`
+  - Color: RGBA(0, 1, 0, 0.9) - 예시: 초록색 불투명
+  - Image Type: Simple
+  - Sprite: UI Sprite Circle (Built-in) 또는 Knob 등 원형 스프라이트
+  - Raycast Target: 체크 해제
+
+### 8. Already의 자식 오브젝트 2-2: EndMarker
+
+**컴포넌트:**
+- `RectTransform`
+  - Anchors: Left-Center (Min: 0, 0.5 / Max: 0, 0.5)
+  - Pivot: Center (0.5, 0.5)
+  - Width: 10, Height: 10
+  - Position: (0, 0, 0)
+
+- `Image`
+  - Color: RGBA(0, 1, 0, 0.9) - 예시: 초록색 불투명
+  - Image Type: Simple
+  - Sprite: UI Sprite Circle (Built-in) 또는 Knob 등 원형 스프라이트
+  - Raycast Target: 체크 해제
+
+### 9. Already의 자식 오브젝트 2-3: FillRect
+
+**컴포넌트:**
+- `RectTransform`
+  - Anchors: Left-Center (Min: 0, 0.5 / Max: 0, 0.5)
+  - Pivot: Left-Center (0, 0.5)
+  - Width: 100 (기본값, 스크립트에서 변경됨)
+  - Height: 20
+  - Position: (0, 0, 0)
+
+- `Image`
+  - Color: RGBA(0, 1, 0, 0.6) - 예시: 초록색 반투명
+  - Image Type: Simple
+  - Sprite: UI Sprite (Built-in) 또는 단순 사각형 스프라이트
+  - Raycast Target: 체크 해제
+
+## 계층 구조 요약
+
+```
+PerfectTimingGuide (루트)
+├── Guide (컨테이너, 초기 활성화)
+│   ├── StartMarker
+│   ├── EndMarker
+│   └── FillRect
+└── Already (컨테이너, 초기 비활성화)
+    ├── StartMarker
+    ├── EndMarker
+    └── FillRect
+```
+
+**색상 예시:**
+- Guide: 노란색 계열 (대기 상태)
+- Already: 초록색 계열 (완료 상태)
+
 ## Unity Editor에서 생성 단계
+
+**참고:** Guide와 Already 두 세트를 만들어야 하므로, 각 세트를 따로 생성합니다.
 
 ### 단계 1: Canvas에서 작업 준비
 1. Hierarchy에서 Canvas 선택 (없으면 Create → UI → Canvas)
@@ -85,60 +176,79 @@
      - Pivot: X=0, Y=0.5
      - Pos X=0, Y=0, Z=0
 
-### 단계 3: FillRect 생성
-1. PerfectTimingGuide 우클릭 → UI → Image
-2. 이름을 "FillRect"로 변경
+### 단계 3: Guide 컨테이너 생성
+1. PerfectTimingGuide 우클릭 → Create Empty
+2. 이름을 "Guide"로 변경
 3. Inspector에서:
    - RectTransform:
      - Anchors Preset: Left-Center
      - Pivot: X=0, Y=0.5
-     - Width: 100, Height: 20
      - Pos X=0, Y=0, Z=0
-   - Image 컴포넌트:
-     - Color: R=1, G=0.8, B=0, A=0.35
-     - Source Image: UISprite (기본 흰색 사각형)
-     - Raycast Target: 체크 해제
 
-### 단계 4: StartMarker 생성
-1. PerfectTimingGuide 우클릭 → UI → Image
+### 단계 4: Guide 세트 생성 (FillRect, StartMarker, EndMarker)
+
+**4-1. Guide/FillRect:**
+1. Guide 우클릭 → UI → Image
+2. 이름을 "FillRect"로 변경
+3. Inspector:
+   - RectTransform: Anchors=Left-Center, Pivot=(0, 0.5), Width=100, Height=20
+   - Image: Color=노란색 반투명 (예: R=1, G=0.8, B=0, A=0.35)
+   - Raycast Target 체크 해제
+
+**4-2. Guide/StartMarker:**
+1. Guide 우클릭 → UI → Image
 2. 이름을 "StartMarker"로 변경
-3. Inspector에서:
-   - RectTransform:
-     - Anchors Preset: Center
-     - Pivot: X=0.5, Y=0.5
-     - Width: 10, Height: 10
-     - Pos X=0, Y=0, Z=0
-   - Image 컴포넌트:
-     - Color: R=1, G=0.8, B=0, A=0.7
-     - Source Image: Knob (또는 원형 스프라이트)
-     - Raycast Target: 체크 해제
+3. Inspector:
+   - RectTransform: Anchors=Left-Center, Pivot=(0.5, 0.5), Width=10, Height=10
+   - Image: Color=노란색 (R=1, G=0.8, B=0, A=0.7), Sprite=Knob
+   - Raycast Target 체크 해제
 
-### 단계 5: EndMarker 생성
-1. PerfectTimingGuide 우클릭 → UI → Image
+**4-3. Guide/EndMarker:**
+1. Guide 우클릭 → UI → Image
 2. 이름을 "EndMarker"로 변경
+3. Inspector:
+   - RectTransform: Anchors=Left-Center, Pivot=(0.5, 0.5), Width=10, Height=10
+   - Image: Color=노란색 (R=1, G=0.8, B=0, A=0.7), Sprite=Knob
+   - Raycast Target 체크 해제
+
+### 단계 5: Already 컨테이너 생성
+1. PerfectTimingGuide 우클릭 → Create Empty
+2. 이름을 "Already"로 변경
 3. Inspector에서:
    - RectTransform:
-     - Anchors Preset: Center
-     - Pivot: X=0.5, Y=0.5
-     - Width: 10, Height: 10
+     - Anchors Preset: Left-Center
+     - Pivot: X=0, Y=0.5
      - Pos X=0, Y=0, Z=0
-   - Image 컴포넌트:
-     - Color: R=1, G=0.8, B=0, A=0.7
-     - Source Image: Knob (또는 원형 스프라이트)
-     - Raycast Target: 체크 해제
+4. **Already 오브젝트를 비활성화** (Inspector 상단 체크박스 해제)
 
-### 단계 6: PerfectTimingGuide 스크립트 연결
-1. PerfectTimingGuide 오브젝트 선택
+### 단계 6: Already 세트 생성 (Guide 세트와 동일하지만 색상만 다름)
+
+**6-1. Already/FillRect:**
+- Guide/FillRect를 복사하여 Already 아래로 이동
+- Color를 초록색 반투명으로 변경 (예: R=0, G=1, B=0, A=0.6)
+
+**6-2. Already/StartMarker:**
+- Guide/StartMarker를 복사하여 Already 아래로 이동
+- Color를 초록색으로 변경 (예: R=0, G=1, B=0, A=0.9)
+
+**6-3. Already/EndMarker:**
+- Guide/EndMarker를 복사하여 Already 아래로 이동
+- Color를 초록색으로 변경 (예: R=0, G=1, B=0, A=0.9)
+
+### 단계 7: PerfectTimingGuide 스크립트 연결
+1. PerfectTimingGuide 루트 오브젝트 선택
 2. Inspector에서 `PerfectTimingGuide` 스크립트 컴포넌트 찾기
 3. 필드 할당:
-   - Start Marker: StartMarker 오브젝트 드래그
-   - End Marker: EndMarker 오브젝트 드래그
-   - Fill Rect: FillRect 오브젝트 드래그
-   - Marker Size: 10
-   - Fill Height: 20
-   - Guide Color: R=1, G=0.8, B=0, A=0.7
+   - Guide Container: Guide 오브젝트 드래그
+   - Guide Start Marker: Guide/StartMarker 드래그
+   - Guide End Marker: Guide/EndMarker 드래그
+   - Guide Fill Rect: Guide/FillRect 드래그
+   - Already Container: Already 오브젝트 드래그
+   - Already Start Marker: Already/StartMarker 드래그
+   - Already End Marker: Already/EndMarker 드래그
+   - Already Fill Rect: Already/FillRect 드래그
 
-### 단계 7: Prefab으로 저장
+### 단계 8: Prefab으로 저장
 1. PerfectTimingGuide 오브젝트를 Project 창의 `Assets/Prefab/` 폴더로 드래그
 2. Prefab이 생성되면 Hierarchy의 인스턴스는 삭제해도 됨
 
@@ -196,6 +306,9 @@ Canvas
 - ✅ End 마커가 Perfect 종료 시간에 위치하는가?
 - ✅ Fill Rect가 Start~End 구간을 올바르게 채우는가?
 - ✅ 여러 Hit가 있을 때 각각의 가이드가 생성되는가?
+- ✅ **초기 상태: Guide 활성화, Already 비활성화인가?**
+- ✅ **완벽 입력 성공 시: 해당 Hit의 가이드가 Guide → Already로 전환되는가?**
+- ✅ **완벽 입력 실패 시: 해당 Hit의 가이드가 Guide 상태로 유지되는가?**
 - ✅ 다음 턴 시작 시 이전 가이드가 제거되는가?
 
 ### 3. 문제 해결
@@ -217,19 +330,23 @@ Canvas
 ## 커스터마이징
 
 ### 색상 변경
-- `PerfectTimingGuide` 스크립트의 `guideColor` 필드 조정
-- 또는 `GetGuideColorForHit` 메서드를 수정하여 히트별로 다른 색상 적용
+Prefab의 각 오브젝트 선택 → Inspector → Image 컴포넌트 → Color 필드에서 직접 수정
+- StartMarker: 원하는 색상/투명도 설정
+- EndMarker: 원하는 색상/투명도 설정
+- FillRect: 원하는 색상/투명도 설정 (보통 마커보다 더 투명하게)
 
 ### 크기 조정
-- `markerSize`: 시작/끝 마커의 크기
-- `fillHeight`: FillRect의 높이
+Prefab의 각 오브젝트 선택 → Inspector → Rect Transform → Width/Height 수정
+- StartMarker: Width/Height (예: 10x10, 15x15 등)
+- EndMarker: Width/Height (예: 10x10, 15x15 등)
+- FillRect: Height만 조정 (Width는 스크립트가 자동 계산)
 
 ### 투명도 조정
-- `guideColor.a`: 전체 투명도
-- `ApplyColors` 메서드에서 FillRect는 `guideColor.a * 0.5f`로 더 투명하게 설정됨
+Image 컴포넌트의 Color → Alpha 값 조정 (0~255 또는 0~1)
 
 ## 참고 사항
 - 가이드는 매 턴마다 새로 생성되므로 성능에 유의하세요
 - 히트가 많은 검술의 경우 가이드가 겹칠 수 있으니 적절히 조정하세요
-- 가이드 색상은 히트 인덱스에 따라 자동으로 변경됩니다
+- 스크립트는 width(시간 정보)만 계산하며, 모든 시각적 속성은 Prefab에서 설정됩니다
+- 히트별로 다른 색상을 사용하고 싶다면 여러 Prefab 변형을 만들고 코드에서 선택하도록 확장 가능합니다
 

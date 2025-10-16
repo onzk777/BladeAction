@@ -1204,6 +1204,12 @@ public class CombatManager : MonoBehaviour
 
             CurrentAttackResultShown = true; // 히트 결과가 표시되었음을 설정
             
+            // 🆕 완벽 입력 성공 시 가이드 완료 상태로 전환
+            if (isPerfect && CombatStatusDisplay.Instance != null)
+            {
+                CombatStatusDisplay.Instance.MarkGuideAsCompleted(CurrentHit);
+            }
+            
             // 🆕 공격자 입력 처리 시 발사체 발사 (성공/실패 무관)
             Debug.Log($"[CombatManager] 공격자 입력 처리 완료 - 발사체 발사: 히트 {CurrentHit}, 완벽 입력: {isPerfect}");
             CreateProjectileForCurrentHit(isPerfect);

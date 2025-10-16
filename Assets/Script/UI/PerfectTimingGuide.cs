@@ -1,102 +1,101 @@
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
 /// 턴 타이머 게이지 바 위에 Perfect Timing 구간을 시각적으로 표시하는 UI 컴포넌트
+/// width만 동적으로 설정하고, 나머지 시각적 속성(높이, 색상, 투명도 등)은 Prefab에서 정의됩니다.
+/// Guide(대기 상태)와 Already(완료 상태) 두 세트를 가지며, 완벽 입력 성공 시 전환됩니다.
 /// </summary>
 public class PerfectTimingGuide : MonoBehaviour
 {
-    [Header("UI Components")]
-    [Tooltip("Perfect 시작 시점 표시용 원형 마커")]
-    [SerializeField] private RectTransform startMarker;
+    [Header("Guide Set - 대기 상태 (아직 입력하지 않음)")]
+    [Tooltip("대기 상태 가이드 컨테이너")]
+    [SerializeField] private GameObject guideContainer;
     
-    [Tooltip("Perfect 종료 시점 표시용 원형 마커")]
-    [SerializeField] private RectTransform endMarker;
+    [Tooltip("Guide - Perfect 시작 시점 마커")]
+    [SerializeField] private RectTransform guideStartMarker;
     
-    [Tooltip("Start~End 구간을 채우는 사각형")]
-    [SerializeField] private RectTransform fillRect;
+    [Tooltip("Guide - Perfect 종료 시점 마커")]
+    [SerializeField] private RectTransform guideEndMarker;
     
-    [Header("Visual Settings")]
-    [Tooltip("마커의 크기 (지름)")]
-    [SerializeField] private float markerSize = 10f;
+    [Tooltip("Guide - Start~End 구간 채우기")]
+    [SerializeField] private RectTransform guideFillRect;
     
-    [Tooltip("Fill Rect의 높이")]
-    [SerializeField] private float fillHeight = 20f;
+    [Header("Already Set - 완료 상태 (완벽 입력 성공)")]
+    [Tooltip("완료 상태 가이드 컨테이너")]
+    [SerializeField] private GameObject alreadyContainer;
     
-    [Tooltip("가이드 색상")]
-    [SerializeField] private Color guideColor = new Color(1f, 0.8f, 0f, 0.7f); // 반투명 노란색
+    [Tooltip("Already - Perfect 시작 시점 마커")]
+    [SerializeField] private RectTransform alreadyStartMarker;
+    
+    [Tooltip("Already - Perfect 종료 시점 마커")]
+    [SerializeField] private RectTransform alreadyEndMarker;
+    
+    [Tooltip("Already - Start~End 구간 채우기")]
+    [SerializeField] private RectTransform alreadyFillRect;
+    
+    private void Awake()
+    {
+        // 초기 상태: Guide 활성화, Already 비활성화
+        if (guideContainer != null) guideContainer.SetActive(true);
+        if (alreadyContainer != null) alreadyContainer.SetActive(false);
+    }
     
     /// <summary>
-    /// Perfect Timing 구간의 width를 설정합니다
+    /// Perfect Timing 구간의 width를 설정합니다 (시간 정보 기반)
+    /// Guide와 Already 두 세트 모두에 동일하게 적용됩니다.
     /// </summary>
     /// <param name="width">게이지 바 상에서의 픽셀 width</param>
     public void SetGuideWidth(float width)
     {
-        if (fillRect == null)
-        {
-            Debug.LogError("[PerfectTimingGuide] fillRect가 할당되지 않았습니다!");
-            return;
-        }
+        // Guide 세트 설정
+        SetupMarkerSet(guideFillRect, guideStartMarker, guideEndMarker, width);
         
-        // FillRect의 width 설정
-        fillRect.sizeDelta = new Vector2(width, fillHeight);
+        // Already 세트 설정
+        SetupMarkerSet(alreadyFillRect, alreadyStartMarker, alreadyEndMarker, width);
+    }
+    
+    /// <summary>
+    /// 마커 세트(FillRect, StartMarker, EndMarker)를 설정합니다
+    /// </summary>
+    private void SetupMarkerSet(RectTransform fillRect, RectTransform startMarker, RectTransform endMarker, float width)
+    {
+        if (fillRect == null) return;
         
-        // StartMarker는 fillRect의 왼쪽 끝에 배치 (로컬 위치 0)
+        // FillRect 설정
+        fillRect.anchorMin = new Vector2(0f, 0.5f);
+        fillRect.anchorMax = new Vector2(0f, 0.5f);
+        fillRect.pivot = new Vector2(0f, 0.5f);
+        fillRect.anchoredPosition = new Vector2(0, 0);
+        fillRect.sizeDelta = new Vector2(width, fillRect.sizeDelta.y);
+        
+        // StartMarker 설정
         if (startMarker != null)
         {
+            startMarker.anchorMin = new Vector2(0f, 0.5f);
+            startMarker.anchorMax = new Vector2(0f, 0.5f);
+            startMarker.pivot = new Vector2(0.5f, 0.5f);
             startMarker.anchoredPosition = new Vector2(0, 0);
-            startMarker.sizeDelta = new Vector2(markerSize, markerSize);
         }
         
-        // EndMarker는 fillRect의 오른쪽 끝에 배치 (로컬 위치 width)
+        // EndMarker 설정
         if (endMarker != null)
         {
+            endMarker.anchorMin = new Vector2(0f, 0.5f);
+            endMarker.anchorMax = new Vector2(0f, 0.5f);
+            endMarker.pivot = new Vector2(0.5f, 0.5f);
             endMarker.anchoredPosition = new Vector2(width, 0);
-            endMarker.sizeDelta = new Vector2(markerSize, markerSize);
         }
-        
-        // 색상 적용
-        ApplyColors();
     }
     
     /// <summary>
-    /// 가이드 색상을 설정합니다
+    /// 완벽 입력 성공 시 호출: Guide를 비활성화하고 Already를 활성화합니다
     /// </summary>
-    /// <param name="color">설정할 색상</param>
-    public void SetGuideColor(Color color)
+    public void MarkAsCompleted()
     {
-        guideColor = color;
-        ApplyColors();
-    }
-    
-    /// <summary>
-    /// 모든 컴포넌트에 색상 적용
-    /// </summary>
-    private void ApplyColors()
-    {
-        if (startMarker != null)
-        {
-            var startImage = startMarker.GetComponent<Image>();
-            if (startImage != null) startImage.color = guideColor;
-        }
+        if (guideContainer != null) guideContainer.SetActive(false);
+        if (alreadyContainer != null) alreadyContainer.SetActive(true);
         
-        if (endMarker != null)
-        {
-            var endImage = endMarker.GetComponent<Image>();
-            if (endImage != null) endImage.color = guideColor;
-        }
-        
-        if (fillRect != null)
-        {
-            var fillImage = fillRect.GetComponent<Image>();
-            if (fillImage != null)
-            {
-                // FillRect는 좀 더 투명하게
-                Color fillColor = guideColor;
-                fillColor.a *= 0.5f;
-                fillImage.color = fillColor;
-            }
-        }
+        Debug.Log("[PerfectTimingGuide] 완벽 입력 성공 - Guide → Already 전환");
     }
     
     /// <summary>

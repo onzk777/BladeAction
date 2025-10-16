@@ -541,12 +541,8 @@ public class CombatStatusDisplay : MonoBehaviour
         float durationRatio = timing.duration / totalTurnTime;
         float guideWidth = gaugeWidth * durationRatio;
         
-        // 가이드 width 설정
+        // 가이드 width 설정 (색상, 크기 등은 Prefab에서 설정된 값 사용)
         guide.SetGuideWidth(guideWidth);
-        
-        // 히트마다 약간 다른 색상 적용 (옵션)
-        Color guideColor = GetGuideColorForHit(hitIndex);
-        guide.SetGuideColor(guideColor);
         
         // 리스트에 추가
         activeGuides.Add(guide);
@@ -568,26 +564,6 @@ public class CombatStatusDisplay : MonoBehaviour
     }
     
     /// <summary>
-    /// 히트 인덱스에 따라 가이드 색상을 반환합니다
-    /// </summary>
-    private Color GetGuideColorForHit(int hitIndex)
-    {
-        // 기본 색상: 반투명 노란색
-        Color baseColor = new Color(1f, 0.8f, 0f, 0.7f);
-        
-        // 히트마다 색조를 약간씩 변경 (선택 사항)
-        float hueShift = (hitIndex % 3) * 0.1f; // 0, 0.1, 0.2 순환
-        
-        // HSV로 변환하여 색조 조정
-        Color.RGBToHSV(baseColor, out float h, out float s, out float v);
-        h = (h + hueShift) % 1f; // 색조 회전
-        Color adjustedColor = Color.HSVToRGB(h, s, v);
-        adjustedColor.a = baseColor.a; // 알파값 유지
-        
-        return adjustedColor;
-    }
-    
-    /// <summary>
     /// 모든 Perfect Timing 가이드를 제거합니다
     /// </summary>
     public void ClearPerfectTimingGuides()
@@ -600,6 +576,30 @@ public class CombatStatusDisplay : MonoBehaviour
             }
         }
         activeGuides.Clear();
+    }
+    
+    /// <summary>
+    /// 특정 Hit의 가이드를 완료 상태로 전환합니다 (완벽 입력 성공 시)
+    /// </summary>
+    /// <param name="hitIndex">Hit 인덱스 (0부터 시작)</param>
+    public void MarkGuideAsCompleted(int hitIndex)
+    {
+        if (activeGuides == null || hitIndex < 0 || hitIndex >= activeGuides.Count)
+        {
+            Debug.LogWarning($"[CombatStatusDisplay] 유효하지 않은 hitIndex: {hitIndex} (activeGuides.Count: {activeGuides?.Count ?? 0})");
+            return;
+        }
+        
+        PerfectTimingGuide guide = activeGuides[hitIndex];
+        if (guide != null)
+        {
+            guide.MarkAsCompleted();
+            Debug.Log($"[CombatStatusDisplay] Hit {hitIndex + 1} 가이드 완료 상태로 전환");
+        }
+        else
+        {
+            Debug.LogWarning($"[CombatStatusDisplay] Hit {hitIndex + 1} 가이드가 null입니다");
+        }
     }
 
 

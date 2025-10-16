@@ -7,19 +7,22 @@
 #### 스크립트
 - **`Assets/Script/UI/PerfectTimingGuide.cs`**
   - Perfect Timing 구간을 시각적으로 표시하는 UI 컴포넌트
-  - Start/End 마커와 Fill Rect로 구성
-  - Width와 색상을 동적으로 설정 가능
+  - Guide (대기 상태) / Already (완료 상태) 두 세트로 구성
+  - 완벽 입력 성공 시 Guide → Already로 자동 전환
+  - Width만 동적으로 설정 (색상/크기는 Prefab에서 설정)
 
 #### 수정된 파일
 - **`Assets/Script/UI/CombatStatusDisplay.cs`**
-  - Perfect Timing 가이드 생성/제거 로직 추가
+  - Perfect Timing 가이드 생성/제거/완료 전환 로직 추가
   - `ShowPerfectTimingGuides()`: 검술의 모든 Hit에 대해 가이드 생성
+  - `MarkGuideAsCompleted()`: 완벽 입력 성공 시 가이드 완료 상태로 전환
   - `ClearPerfectTimingGuides()`: 가이드 제거
   - `ClearResults()`에 가이드 자동 제거 추가
 
 - **`Assets/Script/Combat/CombatManager.cs`**
   - 턴 시작 시 `ShowPerfectTimingGuides()` 호출 추가
   - 검술 데이터와 턴 지속 시간을 전달하여 가이드 표시
+  - 공격자 완벽 입력 성공 시 `MarkGuideAsCompleted()` 호출하여 가이드 전환
 
 #### 문서
 - **`Docs/Design/PerfectTimingGuide_생성_가이드.md`**
@@ -31,15 +34,21 @@
 
 #### PerfectTimingGuide 컴포넌트
 ```csharp
-public void SetGuideWidth(float width)
-public void SetGuideColor(Color color)
-public void Cleanup()
+public void SetGuideWidth(float width)  // width만 동적 설정 (Guide/Already 양쪽)
+public void MarkAsCompleted()            // 완벽 입력 성공 시 Guide → Already 전환
+public void Cleanup()                    // 가이드 제거
 ```
+
+**참고:** 
+- 색상, 크기, 투명도 등은 코드가 아닌 Prefab에서 설정
+- 초기 상태: Guide 활성화, Already 비활성화
+- 완벽 입력 성공: Guide 비활성화, Already 활성화
 
 #### CombatStatusDisplay 연동
 ```csharp
-public void ShowPerfectTimingGuides(ActionCommandData actionData, float totalTurnTime)
-public void ClearPerfectTimingGuides()
+public void ShowPerfectTimingGuides(ActionCommandData actionData, float totalTurnTime)  // 가이드 생성
+public void MarkGuideAsCompleted(int hitIndex)                                         // 가이드 완료 전환
+public void ClearPerfectTimingGuides()                                                 // 가이드 제거
 ```
 
 ### 3. 동작 흐름
@@ -71,21 +80,27 @@ CombatStatusDisplay.ClearPerfectTimingGuides()
 
 ```
 PerfectTimingGuide (RectTransform + PerfectTimingGuide script)
-├── StartMarker (Image, 원형)
-├── EndMarker (Image, 원형)
-└── FillRect (Image, 사각형)
+├── Guide (컨테이너, 초기 활성화)
+│   ├── StartMarker (Image, 원형)
+│   ├── EndMarker (Image, 원형)
+│   └── FillRect (Image, 사각형)
+└── Already (컨테이너, 초기 비활성화)
+    ├── StartMarker (Image, 원형)
+    ├── EndMarker (Image, 원형)
+    └── FillRect (Image, 사각형)
 ```
 
 **Anchor 설정:**
-- PerfectTimingGuide: Left-Center (0, 0.5)
-- FillRect: Left-Center (0, 0.5)
-- StartMarker: Center (0.5, 0.5)
-- EndMarker: Center (0.5, 0.5)
+- PerfectTimingGuide: Left-Center (0, 0.5) / Pivot: Left-Center (0, 0.5)
+- Guide / Already: Left-Center (0, 0.5) / Pivot: Left-Center (0, 0.5)
+- FillRect: Left-Center (0, 0.5) / Pivot: Left-Center (0, 0.5)
+- StartMarker / EndMarker: Left-Center (0, 0.5) / Pivot: Center (0.5, 0.5)
 
-**색상:**
-- 기본: RGBA(1, 0.8, 0, 0.7) - 반투명 노란색
-- FillRect: 알파값 50% 더 투명
-- 히트별로 자동 색조 조정
+**시각적 속성:**
+- Guide 세트: 대기 상태 색상 (예: 노란색 반투명)
+- Already 세트: 완료 상태 색상 (예: 초록색 불투명)
+- 색상, 크기, 투명도는 Prefab에서 직접 설정
+- 스크립트는 width(시간 정보)만 동적으로 계산하여 설정
 
 ### 5. 위치 계산 로직
 
@@ -149,25 +164,15 @@ float guideWidth = gaugeWidth * durationRatio;
 ## 커스터마이징 옵션
 
 ### 색상 변경
-`PerfectTimingGuide.cs`:
-```csharp
-[SerializeField] private Color guideColor = new Color(1f, 0.8f, 0f, 0.7f);
-```
+Prefab 에디터에서 각 UI 요소(StartMarker, EndMarker, FillRect)의 Image 컴포넌트 → Color 필드 수정
 
 ### 크기 조정
-```csharp
-[SerializeField] private float markerSize = 10f;
-[SerializeField] private float fillHeight = 20f;
-```
+Prefab 에디터에서:
+- StartMarker, EndMarker: RectTransform → Width/Height 수정
+- FillRect: RectTransform → Height 수정 (Width는 스크립트가 자동 계산)
 
-### 히트별 색상 로직
-`CombatStatusDisplay.cs`:
-```csharp
-private Color GetGuideColorForHit(int hitIndex)
-{
-    // 색조 회전 로직
-}
-```
+### 투명도 조정
+각 Image 컴포넌트의 Color → Alpha 값 수정
 
 ## 주의 사항
 
@@ -193,11 +198,11 @@ Canvas Scaler 설정에 따라 픽셀 크기가 달라질 수 있습니다.
 
 ## 향후 개선 가능 사항
 
-1. **오브젝트 풀링**: 성능 최적화
+1. **오브젝트 풀링**: 성능 최적화 (매 턴마다 Instantiate/Destroy 대신)
 2. **애니메이션**: 가이드 등장/사라질 때 페이드 효과
 3. **상호작용**: 마우스 호버 시 Hit 정보 툴팁 표시
 4. **시각 효과**: 현재 시간이 Perfect 구간에 진입하면 하이라이트
-5. **색상 프리셋**: 검술 타입별로 다른 색상 적용
+5. **다중 Prefab**: 히트별 또는 검술 타입별로 다른 Prefab 사용 (색상/모양 구분)
 
 ## 문제 해결
 
