@@ -417,6 +417,27 @@ public class DefenderInputHandler : BaseInputHandler
     {
         Debug.Log($"[DefenderInputHandler] 🚨 최종 판정 발생 - 발사체: {projectile.name}, 공격자 완벽: {projectile.attackerPerfectInput}, 방어자 완벽: {defenderPerfectSuccess}");
         
+        // 🆕 쳐내기 성공 시 막기 자동 해제 (Player/Enemy 공통)
+        if (defenderPerfectSuccess)
+        {
+            // Player 막기 해제
+            if (isGuardActive)
+            {
+                isGuardActive = false;
+                isGuardInputHeld = false;
+                StopGuardAnimation();
+                Debug.Log("[DefenderInputHandler] 🆕 쳐내기 성공 - Player 막기 해제");
+            }
+            
+            // Enemy 막기 해제
+            if (aiIsGuarding)
+            {
+                aiIsGuarding = false;
+                StopGuardAnimation();
+                Debug.Log("[DefenderInputHandler] 🆕 쳐내기 성공 - Enemy 막기 해제");
+            }
+        }
+        
         // 🆕 CombatManager에 발사체 기반 최종 판정 요청
         CombatManager.Instance.TriggerProjectileBasedFinalJudgment(projectile, defenderPerfectSuccess);
     }

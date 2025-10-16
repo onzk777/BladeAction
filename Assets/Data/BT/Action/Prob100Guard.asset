@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Prob100Guard
   m_EditorClassIdentifier: 
   description: "\uACF5\uACA9 \uC131\uACF5\uB960 \uC124\uC815: 1"
-  isEnabled: 0
+  isEnabled: 1
   priority: 0
   executeOncePerCombat: 0
   targetProbability: 2

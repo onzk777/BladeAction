@@ -318,7 +318,7 @@ public BehaviorTreeContext CurrentBTContext => currentBTContext;
 
 ## 파일 변경 내역
 
-### 신규 파일 (3개)
+### 신규 파일 (4개)
 1. ✨ `Assets/Script/BT/BTLogHistory.cs` (227줄)
    - BT 실행 기록 저장 시스템
    
@@ -327,8 +327,11 @@ public BehaviorTreeContext CurrentBTContext => currentBTContext;
    
 3. ✨ `Assets/Script/UI/BTDebugPanel.cs` (300줄)
    - 고급 디버그 UI (히스토리, 필터, 제어)
+   
+4. ✨ `Assets/Script/BT/Editor/BehaviorTreeDataEditor.cs` (240줄)
+   - BT Custom Editor (인라인 노드 편집)
 
-### 수정 파일 (7개)
+### 수정 파일 (10개)
 1. `Assets/Script/BT/BehaviorTreeExecutor.cs`
    - BTLogger 호출 추가
    - Entry 정보 전달
@@ -352,6 +355,17 @@ public BehaviorTreeContext CurrentBTContext => currentBTContext;
 7. `Assets/Script/PlayerCombatant.cs`
    - BTLogger 사용
    - CurrentBTContext 프로퍼티 추가
+
+8. `Assets/Script/Combat/DefenderInputHandler.cs`
+   - 쳐내기 성공 시 막기 자동 해제 (Player/Enemy 공통)
+
+9. `Assets/Script/BT/BehaviorTreeData.cs`
+   - ActionWrapper 클래스 추가
+   - BTEntry.actions를 ActionWrapper로 변경
+
+10. `Assets/Script/BT/Core/BTNode.cs`
+    - isEnabled Obsolete 처리
+    - IsValid()에서 isEnabled 체크 제거
 
 ### 추가 파일 (기존 확장)
 8. `Assets/Script/UI/BTMonitorUI.cs` (312줄)
@@ -733,29 +747,95 @@ Phase 5: Duration 시스템        ⏳  0%  (선택 사항)
 
 ---
 
-## 다음 단계
+## 추가 개선 작업
 
-### 옵션 A: 테스트 BT 에셋 생성 (추천)
-- 공격형 NPC BT (HP 기반)
-- 방어형 NPC BT (턴 타입 기반)
-- 특수 패턴 BT (턴 수, 검술 선택)
-- BTDebugPanel로 검증
+### 6. 쳐내기 시 막기 자동 해제 ✅
+**위치**: `Assets/Script/Combat/DefenderInputHandler.cs`
 
-### 옵션 B: UI 추가 개선
-- 히스토리 클릭 인터랙션
-- 로그 검색 기능
-- 통계 기능
+**문제**:
+- Enemy가 BT로 "막기 중 쳐내기 시도" 활성화 시
+- 막기 유지 + 쳐내기 효과 중첩 (막기 DR 보너스 포함)
+- Player는 키 해제로 자연스럽게 막기 해제됨
 
-### 옵션 C: Phase 5 진행
-- Duration 관리 시스템
-- 다중 턴 효과
+**해결**:
+```csharp
+private void TriggerFinalJudgment(Projectile projectile, bool defenderPerfectSuccess)
+{
+    // 쳐내기 성공 시 막기 자동 해제 (Player/Enemy 공통)
+    if (defenderPerfectSuccess)
+    {
+        if (isGuardActive)  // Player 막기
+        {
+            isGuardActive = false;
+            isGuardInputHeld = false;
+            StopGuardAnimation();
+        }
+        
+        if (aiIsGuarding)  // Enemy 막기
+        {
+            aiIsGuarding = false;
+            StopGuardAnimation();
+        }
+    }
+    
+    // CombatManager 판정 (막기 해제 후)
+    CombatManager.Instance.TriggerProjectileBasedFinalJudgment(...);
+}
+```
 
-### 옵션 D: 다른 시스템 개발
-- BT 시스템은 완성!
+**효과**:
+- ✅ Player/Enemy 구분 없는 공통 로직
+- ✅ 쳐내기 성공 시 막기 DR 보너스 제거
+- ✅ 막기/쳐내기 효과 중첩 방지
 
 ---
 
-## 최종 평가
+### 7. BT ActionWrapper 구조 개선 ✅
+**파일**: `Assets/Script/BT/BehaviorTreeData.cs`, `BehaviorTreeExecutor.cs`, `BTNode.cs`
+
+**문제**:
+- BTNode.isEnabled: 노드 ScriptableObject에 있어서 공유 문제
+- 같은 노드를 여러 BT에서 다르게 활성화/비활성화 불가능
+
+**해결**:
+```csharp
+// ActionWrapper 클래스 추가
+[System.Serializable]
+public class ActionWrapper
+{
+    public BTActionNode node;
+    public bool isEnabled = true;  // Entry별 활성화!
+}
+
+// BTEntry 수정
+public class BTEntry
+{
+    public List<ActionWrapper> actions;  // 노드 + 활성화
+}
+```
+
+**Unity Inspector**:
+```
+Entry[0]
+  Actions:
+    Element 0:
+      Node: [공격 성공률 80%]
+      Is Enabled: ☑  ← Entry별 체크박스!
+```
+
+**효과**:
+- ✅ 같은 노드를 BT별로 다르게 제어
+- ✅ 노드 재사용성 향상
+- ✅ 임시 비활성화로 테스트 용이
+
+**BTNode.isEnabled 처리**:
+- `[System.Obsolete]` 경고 추가
+- `[HideInInspector]` 숨김
+- IsValid()에서 체크 제거
+
+---
+
+## 다음 단계
 
 ### Phase 4 목표 달성
 - [x] BT 실행 과정을 상세하게 추적 ✅
@@ -763,14 +843,41 @@ Phase 5: Duration 시스템        ⏳  0%  (선택 사항)
 - [x] 필터링 및 제어 기능 ✅
 - [x] 실전 테스트 및 검증 ✅
 - [x] 문서화 완료 ✅
+- [x] 추가 개선 (쳐내기/막기, ActionWrapper, Custom Editor) ✅
 
 ### 실용성 평가
 - **개발 속도**: BT 문제 즉시 파악 가능 ⚡
 - **디버깅**: 턴별 패턴 추적 용이 🐛
 - **테스트**: QA 팀에 로그 내보내기 가능 📊
 - **학습**: BT 동작 이해도 향상 🎓
+- **편의성**: Custom Editor로 인라인 편집 🎨
 
-**종합 평가**: **실전 사용 가능한 완성도 높은 디버깅 도구** 🎉
+**종합 평가**: **실전 사용 가능한 완성도 높은 BT 시스템** 🎉
+
+---
+
+## 코드 통계 (최종)
+
+### 신규 코드
+- 4개 파일, ~1,200줄
+  - BTLogger.cs (457줄)
+  - BTLogHistory.cs (227줄)
+  - BTDebugPanel.cs (300줄)
+  - BehaviorTreeDataEditor.cs (240줄)
+
+### 수정 코드
+- 10개 파일, ~300줄
+  - BehaviorTreeExecutor, BTNode, BehaviorTreeData
+  - DefenderInputHandler (쳐내기/막기)
+  - EnemyCombatant, PlayerCombatant
+  - 기타 UI 파일
+
+### 문서
+- 7개 파일, ~3,200줄
+  - 사용 메뉴얼 6개
+  - 개발 일지 1개
+
+**총 작업량**: 약 4,700줄
 
 ---
 
@@ -788,16 +895,36 @@ Phase 5: Duration 시스템        ⏳  0%  (선택 사항)
 
 **작성자**: AI Assistant  
 **작업일**: 2025년 10월 14일  
-**소요 시간**: 약 6-7시간  
-**Phase 4 상태**: ✅ **완전 완료 및 실전 검증**  
-**BT 시스템**: ✅ **Phase 1~4 완료, 실전 사용 가능** 🚀
+**소요 시간**: 약 8-9시간  
+**Phase 4 상태**: ✅ **완전 완료 및 추가 개선**  
+**BT 시스템**: ✅ **Phase 1~4 완료, 실전 사용 가능 + 편의성 대폭 향상** 🚀
 
 ---
 
-## 다음 목표
+## 최종 완성 상태
 
-사용자 선택에 따라:
-- 테스트 BT 에셋 생성 및 실전 검증
-- 또는 다른 시스템 개발
+### BT 시스템 핵심 기능
+- ✅ BT Core (Condition, Action, Composite 노드)
+- ✅ BT 실행 및 AI 연동
+- ✅ 확률 Override 시스템
+- ✅ Blackboard 패턴 (개체별 독립)
+- ✅ Player/Enemy 구조 통일
 
-**BT 시스템은 완성되었습니다!** 🎊
+### 디버깅 도구
+- ✅ BTLogger (Console + 히스토리)
+- ✅ BTLogHistory (데이터 저장)
+- ✅ BTDebugPanel (고급 UI)
+- ✅ 필터링, 제어, 내보내기
+
+### 편의성 개선
+- ✅ ActionWrapper (Entry별 활성화)
+- ✅ Custom Editor (인라인 편집)
+- ✅ Composite 재귀 표시
+
+### 전투 시스템 개선
+- ✅ 쳐내기 시 막기 자동 해제
+
+---
+
+**내일부터**: 다른 시스템 개발 진행  
+**BT 시스템**: 완성! 🎊

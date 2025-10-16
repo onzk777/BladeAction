@@ -13,7 +13,10 @@ namespace BladeAction.BT
         [TextArea(2, 4)]
         public string description = "";
         
-        [Tooltip("노드 활성화 여부")]
+        // ⚠️ Deprecated: 노드는 여러 BT에서 공유되므로 노드 자체에 isEnabled를 두면 안 됨
+        // BT Entry의 ActionWrapper.isEnabled를 사용하세요.
+        [System.Obsolete("노드 자체의 isEnabled는 사용하지 마세요. BT Entry에서 액션별 활성화를 관리합니다.", false)]
+        [HideInInspector]
         public bool isEnabled = true;
         
         /// <summary>
@@ -21,7 +24,8 @@ namespace BladeAction.BT
         /// </summary>
         public virtual bool IsValid()
         {
-            return isEnabled;
+            // isEnabled 체크 제거 (Entry에서 관리)
+            return true;
         }
         
         /// <summary>

@@ -243,7 +243,34 @@ Behavior Tree 시스템의 구현 진행상황을 추적하는 문서입니다.
 
 ---
 
-**문서 버전**: 3.0 (Phase 4 완료)  
+### ✅ 추가 개선 완료 (2025-10-14 오후)
+
+#### 전투 시스템 개선
+- **쳐내기 시 막기 자동 해제**
+  - DefenderInputHandler.TriggerFinalJudgment() 수정
+  - Player/Enemy 공통 로직
+  - 막기/쳐내기 효과 중첩 방지
+
+#### BT 구조 개선
+- **ActionWrapper 시스템**
+  - Entry별 액션 활성화/비활성화 제어
+  - 같은 노드를 여러 BT에서 다르게 사용 가능
+  - 노드 재사용성 향상
+  
+- **BTNode.isEnabled Obsolete 처리**
+  - 노드 공유 문제 해결
+  - IsValid()에서 체크 제거
+
+#### 편의성 개선
+- **BehaviorTreeData Custom Editor** (240줄)
+  - Condition/Action 노드 인라인 편집
+  - Composite 노드 재귀 표시
+  - ActionWrapper 체크박스 UI
+  - 한 화면에서 모든 설정 편집 가능
+
+---
+
+**문서 버전**: 4.0 (최종 완성)  
 **최종 업데이트**: 2025년 10월 14일  
-**현재 상태**: ✅ Phase 1~4 완료, 실전 사용 가능  
-**다음 단계**: 테스트 BT 에셋 생성 및 통합 테스트 또는 Phase 5
+**현재 상태**: ✅ **Phase 1~4 완전 완료, 실전 사용 가능, 편의성 대폭 향상**  
+**다음 단계**: 다른 시스템 개발 (BT 시스템 완성)

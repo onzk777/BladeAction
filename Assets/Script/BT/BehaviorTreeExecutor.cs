@@ -131,42 +131,44 @@ namespace BladeAction.BT
         /// <summary>
         /// 액션들을 실행합니다.
         /// </summary>
-        /// <param name="actions">실행할 액션 리스트</param>
+        /// <param name="actionWrappers">실행할 액션 래퍼 리스트</param>
         /// <param name="context">BT 실행 컨텍스트</param>
-        private static void ExecuteActions(List<BTActionNode> actions, BehaviorTreeContext context)
+        private static void ExecuteActions(List<BehaviorTreeData.ActionWrapper> actionWrappers, BehaviorTreeContext context)
         {
-            if (actions == null || actions.Count == 0)
+            if (actionWrappers == null || actionWrappers.Count == 0)
             {
                 BTLogger.LogWarning("액션 없음");
                 return;
             }
             
-            // Priority별로 그룹화
-            var groupedActions = actions
-                .Where(action => action != null && action.IsValid())
-                .GroupBy(action => action.priority)
+            // 활성화된 액션만 필터링하고 Priority별로 그룹화
+            var groupedActions = actionWrappers
+                .Where(wrapper => wrapper != null && wrapper.isEnabled && wrapper.node != null && wrapper.node.IsValid())
+                .GroupBy(wrapper => wrapper.node.priority)
                 .OrderByDescending(group => group.Key); // 높은 우선순위부터
             
-            BTLogger.LogDebug($"총 {actions.Count}개 액션 중 {groupedActions.Sum(g => g.Count())}개 유효");
+            int enabledCount = actionWrappers.Count(w => w != null && w.isEnabled);
+            int validCount = groupedActions.Sum(g => g.Count());
+            BTLogger.LogDebug($"총 {actionWrappers.Count}개 액션 중 활성화: {enabledCount}개, 유효: {validCount}개");
             
             // 각 우선순위 그룹에서 실행
             foreach (var group in groupedActions)
             {
                 BTLogger.LogDebug($"Priority {group.Key} 그룹: {group.Count()}개 액션");
                 
-                foreach (var action in group)
+                foreach (var wrapper in group)
                 {
                     try
                     {
                         // 액션 실행 전 로그
-                        BTLogger.LogActionExecution(action, context);
+                        BTLogger.LogActionExecution(wrapper.node, context);
                         
                         // 액션 실행
-                        action.ExecuteAction(context);
+                        wrapper.node.ExecuteAction(context);
                     }
                     catch (System.Exception e)
                     {
-                        BTLogger.LogError($"액션 오류: {action.name}\n{e}");
+                        BTLogger.LogError($"액션 오류: {wrapper.node.name}\n{e}");
                     }
                 }
             }

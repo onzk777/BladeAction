@@ -19,6 +19,19 @@ namespace BladeAction.BT
         [Tooltip("BT Entry 리스트 (인덱스 = 우선순위)")]
         public List<BTEntry> entries = new List<BTEntry>();
         
+        /// <summary>
+        /// 액션 노드 래퍼 - 노드와 활성화 상태를 함께 관리
+        /// </summary>
+        [System.Serializable]
+        public class ActionWrapper
+        {
+            [Tooltip("실행할 액션 노드")]
+            public BTActionNode node;
+            
+            [Tooltip("이 Entry에서 이 액션 활성화 여부")]
+            public bool isEnabled = true;
+        }
+        
         [System.Serializable]
         public class BTEntry
         {
@@ -28,7 +41,7 @@ namespace BladeAction.BT
             
             [Header("액션들")]
             [Tooltip("조건 만족 시 실행할 액션들")]
-            public List<BTActionNode> actions = new List<BTActionNode>();
+            public List<ActionWrapper> actions = new List<ActionWrapper>();
             
             [Header("설정")]
             [Tooltip("이 Entry 활성화 여부")]
