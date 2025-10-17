@@ -107,7 +107,7 @@ namespace BladeAction.Item.Editor
                 EditorGUI.indentLevel++;
                 
                 // Excel 데이터 - Key 강조
-                //EditorGUILayout.LabelField("기본 정보 (Excel에서 관리)", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("기본 정보 (Excel에서 관리)", EditorStyles.boldLabel);
                 
                 EditorGUILayout.BeginVertical("box");
                 

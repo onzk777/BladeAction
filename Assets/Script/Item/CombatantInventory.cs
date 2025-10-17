@@ -13,7 +13,7 @@ namespace BladeAction.Item
     {
         [Header("인벤토리 설정")]
         [Tooltip("최대 아이템 슬롯 수")]
-        public int maxItemSlots = 50;
+        public int maxItemSlots = 5000;
         
         [Tooltip("인벤토리 이름")]
         public string inventoryName = "Player Inventory";

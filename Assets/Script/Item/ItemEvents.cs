@@ -51,10 +51,10 @@ namespace BladeAction.Item
         {
             get
             {
-                if (_instance == null)
-                {
-                    _instance = FindObjectOfType<ItemEvents>();
-                    if (_instance == null)
+                  if (_instance == null)
+                  {
+                      _instance = FindFirstObjectByType<ItemEvents>();
+                      if (_instance == null)
                     {
                         GameObject go = new GameObject("ItemEvents");
                         _instance = go.AddComponent<ItemEvents>();
