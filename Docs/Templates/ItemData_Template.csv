@@ -1,0 +1,7 @@
+Key,Name,Description,Type,RequiredLevel,MaxStack,StatKey,WeaponTypeKey,ArmorTypeKey,AccessoryTypeKey
+sword_001,철검,기본적인 철제 검,Weapon,1,1,stat_sword_01,katana,,
+sword_002,강철검,강력한 강철로 만든 검,Weapon,5,1,stat_sword_02,straight_sword,,
+armor_001,가죽갑옷,가벼운 가죽 갑옷,Armor,1,1,stat_armor_01,,light_armor,
+armor_002,철갑옷,튼튼한 철제 갑옷,Armor,3,1,stat_armor_02,,medium_armor,
+ring_001,힘의 반지,공격력을 높여주는 반지,Accessory,3,1,stat_accessory_ring,,,ring
+

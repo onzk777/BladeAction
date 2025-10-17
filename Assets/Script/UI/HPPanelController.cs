@@ -30,7 +30,6 @@ public class HPPanelController : MonoBehaviour
 
     // 애니메이션 관련
     private Coroutine sizeAnimationCoroutine;
-    private bool isAnimating = false;
 
     private void Awake()
     {
@@ -186,8 +185,6 @@ public class HPPanelController : MonoBehaviour
 
     private IEnumerator AnimatePanelSizes(float targetPlayerRatio, float targetEnemyRatio)
     {
-        isAnimating = true;
-
         // 현재 Scale 가져오기
         Vector3 currentPlayerScale = playerHPBar.localScale;
         Vector3 currentEnemyScale = enemyHPBar.localScale;
@@ -222,7 +219,6 @@ public class HPPanelController : MonoBehaviour
 
         Debug.Log($"[HPPanelController] 애니메이션 완료 - Player Scale: {playerHPBar.localScale}, Enemy Scale: {enemyHPBar.localScale}");
 
-        isAnimating = false;
         sizeAnimationCoroutine = null;
     }
 

@@ -38,7 +38,6 @@ public class Projectile : MonoBehaviour
     
     // 이벤트
     public event System.Action<Projectile> OnProjectileHit;
-    public event System.Action<Projectile> OnProjectileCompleted;
     public event System.Action<Projectile> OnProjectileEnterPerfectZone;
     public event System.Action<Projectile> OnProjectileEnterHitZone;
     

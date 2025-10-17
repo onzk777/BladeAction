@@ -1416,7 +1416,6 @@ public class CombatManager : MonoBehaviour
         
         // 🆕 발사체 이벤트 구독
         projectile.OnProjectileHit += OnProjectileHit;
-        projectile.OnProjectileCompleted += OnProjectileCompleted;
         
         // 발사체 발사
         projectile.Launch(direction, projectile.baseSpeed);
@@ -1535,16 +1534,6 @@ public class CombatManager : MonoBehaviour
     //     isWaitingForTurnEnd = false;
     // }
     
-    /// <summary>
-    /// 발사체 완료 시 호출되는 메서드
-    /// </summary>
-    private void OnProjectileCompleted(Projectile projectile)
-    {
-        Debug.Log($"[CombatManager] 발사체 완료: {projectile.name}");
-        
-        // 🆕 발사체 완료는 히트 전환과 턴 종료에 영향 없음
-        // 히트 전환과 턴 종료는 모두 시간 기반으로 처리
-    }
     
     /// <summary>
     /// 클래시 결과에 따른 애니메이션 처리

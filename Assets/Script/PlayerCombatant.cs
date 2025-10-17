@@ -107,6 +107,13 @@ public class PlayerCombatant : Combatant
     {
         Debug.Log($"[PlayerCombatant] 🔍 ExecuteBehaviorTrees 호출");
         
+        // 중복 평가 방지
+        if (btEvaluatedThisTurn)
+        {
+            Debug.Log($"[PlayerCombatant] 이미 이번 턴에 BT 평가 완료 - 스킵");
+            return;
+        }
+        
         if (CharacterData?.behaviorTrees == null || CharacterData.behaviorTrees.Count == 0)
         {
             Debug.Log("[PlayerCombatant] BT가 설정되지 않음 - 스킵 (정상, Player는 UI 기반)");

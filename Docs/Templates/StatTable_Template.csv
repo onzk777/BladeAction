@@ -1,0 +1,8 @@
+TableKey,Description,AttackPower,BlockEff,BlockPoiseCost,ParryEff,ParryPoiseCost,ParryPoiseAtk,MaxHP,DamageReduction,Poise
+stat_sword_basic,기본 검 스탯,25,10,5,15,3,20,0,0,0
+stat_sword_advanced,강력한 검 스탯,40,12,5,18,3,25,0,0,0
+stat_armor_light,가죽 갑옷 스탯,0,5,0,0,0,0,50,5,30
+stat_armor_medium,철 갑옷 스탯,0,15,0,0,0,0,100,15,50
+stat_armor_heavy,중갑 스탯,0,25,0,0,0,0,150,25,80
+stat_accessory_ring,반지 스탯,5,0,0,5,0,0,10,0,5
+
