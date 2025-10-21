@@ -123,7 +123,6 @@ namespace BladeAction.Item.Editor
                 EditorGUILayout.PropertyField(itemNameProp);
                 EditorGUILayout.PropertyField(itemProp.FindPropertyRelative("description"));
                 EditorGUILayout.PropertyField(itemTypeProp);
-                EditorGUILayout.PropertyField(itemProp.FindPropertyRelative("requiredLevel"));
                 EditorGUILayout.PropertyField(itemProp.FindPropertyRelative("maxStack"));
                 
                 EditorGUILayout.Space();

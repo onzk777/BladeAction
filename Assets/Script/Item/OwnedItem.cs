@@ -58,8 +58,7 @@ namespace BladeAction.Item
             if (string.IsNullOrEmpty(itemKey))
                 return null;
                 
-            var itemDatabase = Resources.Load<ItemDatabase>("ItemDatabase");
-            return itemDatabase?.GetItem(itemKey);
+            return ItemDatabase.GetItemSafe(itemKey);
         }
         
         /// <summary>
@@ -113,7 +112,11 @@ namespace BladeAction.Item
             var itemData = GetItemData();
             if (itemData != null)
             {
-                maxQuantity = itemData.maxStack;
+                maxQuantity = Mathf.Max(itemData.maxStack, 1); // 최소값 1로 설정
+            }
+            else
+            {
+                maxQuantity = Mathf.Max(maxQuantity, 1); // 아이템 데이터가 없어도 최소값 1
             }
         }
         

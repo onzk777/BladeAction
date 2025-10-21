@@ -112,7 +112,6 @@ namespace BladeAction.Item.Editor
                     EditorGUILayout.EndHorizontal();
                     
                     EditorGUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField($"레벨: {row.RequiredLevel}", GUILayout.Width(80));
                     EditorGUILayout.LabelField($"스택: {row.MaxStack}", GUILayout.Width(80));
                     EditorGUILayout.LabelField($"스탯: {row.StatKey}", GUILayout.Width(150));
                     EditorGUILayout.EndHorizontal();
@@ -255,7 +254,7 @@ namespace BladeAction.Item.Editor
                 using (var writer = new System.IO.StreamWriter(savePath, false, System.Text.Encoding.UTF8))
                 {
                     // 헤더 작성
-                    writer.WriteLine("Key,Name,Description,Type,RequiredLevel,MaxStack,StatKey,WeaponTypeKey,ArmorTypeKey,AccessoryTypeKey");
+                    writer.WriteLine("Key,Name,Description,Type,MaxStack,StatKey,WeaponTypeKey,ArmorTypeKey,AccessoryTypeKey");
                     
                     // 데이터 작성
                     foreach (var item in itemDatabase.items)
@@ -264,12 +263,11 @@ namespace BladeAction.Item.Editor
                             continue;
                         
                         var line = string.Format(
-                            "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}",
+                            "{0},{1},{2},{3},{4},{5},{6},{7},{8}",
                             EscapeCSV(item.itemKey),
                             EscapeCSV(item.itemName),
                             EscapeCSV(item.description),
                             ItemMapper.ItemTypeToString(item.itemType),
-                            item.requiredLevel,
                             item.maxStack,
                             EscapeCSV(item.statTableKey),
                             EscapeCSV(item.weaponTypeKey),

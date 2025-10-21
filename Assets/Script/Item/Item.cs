@@ -23,8 +23,6 @@ namespace BladeAction.Item
         [Tooltip("아이템 타입")]
         public ItemType itemType;
         
-        [Tooltip("필요 레벨")]
-        public int requiredLevel = 1;
         
         [Tooltip("최대 중첩 수 (1이면 중첩 불가)")]
         public int maxStack = 1;

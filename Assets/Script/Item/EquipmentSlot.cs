@@ -69,8 +69,7 @@ namespace BladeAction.Item
             if (string.IsNullOrEmpty(equippedItemKey))
                 return null;
                 
-            var itemDatabase = Resources.Load<ItemDatabase>("ItemDatabase");
-            return itemDatabase?.GetItem(equippedItemKey);
+            return ItemDatabase.GetItemSafe(equippedItemKey);
         }
         
         /// <summary>
@@ -105,8 +104,7 @@ namespace BladeAction.Item
             if (!isActive || string.IsNullOrEmpty(itemKey))
                 return false;
                 
-            var itemDatabase = Resources.Load<ItemDatabase>("ItemDatabase");
-            var item = itemDatabase?.GetItem(itemKey);
+            var item = ItemDatabase.GetItemSafe(itemKey);
             if (item == null)
                 return false;
                 

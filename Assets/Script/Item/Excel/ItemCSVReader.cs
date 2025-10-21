@@ -67,9 +67,9 @@ namespace BladeAction.Item.Excel
             {
                 var values = SplitCSVLine(line);
                 
-                if (values.Length < 10)
+                if (values.Length < 9)
                 {
-                    Debug.LogWarning($"라인 {lineNumber}: 컬럼 수가 부족합니다 (최소 10개 필요, 현재 {values.Length}개)");
+                    Debug.LogWarning($"라인 {lineNumber}: 컬럼 수가 부족합니다 (최소 9개 필요, 현재 {values.Length}개)");
                     return null;
                 }
                 
@@ -79,12 +79,11 @@ namespace BladeAction.Item.Excel
                     Name = values[1].Trim(),
                     Description = values[2].Trim(),
                     Type = values[3].Trim(),
-                    RequiredLevel = ParseInt(values[4], lineNumber, "RequiredLevel"),
-                    MaxStack = ParseInt(values[5], lineNumber, "MaxStack"),
-                    StatKey = values[6].Trim(),
-                    WeaponTypeKey = values[7].Trim(),
-                    ArmorTypeKey = values[8].Trim(),
-                    AccessoryTypeKey = values[9].Trim()
+                    MaxStack = ParseInt(values[4], lineNumber, "MaxStack"),
+                    StatKey = values[5].Trim(),
+                    WeaponTypeKey = values[6].Trim(),
+                    ArmorTypeKey = values[7].Trim(),
+                    AccessoryTypeKey = values[8].Trim()
                 };
             }
             catch (System.Exception ex)

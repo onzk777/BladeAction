@@ -11,6 +11,96 @@ namespace BladeAction.Item
     [CreateAssetMenu(fileName = "ItemDatabase", menuName = "Item/Item Database", order = 10)]
     public class ItemDatabase : ScriptableObject
     {
+        // 캐싱된 인스턴스 (메모리 최적화)
+        private static ItemDatabase _cachedInstance;
+        private static bool _hasSearchedForInstance = false;
+        
+        /// <summary>
+        /// 캐싱된 ItemDatabase 인스턴스 가져오기 (메모리 최적화)
+        /// 파일명에 의존하지 않고 Resources 폴더에서 자동 검색
+        /// </summary>
+        public static ItemDatabase Instance
+        {
+            get
+            {
+                if (_cachedInstance == null && !_hasSearchedForInstance)
+                {
+                    FindAndCacheInstance();
+                }
+                return _cachedInstance;
+            }
+        }
+        
+        /// <summary>
+        /// Resources 폴더에서 ItemDatabase 찾기 (파일명 무관)
+        /// </summary>
+        private static void FindAndCacheInstance()
+        {
+            _hasSearchedForInstance = true;
+            
+            try
+            {
+                // Resources 폴더에서 모든 ItemDatabase 검색 (파일명 의존성 제거)
+                ItemDatabase[] foundDatabases = Resources.LoadAll<ItemDatabase>("");
+                
+                if (foundDatabases != null && foundDatabases.Length > 0)
+                {
+                    if (foundDatabases.Length == 1)
+                    {
+                        _cachedInstance = foundDatabases[0];
+                        Debug.Log($"[ItemDatabase] 인스턴스 발견: '{_cachedInstance.name}' ({_cachedInstance.items?.Count ?? 0}개 아이템)");
+                    }
+                    else
+                    {
+                        // 여러 개 발견 시 가장 많은 아이템을 가진 것 선택
+                        _cachedInstance = foundDatabases.OrderByDescending(db => db.items?.Count ?? 0).First();
+                        Debug.LogWarning($"[ItemDatabase] {foundDatabases.Length}개 발견. 가장 많은 아이템을 가진 '{_cachedInstance.name}' 선택 ({_cachedInstance.items?.Count ?? 0}개 아이템)");
+                    }
+                }
+                else
+                {
+                    Debug.LogError("[ItemDatabase] Resources 폴더에서 ItemDatabase를 찾을 수 없습니다! Create > Item > Item Database로 생성 후 Resources 폴더에 저장하세요.");
+                    return;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[ItemDatabase] 인스턴스 검색 중 오류 발생: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// 캐시 초기화 (에디터에서 필요시 사용)
+        /// </summary>
+        public static void RefreshInstance()
+        {
+            _cachedInstance = null;
+            _hasSearchedForInstance = false;
+        }
+        
+        /// <summary>
+        /// ItemDatabase가 사용 가능한지 확인
+        /// </summary>
+        public static bool IsAvailable()
+        {
+            return Instance != null && Instance.items != null;
+        }
+        
+        /// <summary>
+        /// 안전한 아이템 조회 (null 체크 포함)
+        /// </summary>
+        public static Item GetItemSafe(string itemKey)
+        {
+            if (string.IsNullOrEmpty(itemKey))
+                return null;
+                
+            var instance = Instance;
+            if (instance?.items == null)
+                return null;
+                
+            return instance.GetItem(itemKey);
+        }
+
         [Header("데이터베이스 참조")]
         [Tooltip("아이템 타입 정의 (게임 룰)")]
         public ItemTypeDatabase typeDatabase;

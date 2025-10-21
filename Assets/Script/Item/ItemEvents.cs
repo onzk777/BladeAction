@@ -51,14 +51,19 @@ namespace BladeAction.Item
         {
             get
             {
-                  if (_instance == null)
-                  {
-                      _instance = FindFirstObjectByType<ItemEvents>();
-                      if (_instance == null)
+                if (_instance == null)
+                {
+                    _instance = FindFirstObjectByType<ItemEvents>();
+                    if (_instance == null)
                     {
                         GameObject go = new GameObject("ItemEvents");
                         _instance = go.AddComponent<ItemEvents>();
-                        DontDestroyOnLoad(go);
+                        
+                        // 플레이 모드에서만 DontDestroyOnLoad 사용
+                        if (Application.isPlaying)
+                        {
+                            DontDestroyOnLoad(go);
+                        }
                     }
                 }
                 return _instance;
@@ -96,11 +101,19 @@ namespace BladeAction.Item
             if (_instance == null)
             {
                 _instance = this;
-                DontDestroyOnLoad(gameObject);
+                
+                // 플레이 모드에서만 DontDestroyOnLoad 사용
+                if (Application.isPlaying)
+                {
+                    DontDestroyOnLoad(gameObject);
+                }
             }
             else if (_instance != this)
             {
-                Destroy(gameObject);
+                if (Application.isPlaying)
+                {
+                    Destroy(gameObject);
+                }
             }
         }
         
@@ -200,6 +213,29 @@ namespace BladeAction.Item
         #region 유틸리티
         
         /// <summary>
+        /// 안전한 이벤트 발생 (에디터 모드 고려)
+        /// </summary>
+        private static void SafeTriggerEvent(System.Action triggerAction)
+        {
+            try
+            {
+                triggerAction?.Invoke();
+            }
+            catch (System.Exception ex)
+            {
+                // 에디터 모드에서 발생할 수 있는 오류를 조용히 처리
+                if (Application.isEditor && !Application.isPlaying)
+                {
+                    Debug.LogWarning($"[ItemEvents] 에디터 모드에서 이벤트 발생 감지: {ex.Message}");
+                }
+                else
+                {
+                    Debug.LogError($"[ItemEvents] 이벤트 발생 오류: {ex.Message}");
+                }
+            }
+        }
+        
+        /// <summary>
         /// 아이템 데이터 가져오기
         /// </summary>
         private Item GetItemData(string itemKey)
@@ -207,8 +243,7 @@ namespace BladeAction.Item
             if (string.IsNullOrEmpty(itemKey))
                 return null;
                 
-            var itemDatabase = Resources.Load<ItemDatabase>("ItemDatabase");
-            return itemDatabase?.GetItem(itemKey);
+            return ItemDatabase.GetItemSafe(itemKey);
         }
         
         /// <summary>

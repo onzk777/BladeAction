@@ -67,8 +67,7 @@ namespace BladeAction.Item
             if (isLocked || string.IsNullOrEmpty(itemKey) || quantity <= 0)
                 return false;
                 
-            var itemDatabase = Resources.Load<ItemDatabase>("ItemDatabase");
-            var itemData = itemDatabase?.GetItem(itemKey);
+            var itemData = ItemDatabase.GetItemSafe(itemKey);
             if (itemData == null)
                 return false;
             
@@ -76,12 +75,13 @@ namespace BladeAction.Item
             var existingItem = items.FirstOrDefault(i => i.itemKey == itemKey);
             if (existingItem != null)
             {
-                // 기존 아이템에 수량 추가
+                // 기존 아이템에 수량 추가 (UpdateMaxQuantity가 최소값 1 보장)
                 existingItem.UpdateMaxQuantity();
                 bool success = existingItem.AddQuantity(quantity);
+                
                 if (success)
                 {
-                    ItemEvents.Instance?.TriggerItemQuantityChanged(itemKey, existingItem.quantity, inventoryName);
+                    SafeTriggerEvent(events => events.TriggerItemQuantityChanged(itemKey, existingItem.quantity, inventoryName));
                 }
                 return success;
             }
@@ -90,14 +90,21 @@ namespace BladeAction.Item
                 // 새 아이템 추가
                 if (items.Count >= maxItemSlots)
                 {
-                    ItemEvents.Instance?.TriggerInventoryFull(itemKey, inventoryName);
+                    SafeTriggerEvent(events => events.TriggerInventoryFull(itemKey, inventoryName));
                     return false; // 인벤토리 가득참
                 }
                     
                 var newItem = new OwnedItem(itemKey, quantity);
-                newItem.UpdateMaxQuantity();
+                newItem.UpdateMaxQuantity(); // maxQuantity 최소값 1 보장
+                
+                // maxQuantity 업데이트 후 수량이 초과되었는지 확인 및 조정
+                if (newItem.quantity > newItem.maxQuantity)
+                {
+                    newItem.quantity = newItem.maxQuantity;
+                }
+                
                 items.Add(newItem);
-                ItemEvents.Instance?.TriggerItemAdded(itemKey, quantity, inventoryName);
+                SafeTriggerEvent(events => events.TriggerItemAdded(itemKey, quantity, inventoryName));
                 return true;
             }
         }
@@ -119,11 +126,11 @@ namespace BladeAction.Item
                 if (item.IsEmpty())
                 {
                     items.Remove(item);
-                    ItemEvents.Instance?.TriggerItemRemoved(itemKey, quantity, inventoryName);
+                    SafeTriggerEvent(events => events.TriggerItemRemoved(itemKey, quantity, inventoryName));
                 }
                 else
                 {
-                    ItemEvents.Instance?.TriggerItemQuantityChanged(itemKey, item.quantity, inventoryName);
+                    SafeTriggerEvent(events => events.TriggerItemQuantityChanged(itemKey, item.quantity, inventoryName));
                 }
                 return true;
             }
@@ -190,7 +197,7 @@ namespace BladeAction.Item
                 string unequippedKey = slot.UnequipItem();
                 // 해제된 아이템을 인벤토리에 다시 추가
                 AddItem(unequippedKey, 1);
-                ItemEvents.Instance?.TriggerItemUnequipped(unequippedKey, slotType, inventoryName);
+                SafeTriggerEvent(events => events.TriggerItemUnequipped(unequippedKey, slotType, inventoryName));
             }
             
             // 새 아이템 장착
@@ -199,7 +206,7 @@ namespace BladeAction.Item
                 // 인벤토리에서 아이템 제거 (이벤트는 RemoveItem에서 발생)
                 if (RemoveItem(itemKey, 1))
                 {
-                    ItemEvents.Instance?.TriggerItemEquipped(itemKey, slotType, inventoryName);
+                    SafeTriggerEvent(events => events.TriggerItemEquipped(itemKey, slotType, inventoryName));
                     return true;
                 }
             }
@@ -226,7 +233,7 @@ namespace BladeAction.Item
                 bool success = AddItem(unequippedKey, 1);
                 if (success)
                 {
-                    ItemEvents.Instance?.TriggerItemUnequipped(unequippedKey, slotType, inventoryName);
+                    SafeTriggerEvent(events => events.TriggerItemUnequipped(unequippedKey, slotType, inventoryName));
                 }
                 return success;
             }
@@ -260,6 +267,31 @@ namespace BladeAction.Item
         #region 유틸리티
         
         /// <summary>
+        /// 안전한 이벤트 발생 (에디터 모드 고려)
+        /// </summary>
+        private void SafeTriggerEvent(System.Action<ItemEvents> eventAction)
+        {
+            try
+            {
+                var events = ItemEvents.Instance;
+                if (events != null)
+                {
+                    eventAction?.Invoke(events);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                // 에디터 모드나 테스트에서 발생할 수 있는 오류를 조용히 처리
+                if (Application.isEditor && !Application.isPlaying)
+                {
+                    // 테스트 중이므로 조용히 무시
+                    return;
+                }
+                Debug.LogWarning($"[CombatantInventory] 이벤트 발생 실패: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
         /// 인벤토리 정리 (빈 슬롯 제거)
         /// </summary>
         public void CleanupInventory()
@@ -280,7 +312,7 @@ namespace BladeAction.Item
                 slot.UnequipItem();
             }
             
-            ItemEvents.Instance?.TriggerInventoryCleared(inventoryName);
+            SafeTriggerEvent(events => events.TriggerInventoryCleared(inventoryName));
         }
         
         /// <summary>
