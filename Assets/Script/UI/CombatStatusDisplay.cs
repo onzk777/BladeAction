@@ -602,5 +602,24 @@ public class CombatStatusDisplay : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Scene 전환 시 이벤트 구독 해제 및 리소스 정리
+    /// </summary>
+    private void OnDestroy()
+    {
+        // 이벤트 구독 해제
+        if (CharacterManager.Instance?.PlayerCombatant != null)
+        {
+            CharacterManager.Instance.PlayerCombatant.OnStatsChanged -= OnPlayerStatsChanged;
+        }
+
+        if (CharacterManager.Instance?.EnemyCombatant != null)
+        {
+            CharacterManager.Instance.EnemyCombatant.OnStatsChanged -= OnEnemyStatsChanged;
+        }
+
+        // 가이드 정리
+        ClearPerfectTimingGuides();
+    }
 
 }

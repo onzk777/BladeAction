@@ -24,10 +24,27 @@ public class EnemyActionSelectUI : MonoBehaviour
                 Debug.Log("[EnemyActionSelectUI] EnemyController 자동 연결 완료");
             }
         }
+        
+        // ActionCommandSelectionManager에 자신을 등록 (Scene 분리 대비)
+        if (ActionCommandSelectionManager.Instance != null)
+        {
+            ActionCommandSelectionManager.Instance.RegisterEnemyActionUI(this);
+        }
+        else
+        {
+            Debug.LogWarning("[EnemyActionSelectUI] ActionCommandSelectionManager가 아직 생성되지 않았습니다. Start에서 재시도합니다.");
+        }
     }
 
     private void Start()
     {
+        // ActionCommandSelectionManager에 등록 재시도 (Awake에서 실패한 경우)
+        if (ActionCommandSelectionManager.Instance != null && 
+            ActionCommandSelectionManager.Instance.enemyActionSelectUI != this)
+        {
+            ActionCommandSelectionManager.Instance.RegisterEnemyActionUI(this);
+        }
+        
         Initialize();
     }
 

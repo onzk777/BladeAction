@@ -1098,23 +1098,14 @@ public class CombatManager : MonoBehaviour
     /// <returns>AI의 대략적인 위치</returns>
     private Vector3 GetAIPositionFallback()
     {
-        // 1. 씬에서 EnemyController를 찾아보기
-        EnemyController[] enemyControllers = FindObjectsByType<EnemyController>(FindObjectsSortMode.None);
-        if (enemyControllers.Length > 0)
+        // 1. CombatManager가 이미 참조하고 있는 enemyController 사용 (Scene 분리 대비)
+        if (enemyController != null)
         {
-            Debug.Log($"[FloatingText 위치] FindObjectsOfType으로 AI 위치 찾음: {enemyControllers[0].transform.position}");
-            return enemyControllers[0].transform.position;
+            Debug.Log($"[FloatingText 위치] enemyController 참조로 AI 위치 찾음: {enemyController.transform.position}");
+            return enemyController.transform.position;
         }
         
-        // 2. "Enemy" 태그를 가진 GameObject 찾기
-        GameObject enemyObject = GameObject.FindGameObjectWithTag("Enemy");
-        if (enemyObject != null)
-        {
-            Debug.Log($"[FloatingText 위치] Enemy 태그로 AI 위치 찾음: {enemyObject.transform.position}");
-            return enemyObject.transform.position;
-        }
-        
-        // 3. 플레이어 반대편에 대략적인 위치 설정
+        // 2. 플레이어 반대편에 대략적인 위치 설정
         if (playerController != null)
         {
             Vector3 playerPos = playerController.transform.position;
@@ -1123,7 +1114,7 @@ public class CombatManager : MonoBehaviour
             return fallbackPos;
         }
         
-        // 4. 최후의 수단: 화면 중앙
+        // 3. 최후의 수단: 화면 중앙
         Vector3 centerPos = Camera.main != null ? Camera.main.transform.position : Vector3.zero;
         Debug.Log($"[FloatingText 위치] 화면 중앙 대체 위치 사용: {centerPos}");
         return centerPos;

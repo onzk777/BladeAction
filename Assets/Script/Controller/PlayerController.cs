@@ -90,11 +90,11 @@ public class PlayerController : MonoBehaviour, ICombatController
             useTestMode = testMode;
             Debug.Log($"[PlayerController] 테스트 모드 변경: {testMode}");
             
-            // UI가 있으면 버튼 새로고침
-            var playerActionSelectUI = FindFirstObjectByType<PlayerActionSelectUI>();
-            if (playerActionSelectUI != null)
+            // ActionCommandSelectionManager를 통해 UI 접근 (Scene 분리 대비)
+            if (ActionCommandSelectionManager.Instance != null && 
+                ActionCommandSelectionManager.Instance.playerActionSelectUI != null)
             {
-                playerActionSelectUI.RefreshButtons();
+                ActionCommandSelectionManager.Instance.playerActionSelectUI.RefreshButtons();
             }
         }
     }

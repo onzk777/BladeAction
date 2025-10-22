@@ -68,18 +68,17 @@ public class PlayerCombatant : Combatant
         // 현재: UI 기반 선택
         // 향후: BT 기반 선택 추가 가능 (useAutoBattle 플래그 등)
         
-        // UI에서 직접 선택된 버튼 인덱스 가져오기
-        var playerActionSelectUI = UnityEngine.Object.FindFirstObjectByType<PlayerActionSelectUI>();
-        
+        // ActionCommandSelectionManager를 통해 UI 접근 (Scene 분리 대비)
         int idx = 0;
-        if (playerActionSelectUI != null)
+        if (ActionCommandSelectionManager.Instance != null && 
+            ActionCommandSelectionManager.Instance.playerActionSelectUI != null)
         {
-            idx = playerActionSelectUI.GetCurrentSelectedButtonIndex();
+            idx = ActionCommandSelectionManager.Instance.playerActionSelectUI.GetCurrentSelectedButtonIndex();
             Debug.Log($"[PlayerCombatant] UI에서 선택된 인덱스: {idx}");
         }
         else
         {
-            Debug.LogWarning("[PlayerCombatant] PlayerActionSelectUI를 찾을 수 없음 - 기본값 0 사용");
+            Debug.LogWarning("[PlayerCombatant] ActionCommandSelectionManager 또는 PlayerActionSelectUI를 찾을 수 없음 - 기본값 0 사용");
             idx = 0;
         }
         

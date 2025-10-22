@@ -16,6 +16,7 @@ public class PlayerActionSelectUI : MonoBehaviour
     private List<ActionButton> actionButtons = new List<ActionButton>();
     private bool isInitialized = false;
     private CanvasGroup canvasGroup;
+    private Coroutine focusMonitorCoroutine; // 포커스 모니터링 코루틴 참조
 
     private void Awake()
     {
@@ -44,16 +45,33 @@ public class PlayerActionSelectUI : MonoBehaviour
             canvasGroup.alpha = 1.0f;
             Debug.Log("[PlayerActionSelectUI] Canvas Group 강제 활성화 완료");
         }
+        
+        // ActionCommandSelectionManager에 자신을 등록 (Scene 분리 대비)
+        if (ActionCommandSelectionManager.Instance != null)
+        {
+            ActionCommandSelectionManager.Instance.RegisterPlayerActionUI(this);
+        }
+        else
+        {
+            Debug.LogWarning("[PlayerActionSelectUI] ActionCommandSelectionManager가 아직 생성되지 않았습니다. Start에서 재시도합니다.");
+        }
     }
 
     private void Start()
     {
+        // ActionCommandSelectionManager에 등록 재시도 (Awake에서 실패한 경우)
+        if (ActionCommandSelectionManager.Instance != null && 
+            ActionCommandSelectionManager.Instance.playerActionSelectUI != this)
+        {
+            ActionCommandSelectionManager.Instance.RegisterPlayerActionUI(this);
+        }
+        
         Initialize();
         CheckUIState(); // 디버깅용 메서드 활성화
         CheckCanvasGroupState(); // Canvas Group 상태 확인
         
         // 포커스 유지를 위한 모니터링 시작
-        StartCoroutine(MonitorFocusRetention());
+        focusMonitorCoroutine = StartCoroutine(MonitorFocusRetention());
     }
     
     /// <summary>
@@ -350,6 +368,28 @@ public class PlayerActionSelectUI : MonoBehaviour
             canvasGroup.interactable = active;
             canvasGroup.blocksRaycasts = active;
             Debug.Log($"[PlayerActionSelectUI] 네비게이션 그룹 {(active ? "활성화" : "비활성화")}");
+        }
+    }
+
+    /// <summary>
+    /// Scene 전환 시 코루틴 정리 및 이벤트 구독 해제
+    /// </summary>
+    private void OnDestroy()
+    {
+        // 코루틴 정리
+        if (focusMonitorCoroutine != null)
+        {
+            StopCoroutine(focusMonitorCoroutine);
+            focusMonitorCoroutine = null;
+        }
+
+        // 버튼 이벤트 구독 해제
+        foreach (var button in actionButtons)
+        {
+            if (button != null)
+            {
+                button.OnButtonClicked -= OnButtonClicked;
+            }
         }
     }
 }
