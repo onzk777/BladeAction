@@ -40,6 +40,7 @@ namespace BladeAction.Item
         
         /// <summary>
         /// 기본 장비 슬롯 초기화
+        /// 총 6개 슬롯: 무기 1, 갑옷 1, 장신구 3, 검술 유파 1
         /// </summary>
         private void InitializeDefaultEquipmentSlots()
         {
@@ -47,13 +48,12 @@ namespace BladeAction.Item
             equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Weapon, "주무기"));
             equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Armor, "갑옷"));
             
-            // 장신구 슬롯 5개
+            // 장신구 슬롯 3개
             equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Accessory, "장신구1"));
             equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Accessory, "장신구2"));
             equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Accessory, "장신구3"));
-            equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Accessory, "장신구4"));
-            equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Accessory, "장신구5"));
             
+            // 검술 유파 슬롯
             equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.SwordArtStyle, "검술 유파"));
         }
         
@@ -75,27 +75,71 @@ namespace BladeAction.Item
             var existingItem = items.FirstOrDefault(i => i.itemKey == itemKey);
             if (existingItem != null)
             {
-                // 기존 아이템에 수량 추가 (UpdateMaxQuantity가 최소값 1 보장)
+                // 기존 아이템에 수량 추가 시도
                 existingItem.UpdateMaxQuantity();
-                bool success = existingItem.AddQuantity(quantity);
+                int addedQuantity = Mathf.Min(quantity, existingItem.maxQuantity - existingItem.quantity);
                 
-                if (success)
+                if (addedQuantity > 0)
                 {
+                    existingItem.quantity += addedQuantity;
                     SafeTriggerEvent(events => events.TriggerItemQuantityChanged(itemKey, existingItem.quantity, inventoryName));
+                    quantity -= addedQuantity; // 남은 수량
                 }
-                return success;
+                
+                // 남은 수량이 있으면 새로운 슬롯 생성
+                if (quantity > 0)
+                {
+                    return AddItemToNewSlot(itemKey, quantity);
+                }
+                
+                return true;
             }
             else
             {
                 // 새 아이템 추가
-                if (items.Count >= maxItemSlots)
+                return AddItemToNewSlot(itemKey, quantity);
+            }
+        }
+        
+        /// <summary>
+        /// 새로운 슬롯에 아이템 추가 (다른 같은 아이템 슬롯들도 고려)
+        /// </summary>
+        private bool AddItemToNewSlot(string itemKey, int quantity)
+        {
+            if (items.Count >= maxItemSlots)
+            {
+                SafeTriggerEvent(events => events.TriggerInventoryFull(itemKey, inventoryName));
+                return false; // 인벤토리 가득참
+            }
+            
+            var itemData = ItemDatabase.GetItemSafe(itemKey);
+            if (itemData == null)
+                return false;
+            
+            // 다른 같은 아이템 슬롯들 중에서 스택 가능한 슬롯 찾기
+            var sameItems = items.Where(i => i.itemKey == itemKey && i.quantity < i.maxQuantity).ToList();
+            
+            foreach (var existingItem in sameItems)
+            {
+                if (quantity <= 0) break;
+                
+                existingItem.UpdateMaxQuantity();
+                int canAdd = existingItem.maxQuantity - existingItem.quantity;
+                int addAmount = Mathf.Min(quantity, canAdd);
+                
+                if (addAmount > 0)
                 {
-                    SafeTriggerEvent(events => events.TriggerInventoryFull(itemKey, inventoryName));
-                    return false; // 인벤토리 가득참
+                    existingItem.quantity += addAmount;
+                    quantity -= addAmount;
+                    SafeTriggerEvent(events => events.TriggerItemQuantityChanged(itemKey, existingItem.quantity, inventoryName));
                 }
-                    
+            }
+            
+            // 남은 수량이 있으면 새로운 슬롯 생성
+            if (quantity > 0)
+            {
                 var newItem = new OwnedItem(itemKey, quantity);
-                newItem.UpdateMaxQuantity(); // maxQuantity 최소값 1 보장
+                newItem.UpdateMaxQuantity();
                 
                 // maxQuantity 업데이트 후 수량이 초과되었는지 확인 및 조정
                 if (newItem.quantity > newItem.maxQuantity)
@@ -104,9 +148,17 @@ namespace BladeAction.Item
                 }
                 
                 items.Add(newItem);
-                SafeTriggerEvent(events => events.TriggerItemAdded(itemKey, quantity, inventoryName));
-                return true;
+                SafeTriggerEvent(events => events.TriggerItemAdded(itemKey, newItem.quantity, inventoryName));
+                
+                // 남은 수량이 있으면 재귀적으로 추가
+                int remainingQuantity = quantity - newItem.quantity;
+                if (remainingQuantity > 0)
+                {
+                    return AddItemToNewSlot(itemKey, remainingQuantity);
+                }
             }
+            
+            return true;
         }
         
         /// <summary>
@@ -273,6 +325,10 @@ namespace BladeAction.Item
         {
             try
             {
+                // OnDestroy 등에서 호출 시 새 GameObject 생성 방지
+                if (!ItemEvents.HasInstance)
+                    return;
+                
                 var events = ItemEvents.Instance;
                 if (events != null)
                 {

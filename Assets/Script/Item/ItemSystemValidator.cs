@@ -108,10 +108,10 @@ public class ItemSystemValidator : MonoBehaviour
                     }
                 }
                 
-                LogInfo($"슬롯 구성: 무기{weaponCount}개, 방어구{armorCount}개, 장신구{accessoryCount}개, 검술유파{swordArtCount}개");
+                LogInfo($"슬롯 구성: 무기{weaponCount}개, 갑옷{armorCount}개, 장신구{accessoryCount}개, 검술유파{swordArtCount}개");
                 
-                if (weaponCount == 1 && armorCount == 1 && accessoryCount == 5 && swordArtCount == 1)
-                    LogSuccess("장비 슬롯 구성이 올바름");
+                if (weaponCount == 1 && armorCount == 1 && accessoryCount == 3 && swordArtCount == 1)
+                    LogSuccess("장비 슬롯 구성이 올바름 (총 6개: 무기1, 갑옷1, 장신구3, 유파1)");
                 else
                     LogError($"장비 슬롯 구성 오류: 무기{weaponCount}, 방어구{armorCount}, 장신구{accessoryCount}, 검술유파{swordArtCount}");
             }

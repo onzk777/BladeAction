@@ -53,6 +53,9 @@ namespace BladeAction.Item
         public SwordArtStyleData swordArtStyle;
         
         [Header("스탯 (재사용 방식)")]
+        [Tooltip("스탯 테이블 사용 여부 (체크하면 스탯 테이블 연결, 체크 해제하면 스탯 없는 아이템)")]
+        public bool useStatTable = false;
+        
         [Tooltip("스탯 테이블 키 (StatTable 참조)")]
         [DatabaseKey(typeof(StatDatabase), "statTables", "tableKey", "description")]
         public string statTableKey;
@@ -62,6 +65,10 @@ namespace BladeAction.Item
         /// </summary>
         public EquipmentStats GetStats(StatDatabase statDatabase)
         {
+            // 스탯 테이블을 사용하지 않는 아이템이면 빈 스탯 반환
+            if (!useStatTable)
+                return new EquipmentStats();
+            
             if (statDatabase == null || string.IsNullOrEmpty(statTableKey))
                 return new EquipmentStats();
             

@@ -1,0 +1,4 @@
+﻿Key,Name,Description,Type,MaxStack,StatKey,WeaponTypeKey,ArmorTypeKey,AccessoryTypeKey
+itm_weapon_test1,테스트용 직검,테스트용 직검이다.,Weapon,5,Test_StraightSword,Sword,,
+itm_weapon_test2,테스트용 직검,테스트용 직검이다.,Weapon,1,Test_StraightSword,Sword,,
+itm_swordartstyle_imperial,제국 검술 유파,제국의 검술은 세계 제일!,SwordArtStyle,1,Test_StraightSword_2,,,

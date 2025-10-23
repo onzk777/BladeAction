@@ -20,13 +20,14 @@ MonoBehaviour:
     description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80\uC774\uB2E4."
     itemType: 1
     requiredLevel: 0
-    maxStack: 1
-    icon: {fileID: 0}
+    maxStack: 5
+    icon: {fileID: 21300000, guid: b8618480a27c5e646b9a99b0e83dde55, type: 3}
     appearance: {fileID: 0}
     weaponTypeKey: Sword
     armorTypeKey: 
     accessoryTypeKey: 
     swordArtStyle: {fileID: 0}
+    useStatTable: 1
     statTableKey: Test_StraightSword
   - itemKey: itm_weapon_test2
     itemName: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80"
@@ -34,10 +35,41 @@ MonoBehaviour:
     itemType: 1
     requiredLevel: 0
     maxStack: 1
-    icon: {fileID: 0}
+    icon: {fileID: 21300000, guid: 1655fc56dfe035c40953982817ab7881, type: 3}
+    appearance: {fileID: 0}
+    weaponTypeKey: Sword
+    armorTypeKey: 
+    accessoryTypeKey: 
+    swordArtStyle: {fileID: 0}
+    useStatTable: 1
+    statTableKey: Test_StraightSword
+  - itemKey: itm_swordartstyle_imperial
+    itemName: "\uC81C\uAD6D \uAC80\uC220 \uC720\uD30C"
+    description: "\uC81C\uAD6D \uC815\uADDC \uAC80\uC220 \uC720\uD30C\uC758 \uBE44\uC804
+      \uB450\uB8E8\uB9C8\uB9AC\uC774\uB2E4."
+    itemType: 4
+    requiredLevel: 0
+    maxStack: 1
+    icon: {fileID: 21300000, guid: 27c2e8784aa14fe4387cf48dce05e78f, type: 3}
     appearance: {fileID: 0}
     weaponTypeKey: 
     armorTypeKey: 
     accessoryTypeKey: 
-    swordArtStyle: {fileID: 0}
-    statTableKey: Test_StraightSword
+    swordArtStyle: {fileID: 11400000, guid: 1b844bdf3947de140b680e74e35a23ae, type: 2}
+    useStatTable: 1
+    statTableKey: Test_StraightSword_2
+  - itemKey: itm_swordartstyle_street
+    itemName: "\uAE38\uAC70\uB9AC \uB9C9\uC2F8\uC6C0"
+    description: "\uC81C\uAD6D \uC815\uADDC \uAC80\uC220 \uC720\uD30C\uC758 \uBE44\uC804
+      \uB450\uB8E8\uB9C8\uB9AC\uC774\uB2E4."
+    itemType: 4
+    requiredLevel: 0
+    maxStack: 1
+    icon: {fileID: 21300000, guid: 27c2e8784aa14fe4387cf48dce05e78f, type: 3}
+    appearance: {fileID: 0}
+    weaponTypeKey: 
+    armorTypeKey: 
+    accessoryTypeKey: 
+    swordArtStyle: {fileID: 11400000, guid: 1b844bdf3947de140b680e74e35a23ae, type: 2}
+    useStatTable: 1
+    statTableKey: Test_StraightSword_2

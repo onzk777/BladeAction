@@ -11,10 +11,51 @@ Unity 에디터에서 인벤토리 UI를 구현하기 위한 오브젝트 구조
 Canvas (Screen Space - Overlay)
 └── MainInventoryPanel (Panel)
     ├── TopNavigationBar (Panel + HorizontalLayoutGroup)
+    │   ├── BagTab (Button)
+    │   ├── SwordArtTab (Button)
+    │   └── EmptyTabs (Button들)
     └── MainContentArea (Panel + HorizontalLayoutGroup)
         ├── EquipmentPanel (Panel + VerticalLayoutGroup)
+        │   ├── CharacterEquipmentSlots (Panel)
+        │   │   ├── WeaponSlot (HorizontalLayoutGroup)
+        │   │   │   ├── WeaponIcon (Image)
+        │   │   │   └── WeaponName (Text)
+        │   │   ├── ArmorSlot (HorizontalLayoutGroup)
+        │   │   │   ├── ArmorIcon (Image)
+        │   │   │   └── ArmorName (Text)
+        │   │   └── AccessorySlots (HorizontalLayoutGroup)
+        │   │       ├── AccessorySlot1 (Image)
+        │   │       ├── AccessorySlot2 (Image)
+        │   │       └── AccessorySlot3 (Image)
+        │   └── EquippedSwordArtStyle (Panel + VerticalLayoutGroup)
+        │       ├── SwordArtStyleSlot (HorizontalLayoutGroup)
+        │       │   ├── SwordArtStyleIcon (Image)
+        │       │   └── SwordArtStyleName (Text)
+        │       └── SwordsmanshipScrollView (ScrollRect)
+        │           └── Viewport (Image + Mask)
+        │               └── Content (RectTransform + VerticalLayoutGroup)
         ├── InventoryGridPanel (Panel + VerticalLayoutGroup)
+        │   ├── InventoryTitle (Text)
+        │   └── InventoryScrollView (ScrollRect)
+        │       └── Viewport (Image + Mask)
+        │           └── Content (RectTransform + GridLayoutGroup)  ← GridLayoutGroup 위치
+        │               └── ItemSlots (ItemSlotUI Prefab들 - 동적 생성)
         └── ItemDetailsPanel (Panel + VerticalLayoutGroup)
+            ├── SelectedItemDisplay (HorizontalLayoutGroup)
+            │   ├── SelectedItemIcon (Image)
+            │   └── SelectedItemName (Text)
+            ├── ItemStatsInfo (VerticalLayoutGroup)
+            │   ├── ATK_Stat (Text)
+            │   ├── DEF_Stat (Text)
+            │   └── SPD_Stat (Text)
+            ├── ItemDescription (ScrollRect)
+            │   └── Viewport (Image + Mask)
+            │       └── Content (RectTransform)
+            │           └── ItemDescriptionText (TextMeshProUGUI)
+            └── ActionButtons (HorizontalLayoutGroup)
+                ├── EquipButton (Button)
+                ├── UseButton (Button)
+                └── DropButton (Button)
 ```
 
 ---
@@ -30,8 +71,10 @@ Canvas (Screen Space - Overlay)
 - `GraphicRaycaster`
 
 **설정값**:
-- Sort Order: 10 (다른 UI보다 위에 표시)
+- Sort Order: 10 (전투 Canvas보다 위에 표시)
 - Pixel Perfect: true
+
+**⚠️ 중요**: 기존 전투 Canvas와 별도로 생성하여 UI 시스템 분리
 
 ---
 
@@ -122,38 +165,58 @@ Canvas (Screen Space - Overlay)
 - `WeaponIcon` (Image, 64x64, 노란색 테두리)
 - `WeaponName` (Text, "무기 이름")
 
-##### 5.1.2 방어구 슬롯들
-**오브젝트명**: `ArmorSlots`
+##### 5.1.2 갑옷 슬롯
+**오브젝트명**: `ArmorSlot`
 **컴포넌트**:
 - `HorizontalLayoutGroup`
 - `ContentSizeFitter` (Horizontal: Preferred Size)
 
 **하위 오브젝트**:
-- `HelmetSlot` (Image, 48x48, 회색 배경)
-- `ArmorSlot` (Image, 48x48, 회색 배경)
-- `BootsSlot` (Image, 48x48, 회색 배경)
+- `ArmorIcon` (Image, 64x64, 노란색 테두리)
+- `ArmorName` (Text, "갑옷 이름")
 
-##### 5.1.3 유파 슬롯
-**오브젝트명**: `MartialArtSlot`
+##### 5.1.3 장신구 슬롯들
+**오브젝트명**: `AccessorySlots`
 **컴포넌트**:
 - `HorizontalLayoutGroup`
 - `ContentSizeFitter` (Horizontal: Preferred Size)
 
 **하위 오브젝트**:
-- `MartialArtIcon` (Image, 64x64, 노란색 테두리)
-- `MartialArtName` (Text, "유파 이름")
+- `AccessorySlot1` (Image, 48x48, 회색 배경, 아이콘만)
+- `AccessorySlot2` (Image, 48x48, 회색 배경, 아이콘만)
+- `AccessorySlot3` (Image, 48x48, 회색 배경, 아이콘만)
+
+**💡 참고**: 장신구 슬롯은 아이콘만 표시하고 텍스트는 없음
 
 #### 5.2 장착 유파 + 검술 리스트 영역
-**오브젝트명**: `EquippedStyleAndSwordsmanshipList`
+**오브젝트명**: `EquippedSwordArtStyle`
 **컴포넌트**:
 - `VerticalLayoutGroup`
 - `ContentSizeFitter` (Vertical: Preferred Size)
 
+**💡 참고**: 이 영역에서 유파 슬롯 기능을 포함 (유파 아이콘 + 이름 + 검술 목록)
+
 **하위 오브젝트**:
-- `CurrentStyleInfo` (Text, "현재 장착 유파")
-- `SwordsmanshipScrollView` (ScrollRect)
-  - `Viewport` (Image + Mask)
+
+##### 5.2.1 장착된 유파 슬롯
+**오브젝트명**: `SwordArtStyleSlot`
+**컴포넌트**:
+- `HorizontalLayoutGroup`
+- `ContentSizeFitter` (Horizontal: Preferred Size)
+
+**하위 오브젝트**:
+- `SwordArtStyleIcon` (Image, 64x64, 노란색 테두리)
+- `SwordArtStyleName` (Text, "유파 이름")
+
+##### 5.2.2 검술 리스트
+**오브젝트명**: `SwordsmanshipScrollView`
+**컴포넌트**:
+- `ScrollRect`
+
+**하위 오브젝트**:
+- `Viewport` (Image + Mask)
   - `Content` (RectTransform + VerticalLayoutGroup)
+    - 검술 버튼들이 동적으로 생성됨
 
 ---
 
@@ -180,7 +243,7 @@ Canvas (Screen Space - Overlay)
 
 **하위 오브젝트**:
 - `Viewport` (Image + Mask)
-- `Content` (RectTransform + GridLayoutGroup)
+  - `Content` (RectTransform + GridLayoutGroup)
 
 **GridLayoutGroup 설정**:
 - Cell Size: 80x80
@@ -202,7 +265,7 @@ Canvas (Screen Space - Overlay)
 **하위 오브젝트들**:
 
 #### 7.1 선택된 아이템 표시
-**오브젝트명**: `SelectedItemDisplay`
+**오브젝트명**: `ItemDetailInfo`
 **컴포넌트**:
 - `HorizontalLayoutGroup`
 - `ContentSizeFitter` (Horizontal: Preferred Size)
@@ -218,9 +281,31 @@ Canvas (Screen Space - Overlay)
 - `ContentSizeFitter` (Vertical: Preferred Size)
 
 **하위 오브젝트**:
-- `ATK_Stat` (Text, "ATK: +100")
-- `DEF_Stat` (Text, "DEF: +50")
-- `SPD_Stat` (Text, "SPD: +25")
+
+##### 7.2.1 아이템 옵션 그리드
+**오브젝트명**: `STATINFO_01` (GridLayoutGroup 컨테이너)
+**컴포넌트**:
+- `GridLayoutGroup`
+- `ContentSizeFitter` (Vertical: Preferred Size)
+
+**GridLayoutGroup 설정**:
+- Cell Size: 390x50
+- Spacing: 20x10
+- Start Corner: Upper Left
+- Start Axis: Horizontal
+- Child Alignment: Upper Left
+- Constraint: Fixed Column Count
+- Constraint Count: 2
+
+**하위 오브젝트** (2열 3행 배치):
+- `STATINFO_01` (Text, "옵션1: +값")
+- `STATINFO_02` (Text, "옵션2: +값")
+- `STATINFO_03` (Text, "옵션3: +값")
+- `STATINFO_04` (Text, "옵션4: +값")
+- `STATINFO_05` (Text, "옵션5: +값")
+- `STATINFO_06` (Text, "옵션6: +값")
+
+**💡 참고**: 아이템 데이터에 따라 동적으로 옵션 표시 (최대 6개)
 
 #### 7.3 아이템 설명
 **오브젝트명**: `ItemDescription`
@@ -230,11 +315,11 @@ Canvas (Screen Space - Overlay)
 
 **하위 오브젝트**:
 - `Viewport` (Image + Mask)
-- `Content` (RectTransform)
-  - `DescriptionText` (Text, "아이템 설명...")
+  - `Content` (RectTransform)
+    - `ItemDescriptionText` (TextMeshProUGUI, "아이템 설명...")
 
 #### 7.4 액션 버튼들
-**오브젝트명**: `ActionButtons`
+**오브젝트명**: `ItemActionButtons`
 **컴포넌트**:
 - `HorizontalLayoutGroup`
 - `ContentSizeFitter` (Horizontal: Preferred Size)
@@ -258,14 +343,23 @@ ItemSlotUI (Button)
 └── ItemQuantity (Text)
 ```
 
-### EquipmentSlotUI 프리팹
-**용도**: 장비 슬롯 (무기, 방어구, 유파)
+### EquipmentSlotUI 프리팹 (무기/갑옷/유파용)
+**용도**: 무기, 갑옷, 유파 슬롯 (아이콘 + 이름)
 **구조**:
 ```
 EquipmentSlotUI (Button)
-├── EquipmentIcon (Image)
+├── EquipmentIcon (Image, 64x64)
 ├── EquipmentName (Text)
 └── EquipmentFrame (Image, 테두리)
+```
+
+### AccessorySlotUI 프리팹 (장신구용)
+**용도**: 장신구 슬롯 (아이콘만, 텍스트 없음)
+**구조**:
+```
+AccessorySlotUI (Button)
+├── AccessoryIcon (Image, 48x48)
+└── AccessoryFrame (Image, 테두리)
 ```
 
 ---
@@ -303,7 +397,7 @@ EquipmentSlotUI (Button)
 5. **EquipmentPanel** 및 하위 요소들 생성
 6. **InventoryGridPanel** 및 스크롤 뷰 생성
 7. **ItemDetailsPanel** 및 하위 요소들 생성
-8. **프리팹 생성** (ItemSlotUI, EquipmentSlotUI)
+8. **프리팹 생성** (ItemSlotUI, EquipmentSlotUI, AccessorySlotUI)
 9. **레이아웃 조정** 및 최종 테스트
 
 ---

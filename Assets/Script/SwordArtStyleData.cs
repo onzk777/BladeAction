@@ -8,6 +8,10 @@ public class SwordArtStyleData : ScriptableObject
     [Header("검술 스타일 기본")]
     [Tooltip("에디터에 표시될 스타일 이름")]
     public string styleName = "New Style";
+    
+    [Tooltip("유파에 대한 간략한 설명")]
+    [TextArea(2, 4)]
+    public string description = "";
 
     [Header("Spine 애니메이션")]
     [Tooltip("이 유파에서 사용할 Spine 애니메이션 애셋")]

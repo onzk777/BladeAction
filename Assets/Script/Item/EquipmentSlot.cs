@@ -4,13 +4,14 @@ namespace BladeAction.Item
 {
     /// <summary>
     /// 장비 슬롯 타입 (어떤 종류의 장비가 들어가는지)
+    /// 총 6개 슬롯: 무기 1, 갑옷 1, 장신구 3, 검술 유파 1
     /// </summary>
     public enum EquipmentSlotType
     {
         None = 0,
         Weapon = 1,      // 무기
-        Armor = 2,       // 방어구
-        Accessory = 3,   // 보조장비
+        Armor = 2,       // 갑옷
+        Accessory = 3,   // 장신구
         SwordArtStyle = 4 // 검술 유파
     }
     
@@ -138,9 +139,9 @@ namespace BladeAction.Item
                 case EquipmentSlotType.Weapon:
                     return "무기";
                 case EquipmentSlotType.Armor:
-                    return "방어구";
+                    return "갑옷";
                 case EquipmentSlotType.Accessory:
-                    return "보조장비";
+                    return "장신구";
                 case EquipmentSlotType.SwordArtStyle:
                     return "검술 유파";
                 default:

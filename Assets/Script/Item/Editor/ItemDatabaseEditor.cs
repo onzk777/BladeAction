@@ -160,7 +160,15 @@ namespace BladeAction.Item.Editor
                 
                 // 스탯
                 EditorGUILayout.LabelField("스탯", EditorStyles.boldLabel);
-                EditorGUILayout.PropertyField(itemProp.FindPropertyRelative("statTableKey"));
+                var useStatTableProp = itemProp.FindPropertyRelative("useStatTable");
+                EditorGUILayout.PropertyField(useStatTableProp, new GUIContent("스탯 테이블 사용"));
+                if (useStatTableProp.boolValue)
+                {
+                    EditorGUILayout.PropertyField(
+                        itemProp.FindPropertyRelative("statTableKey"),
+                        new GUIContent("스탯 테이블 키")
+                    );
+                }
                 
                 EditorGUI.indentLevel--;
             }

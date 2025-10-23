@@ -1,0 +1,548 @@
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using BladeAction.Item;
+using System.Collections.Generic;
+
+namespace BladeAction.UI
+{
+    /// <summary>
+    /// 아이템 상세 정보 패널
+    /// 선택된 아이템의 상세 정보를 표시하고 액션 버튼을 제공합니다.
+    /// </summary>
+    public class ItemDetailPanel : MonoBehaviour
+    {
+        [Header("인벤토리 참조")]
+        [Tooltip("인벤토리 참조 (런타임에 설정)")]
+        [SerializeField] private CombatantInventory inventory;
+        
+        [Header("UI 컴포넌트 - 기본 정보")]
+        [Tooltip("선택된 아이템 아이콘")]
+        [SerializeField] private Image itemIcon;
+        
+        [Tooltip("선택된 아이템 이름")]
+        [SerializeField] private TextMeshProUGUI itemNameText;
+        
+        [Header("UI 컴포넌트 - 스탯 정보")]
+        [Tooltip("스탯 정보 텍스트 배열 (최대 6개)")]
+        [SerializeField] private TextMeshProUGUI[] statInfoTexts = new TextMeshProUGUI[6];
+        
+        [Header("UI 컴포넌트 - 설명")]
+        [Tooltip("아이템 설명 텍스트")]
+        [SerializeField] private TextMeshProUGUI descriptionText;
+        
+        [Tooltip("설명/스탯 토글 버튼")]
+        [SerializeField] private Button toggleButton;
+        
+        [Tooltip("토글 버튼 텍스트")]
+        [SerializeField] private TextMeshProUGUI toggleButtonText;
+        
+        [Header("UI 컴포넌트 - 액션 버튼")]
+        [Tooltip("장착/해제 버튼")]
+        [SerializeField] private Button equipButton;
+        
+        [Tooltip("장착/해제 버튼 텍스트")]
+        [SerializeField] private TextMeshProUGUI equipButtonText;
+        
+        [Tooltip("사용 버튼")]
+        [SerializeField] private Button useButton;
+        
+        [Tooltip("버리기 버튼")]
+        [SerializeField] private Button dropButton;
+        
+        [Header("기본 아이콘")]
+        [Tooltip("아이템 미선택 시 표시할 기본 아이콘")]
+        [SerializeField] private Sprite defaultIcon;
+        
+        [Header("디버그")]
+        [Tooltip("디버그 로그 출력")]
+        [SerializeField] private bool enableDebugLog = true;
+        
+        // 현재 선택된 아이템
+        private OwnedItem currentItem;
+        
+        // 토글 상태 (true: 설명, false: 스탯)
+        private bool showDescription = true;
+        
+        #region Unity 생명주기
+        
+        private void Awake()
+        {
+            // 초기 상태 설정
+            Clear();
+        }
+        
+        private void Start()
+        {
+            // 버튼 이벤트 연결 (Start에서 실행하여 GameObject가 활성화된 후 연결)
+            if (equipButton != null)
+                equipButton.onClick.AddListener(OnEquipButtonClicked);
+            
+            if (useButton != null)
+                useButton.onClick.AddListener(OnUseButtonClicked);
+            
+            if (dropButton != null)
+                dropButton.onClick.AddListener(OnDropButtonClicked);
+            
+            if (toggleButton != null)
+                toggleButton.onClick.AddListener(OnToggleButtonClicked);
+        }
+        
+        private void OnDestroy()
+        {
+            // 버튼 이벤트 해제
+            if (equipButton != null)
+                equipButton.onClick.RemoveListener(OnEquipButtonClicked);
+            
+            if (useButton != null)
+                useButton.onClick.RemoveListener(OnUseButtonClicked);
+            
+            if (dropButton != null)
+                dropButton.onClick.RemoveListener(OnDropButtonClicked);
+            
+            if (toggleButton != null)
+                toggleButton.onClick.RemoveListener(OnToggleButtonClicked);
+        }
+        
+        #endregion
+        
+        #region 초기화 및 설정
+        
+        /// <summary>
+        /// 인벤토리 참조 설정
+        /// </summary>
+        public void Initialize(CombatantInventory inventory)
+        {
+            this.inventory = inventory;
+            Clear();
+        }
+        
+        #endregion
+        
+        #region 아이템 표시
+        
+        /// <summary>
+        /// 아이템 상세 정보 표시
+        /// </summary>
+        /// <param name="item">표시할 OwnedItem</param>
+        public void ShowItem(OwnedItem item)
+        {
+            if (item == null || item.IsEmpty())
+            {
+                HidePanel();
+                return;
+            }
+            
+            // 패널 활성화
+            gameObject.SetActive(true);
+            currentItem = item;
+            
+            // 아이템 데이터 가져오기
+            BladeAction.Item.Item itemData = item.GetItemData();
+            if (itemData == null)
+            {
+                Debug.LogWarning($"[ItemDetailPanel] 아이템 데이터를 찾을 수 없습니다: {item.itemKey}");
+                Clear();
+                return;
+            }
+            
+            // 기본 정보 표시
+            ShowBasicInfo(itemData);
+            
+            // 스탯 정보 표시
+            ShowStatInfo(itemData);
+            
+            // 설명 표시
+            ShowDescription(itemData);
+            
+            // 토글 표시 초기화
+            UpdateToggleDisplay();
+            
+            // 버튼 상태 업데이트
+            UpdateButtons(item, itemData);
+        }
+        
+        /// <summary>
+        /// 기본 정보 표시 (아이콘, 이름)
+        /// </summary>
+        private void ShowBasicInfo(BladeAction.Item.Item itemData)
+        {
+            // 아이콘
+            if (itemIcon != null)
+            {
+                itemIcon.sprite = itemData.icon;
+                itemIcon.enabled = itemData.icon != null;
+            }
+            
+            // 이름
+            if (itemNameText != null)
+            {
+                itemNameText.text = itemData.itemName;
+            }
+        }
+        
+        /// <summary>
+        /// 스탯 정보 표시
+        /// </summary>
+        private void ShowStatInfo(BladeAction.Item.Item itemData)
+        {
+            // 모든 스탯 텍스트 초기화
+            foreach (var statText in statInfoTexts)
+            {
+                if (statText != null)
+                {
+                    statText.text = "";
+                    statText.enabled = false;
+                }
+            }
+            
+            // 장비 아이템인 경우 스탯 표시
+            if (itemData.itemType == ItemType.Weapon || 
+                itemData.itemType == ItemType.Armor || 
+                itemData.itemType == ItemType.Accessory)
+            {
+                var stats = itemData.GetStats(ItemDatabase.Instance?.statDatabase);
+                if (stats != null)
+                {
+                    List<string> statStrings = new List<string>();
+                    
+                    // 스탯 수집
+                    if (stats.attackPower > 0)
+                        statStrings.Add($"공격력: +{stats.attackPower:F1}");
+                    
+                    if (stats.blockEfficiency > 0)
+                        statStrings.Add($"막기 효율: +{stats.blockEfficiency:F1}%");
+                    
+                    if (stats.parryEfficiency > 0)
+                        statStrings.Add($"쳐내기 효율: +{stats.parryEfficiency:F1}%");
+                    
+                    if (stats.maxHP > 0)
+                        statStrings.Add($"최대 HP: +{stats.maxHP:F0}");
+                    
+                    if (stats.damageReduction > 0)
+                        statStrings.Add($"피해 감소: +{stats.damageReduction:F1}%");
+                    
+                    if (stats.poise > 0)
+                        statStrings.Add($"Poise: +{stats.poise:F0}");
+                    
+                    // 스탯 텍스트 설정 (최대 6개)
+                    for (int i = 0; i < statStrings.Count && i < statInfoTexts.Length; i++)
+                    {
+                        if (statInfoTexts[i] != null)
+                        {
+                            statInfoTexts[i].text = statStrings[i];
+                            statInfoTexts[i].enabled = true;
+                        }
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 설명 표시
+        /// </summary>
+        private void ShowDescription(BladeAction.Item.Item itemData)
+        {
+            if (descriptionText != null)
+            {
+                descriptionText.text = itemData.description;
+            }
+        }
+        
+        /// <summary>
+        /// 버튼 상태 업데이트
+        /// </summary>
+        private void UpdateButtons(OwnedItem item, BladeAction.Item.Item itemData)
+        {
+            // 장착/해제 버튼
+            if (equipButton != null && equipButtonText != null)
+            {
+                // 장비 아이템인 경우만 활성화
+                bool isEquipment = itemData.itemType == ItemType.Weapon || 
+                                   itemData.itemType == ItemType.Armor || 
+                                   itemData.itemType == ItemType.Accessory ||
+                                   itemData.itemType == ItemType.SwordArtStyle;
+                
+                equipButton.interactable = isEquipment;
+                
+                if (isEquipment)
+                {
+                    // 장착 여부에 따라 버튼 텍스트 변경
+                    equipButtonText.text = item.isEquipped ? "해제" : "장착";
+                }
+                else
+                {
+                    equipButtonText.text = "장착";
+                }
+            }
+            
+            // 사용 버튼 (현재는 비활성화, 추후 소모품 구현 시 활성화)
+            if (useButton != null)
+            {
+                useButton.interactable = false;
+            }
+            
+            // 버리기 버튼
+            if (dropButton != null)
+            {
+                // 잠긴 아이템은 버리기 불가
+                dropButton.interactable = !item.isLocked;
+            }
+        }
+        
+        /// <summary>
+        /// 패널 숨기기 (비활성화)
+        /// </summary>
+        public void HidePanel()
+        {
+            gameObject.SetActive(false);
+        }
+        
+        /// <summary>
+        /// 패널 비우기
+        /// </summary>
+        public void Clear()
+        {
+            currentItem = null;
+            
+            // 아이콘 초기화
+            if (itemIcon != null)
+            {
+                itemIcon.sprite = defaultIcon;
+                itemIcon.enabled = defaultIcon != null;
+            }
+            
+            // 이름 초기화
+            if (itemNameText != null)
+            {
+                itemNameText.text = "아이템을 선택하세요";
+            }
+            
+            // 스탯 텍스트 숨김
+            foreach (var statText in statInfoTexts)
+            {
+                if (statText != null)
+                {
+                    statText.text = "";
+                    statText.enabled = false;
+                }
+            }
+            
+            // 설명 초기화
+            if (descriptionText != null)
+            {
+                descriptionText.text = "";
+            }
+            
+            // 버튼 비활성화
+            if (equipButton != null)
+                equipButton.interactable = false;
+            
+            if (useButton != null)
+                useButton.interactable = false;
+            
+            if (dropButton != null)
+                dropButton.interactable = false;
+        }
+        
+        #endregion
+        
+        #region 버튼 이벤트 처리
+        
+        /// <summary>
+        /// 장착/해제 버튼 클릭
+        /// </summary>
+        private void OnEquipButtonClicked()
+        {
+            if (currentItem == null || inventory == null)
+                return;
+            
+            BladeAction.Item.Item itemData = currentItem.GetItemData();
+            if (itemData == null)
+                return;
+            
+            // 장착 여부에 따라 처리
+            if (currentItem.isEquipped)
+            {
+                // 해제
+                UnequipItem(itemData);
+            }
+            else
+            {
+                // 장착
+                EquipItem(itemData);
+            }
+        }
+        
+        /// <summary>
+        /// 아이템 장착
+        /// </summary>
+        private void EquipItem(BladeAction.Item.Item itemData)
+        {
+            // 아이템 타입에 맞는 슬롯 타입 결정
+            EquipmentSlotType slotType = GetSlotTypeForItem(itemData.itemType);
+            
+            if (slotType == EquipmentSlotType.None)
+            {
+                Debug.LogWarning($"[ItemDetailPanel] 장착할 수 없는 아이템 타입: {itemData.itemType}");
+                return;
+            }
+            
+            // 인벤토리에 장착 요청
+            bool success = inventory.EquipItem(currentItem.itemKey, slotType);
+            
+            if (enableDebugLog)
+                Debug.Log($"[ItemDetailPanel] 아이템 장착: {currentItem.itemKey} → {slotType} ({success})");
+            
+            if (success)
+            {
+                // UI 갱신 (ItemEvents에서 자동으로 갱신됨)
+                ShowItem(currentItem); // 버튼 텍스트 업데이트
+            }
+        }
+        
+        /// <summary>
+        /// 아이템 해제
+        /// </summary>
+        private void UnequipItem(BladeAction.Item.Item itemData)
+        {
+            // 아이템 타입에 맞는 슬롯 타입 결정
+            EquipmentSlotType slotType = GetSlotTypeForItem(itemData.itemType);
+            
+            if (slotType == EquipmentSlotType.None)
+            {
+                Debug.LogWarning($"[ItemDetailPanel] 해제할 수 없는 아이템 타입: {itemData.itemType}");
+                return;
+            }
+            
+            // 인벤토리에 해제 요청
+            bool success = inventory.UnequipItem(slotType);
+            
+            if (enableDebugLog)
+                Debug.Log($"[ItemDetailPanel] 아이템 해제: {currentItem.itemKey} ({success})");
+            
+            if (success)
+            {
+                // UI 갱신 (ItemEvents에서 자동으로 갱신됨)
+                ShowItem(currentItem); // 버튼 텍스트 업데이트
+            }
+        }
+        
+        /// <summary>
+        /// 아이템 타입에 따른 슬롯 타입 반환
+        /// </summary>
+        private EquipmentSlotType GetSlotTypeForItem(ItemType itemType)
+        {
+            switch (itemType)
+            {
+                case ItemType.Weapon:
+                    return EquipmentSlotType.Weapon;
+                case ItemType.Armor:
+                    return EquipmentSlotType.Armor;
+                case ItemType.Accessory:
+                    return EquipmentSlotType.Accessory;
+                case ItemType.SwordArtStyle:
+                    return EquipmentSlotType.SwordArtStyle;
+                default:
+                    return EquipmentSlotType.None;
+            }
+        }
+        
+        /// <summary>
+        /// 사용 버튼 클릭
+        /// </summary>
+        private void OnUseButtonClicked()
+        {
+            if (currentItem == null)
+                return;
+            
+            // TODO: 소모품 사용 로직 구현
+            if (enableDebugLog)
+                Debug.Log($"[ItemDetailPanel] 아이템 사용: {currentItem.itemKey} (미구현)");
+        }
+        
+        /// <summary>
+        /// 버리기 버튼 클릭
+        /// </summary>
+        private void OnDropButtonClicked()
+        {
+            if (currentItem == null || inventory == null)
+                return;
+            
+            if (currentItem.isLocked)
+            {
+                if (enableDebugLog)
+                    Debug.Log($"[ItemDetailPanel] 잠긴 아이템은 버릴 수 없습니다: {currentItem.itemKey}");
+                return;
+            }
+            
+            // TODO: 확인 팝업 추가
+            bool success = inventory.RemoveItem(currentItem.itemKey, currentItem.quantity);
+            
+            if (enableDebugLog)
+                Debug.Log($"[ItemDetailPanel] 아이템 버리기: {currentItem.itemKey} ({success})");
+            
+            if (success)
+            {
+                Clear();
+            }
+        }
+        
+        /// <summary>
+        /// 토글 버튼 클릭
+        /// </summary>
+        private void OnToggleButtonClicked()
+        {
+            showDescription = !showDescription;
+            UpdateToggleDisplay();
+            
+            if (enableDebugLog)
+                Debug.Log($"[ItemDetailPanel] 토글: {(showDescription ? "설명" : "스탯")}");
+        }
+        
+        /// <summary>
+        /// 토글 표시 업데이트
+        /// </summary>
+        private void UpdateToggleDisplay()
+        {
+            if (descriptionText != null)
+            {
+                descriptionText.gameObject.SetActive(showDescription);
+            }
+            
+            if (statInfoTexts != null)
+            {
+                foreach (var statText in statInfoTexts)
+                {
+                    if (statText != null)
+                    {
+                        statText.gameObject.SetActive(!showDescription);
+                    }
+                }
+            }
+            
+            if (toggleButtonText != null)
+            {
+                toggleButtonText.text = showDescription ? "스탯 보기" : "설명 보기";
+            }
+        }
+        
+        #endregion
+        
+        #region 디버그
+        
+        /// <summary>
+        /// 디버그 정보 출력
+        /// </summary>
+        [ContextMenu("Print Debug Info")]
+        private void PrintDebugInfo()
+        {
+            Debug.Log("[ItemDetailPanel] 디버그 정보:");
+            Debug.Log($"  - Current Item: {(currentItem != null ? currentItem.ToString() : "null")}");
+            Debug.Log($"  - Inventory: {(inventory != null ? inventory.inventoryName : "null")}");
+        }
+        
+        #endregion
+    }
+}
+

@@ -47,6 +47,12 @@ namespace BladeAction.Item
     public class ItemEvents : MonoBehaviour
     {
         private static ItemEvents _instance;
+        
+        /// <summary>
+        /// 인스턴스 존재 여부 (GameObject 생성 없이 안전하게 체크)
+        /// </summary>
+        public static bool HasInstance => _instance != null;
+        
         public static ItemEvents Instance
         {
             get
@@ -114,6 +120,29 @@ namespace BladeAction.Item
                 {
                     Destroy(gameObject);
                 }
+                else
+                {
+                    // 에디터 모드에서는 즉시 파괴
+                    DestroyImmediate(gameObject);
+                }
+            }
+        }
+        
+        void OnDestroy()
+        {
+            // 이 인스턴스가 싱글톤 인스턴스인 경우에만 정리
+            if (_instance == this)
+            {
+                _instance = null;
+            }
+        }
+        
+        void OnApplicationQuit()
+        {
+            // 애플리케이션 종료 시 명시적으로 정리
+            if (_instance == this)
+            {
+                _instance = null;
             }
         }
         
