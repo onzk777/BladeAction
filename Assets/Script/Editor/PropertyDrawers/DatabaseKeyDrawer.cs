@@ -16,10 +16,23 @@ namespace BladeAction.Editor
     [CustomPropertyDrawer(typeof(DatabaseKeyAttribute))]
     public class DatabaseKeyDrawer : PropertyDrawer
     {
-        // 캐시된 키 목록 (성능 최적화)
-        private KeyDisplayPair[] cachedKeys;
-        private double lastUpdateTime;
-        private const double UPDATE_INTERVAL = 0.5; // 0.5초마다 갱신
+        // Static 캐시 (모든 인스턴스가 공유) - 핵심 최적화!
+        private static System.Collections.Generic.Dictionary<string, CachedData> staticCache 
+            = new System.Collections.Generic.Dictionary<string, CachedData>();
+        private static System.Collections.Generic.Dictionary<Type, ScriptableObject> databaseCache
+            = new System.Collections.Generic.Dictionary<Type, ScriptableObject>();
+        private const double UPDATE_INTERVAL = 5.0; // 5초마다 갱신 (0.5초는 너무 짧음)
+        
+        /// <summary>
+        /// 캐시 초기화 (메뉴 아이템으로 제공)
+        /// </summary>
+        [UnityEditor.MenuItem("Tools/Database/Clear Property Drawer Cache")]
+        public static void ClearCache()
+        {
+            staticCache.Clear();
+            databaseCache.Clear();
+            Debug.Log("✅ DatabaseKeyDrawer 캐시가 초기화되었습니다.");
+        }
         
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
@@ -51,17 +64,26 @@ namespace BladeAction.Editor
             }
             else
             {
-                // 주기적으로 또는 캐시가 없으면 키 목록 갱신
-                bool shouldUpdate = cachedKeys == null || 
-                                   EditorApplication.timeSinceStartup - lastUpdateTime > UPDATE_INTERVAL;
+                // Static 캐시 키 생성 (데이터베이스 + 필드 조합)
+                string cacheKey = $"{attr.DatabaseType.Name}_{attr.ListFieldName}_{attr.KeyFieldName}";
                 
-                if (shouldUpdate)
+                // Static 캐시에서 가져오기
+                CachedData cachedData;
+                bool needsUpdate = !staticCache.TryGetValue(cacheKey, out cachedData) ||
+                                  EditorApplication.timeSinceStartup - cachedData.lastUpdateTime > UPDATE_INTERVAL;
+                
+                if (needsUpdate)
                 {
-                    cachedKeys = ExtractKeys(database, attr.ListFieldName, attr.KeyFieldName, attr.DisplayNameField);
-                    lastUpdateTime = EditorApplication.timeSinceStartup;
+                    var extractedKeys = ExtractKeys(database, attr.ListFieldName, attr.KeyFieldName, attr.DisplayNameField);
+                    cachedData = new CachedData
+                    {
+                        keys = extractedKeys,
+                        lastUpdateTime = EditorApplication.timeSinceStartup
+                    };
+                    staticCache[cacheKey] = cachedData;
                 }
                 
-                var keys = cachedKeys;
+                var keys = cachedData.keys;
                 
                 if (keys.Length == 0)
                 {
@@ -81,45 +103,65 @@ namespace BladeAction.Editor
         }
         
         /// <summary>
-        /// 프로젝트에서 데이터베이스 찾기 (범용)
+        /// 프로젝트에서 데이터베이스 찾기 (범용) - Static 캐싱 적용
         /// </summary>
         private ScriptableObject FindDatabase(Type databaseType, string databasePath = null)
         {
             if (databaseType == null || !typeof(ScriptableObject).IsAssignableFrom(databaseType))
                 return null;
             
+            // Static 캐시 확인 (경로가 없는 경우만 캐싱)
+            if (string.IsNullOrEmpty(databasePath) && databaseCache.ContainsKey(databaseType))
+            {
+                var cached = databaseCache[databaseType];
+                if (cached != null)
+                    return cached;
+            }
+            
+            ScriptableObject database = null;
+            
             // 1. 경로가 지정된 경우 해당 경로에서 로드
             if (!string.IsNullOrEmpty(databasePath))
             {
-                var db = AssetDatabase.LoadAssetAtPath(databasePath, databaseType) as ScriptableObject;
-                if (db != null)
-                    return db;
+                database = AssetDatabase.LoadAssetAtPath(databasePath, databaseType) as ScriptableObject;
+                if (database != null)
+                    return database;
                 
                 Debug.LogWarning($"지정된 경로에서 Database를 찾을 수 없습니다: {databasePath}");
             }
             
             // 2. Resources 폴더에서 검색
             var resourcePath = databaseType.Name;
-            var resourceDB = Resources.Load(resourcePath, databaseType) as ScriptableObject;
-            if (resourceDB != null)
-                return resourceDB;
+            database = Resources.Load(resourcePath, databaseType) as ScriptableObject;
+            if (database != null)
+            {
+                databaseCache[databaseType] = database;
+                return database;
+            }
             
             // 3. 프로젝트 전체에서 검색
             var typeName = databaseType.Name;
             var guids = AssetDatabase.FindAssets($"t:{typeName}");
             
             if (guids.Length == 0)
+            {
+                databaseCache[databaseType] = null; // null도 캐싱 (반복 검색 방지)
                 return null;
+            }
             
-            // 여러 개 있으면 경고
-            if (guids.Length > 1)
+            // 여러 개 있으면 경고 (한 번만)
+            if (guids.Length > 1 && !databaseCache.ContainsKey(databaseType))
             {
                 Debug.LogWarning($"{typeName} 타입의 Database가 {guids.Length}개 발견되었습니다. " +
                                 $"첫 번째 것을 사용합니다. 특정 Database를 지정하려면 databasePath 파라미터를 사용하세요.");
             }
             
             var path = AssetDatabase.GUIDToAssetPath(guids[0]);
-            return AssetDatabase.LoadAssetAtPath(path, databaseType) as ScriptableObject;
+            database = AssetDatabase.LoadAssetAtPath(path, databaseType) as ScriptableObject;
+            
+            // 캐시에 저장
+            databaseCache[databaseType] = database;
+            return database;
         }
         
         /// <summary>
@@ -241,6 +283,15 @@ namespace BladeAction.Editor
         {
             public string Key;
             public string Display;
+        }
+        
+        /// <summary>
+        /// Static 캐시 데이터 구조
+        /// </summary>
+        private struct CachedData
+        {
+            public KeyDisplayPair[] keys;
+            public double lastUpdateTime;
         }
     }
 }
