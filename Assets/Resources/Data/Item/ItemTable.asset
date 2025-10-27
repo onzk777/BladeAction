@@ -23,24 +23,24 @@ MonoBehaviour:
     maxStack: 5
     icon: {fileID: 21300000, guid: b8618480a27c5e646b9a99b0e83dde55, type: 3}
     appearance: {fileID: 0}
-    weaponTypeKey: Sword
+    weaponTypeKey: StraightSword
     armorTypeKey: 
     accessoryTypeKey: 
-    swordArtStyle: {fileID: 0}
+    swordArtStyleKey: 
     useStatTable: 1
     statTableKey: Test_StraightSword_1
   - itemKey: itm_weapon_test2
-    itemName: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80"
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80\uC774\uB2E4."
+    itemName: "\uD14C\uC2A4\uD2B8\uC6A9 \uC30D\uAC80"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC30D\uAC80\uC774\uB2E4."
     itemType: 1
     requiredLevel: 0
     maxStack: 1
     icon: {fileID: 21300000, guid: 1655fc56dfe035c40953982817ab7881, type: 3}
     appearance: {fileID: 0}
-    weaponTypeKey: Sword
+    weaponTypeKey: StraightSword
     armorTypeKey: 
     accessoryTypeKey: 
-    swordArtStyle: {fileID: 0}
+    swordArtStyleKey: 
     useStatTable: 1
     statTableKey: Test_StraightSword_2
   - itemKey: itm_swordartstyle_imperial
@@ -55,13 +55,14 @@ MonoBehaviour:
     weaponTypeKey: 
     armorTypeKey: 
     accessoryTypeKey: 
-    swordArtStyle: {fileID: 11400000, guid: 1b844bdf3947de140b680e74e35a23ae, type: 2}
+    swordArtStyleKey: EmpireBladeWorks
     useStatTable: 0
     statTableKey: Test_StraightSword_2
   - itemKey: itm_swordartstyle_street
     itemName: "\uAE38\uAC70\uB9AC \uB9C9\uC2F8\uC6C0"
-    description: "\uC81C\uAD6D \uC815\uADDC \uAC80\uC220 \uC720\uD30C\uC758 \uBE44\uC804
-      \uB450\uB8E8\uB9C8\uB9AC\uC774\uB2E4."
+    description: "\uD5D8\uC545\uD55C \uB4B7\uACE8\uBAA9\uC744 \uC804\uC804\uD558\uB294
+      \uBD88\uB7C9\uBC30\uB4E4\uC774 \uC790\uC5F0\uC2A4\uB7FD\uAC8C \uD130\uB4DD\uD558\uB294
+      \uAC80\uC220."
     itemType: 4
     requiredLevel: 0
     maxStack: 1
@@ -70,6 +71,34 @@ MonoBehaviour:
     weaponTypeKey: 
     armorTypeKey: 
     accessoryTypeKey: 
-    swordArtStyle: {fileID: 11400000, guid: 1b844bdf3947de140b680e74e35a23ae, type: 2}
+    swordArtStyleKey: StreetBlade
     useStatTable: 0
     statTableKey: Test_StraightSword_2
+  - itemKey: itm_armor_test1
+    itemName: "\uCCA0\uAC11\uC637"
+    description: "\uB9E4\uC6B0 \uD2BC\uD2BC\uD55C \uCCA0\uAC11\uC637"
+    itemType: 2
+    requiredLevel: 0
+    maxStack: 0
+    icon: {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
+    appearance: {fileID: 0}
+    weaponTypeKey: 
+    armorTypeKey: MetalArmor
+    accessoryTypeKey: 
+    swordArtStyleKey: 
+    useStatTable: 1
+    statTableKey: Test_Armor_Metal
+  - itemKey: itm_accessory_test1
+    itemName: "\uB3CC\uBC18\uC9C0"
+    description: "\uB3CC\uB85C \uB9CC\uB4E0 \uC2F8\uAD6C\uB824 \uBC18\uC9C0"
+    itemType: 3
+    requiredLevel: 0
+    maxStack: 0
+    icon: {fileID: 10915, guid: 0000000000000000f000000000000000, type: 0}
+    appearance: {fileID: 0}
+    weaponTypeKey: 
+    armorTypeKey: 
+    accessoryTypeKey: Ring
+    swordArtStyleKey: 
+    useStatTable: 0
+    statTableKey: Test_Armor_Metal

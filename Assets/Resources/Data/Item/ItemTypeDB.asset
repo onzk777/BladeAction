@@ -13,7 +13,41 @@ MonoBehaviour:
   m_Name: ItemTypeDB
   m_EditorClassIdentifier: Assembly-CSharp::BladeAction.Item.ItemTypeDatabase
   weaponTypes:
-  - {fileID: 11400000, guid: 1ceb2a620a9797547a373b603135f3a2, type: 2}
-  armorTypes: []
-  accessoryTypes: []
-  swordArtStyles: []
+  - typeName: "\uC9C1\uAC80"
+    typeKey: StraightSword
+    typeIcon: {fileID: 0}
+    description: "\uAC00\uC7A5 \uAE30\uBCF8\uC801\uC778 \uC11C\uC591\uC2DD \uAC80.
+      \uACBD\uB7C9 \uD0C0\uC785\uC73C\uB85C \uBCA0\uAE30\uC640 \uCC0C\uB974\uAE30\uC758
+      \uADE0\uD615\uC774 \uC88B\uB2E4."
+    category: 0
+    baseAttackSpeed: 1
+    baseRange: 1
+  armorTypes:
+  - typeName: "\uC758\uBCF5"
+    typeKey: Cloth
+    typeIcon: {fileID: 0}
+    description: "\uC77C\uBC18\uC778\uB4E4\uC774 \uC785\uB294 \uBCF4\uD1B5\uC758
+      \uC758\uB958. \uC804\uD22C\uC5D0\uB294 \uB3C4\uC6C0\uC774 \uB418\uC9C0 \uC54A\uB294\uB2E4."
+    category: 0
+    baseWeight: 0
+    baseMobility: 1
+    requiredLevel: 0
+  - typeName: "\uAE08\uC18D \uAC11\uC637"
+    typeKey: MetalArmor
+    typeIcon: {fileID: 0}
+    description: "\uBB34\uAC70"
+    category: 2
+    baseWeight: 5
+    baseMobility: 0.5
+    requiredLevel: 0
+  accessoryTypes:
+  - typeName: "\uBC18\uC9C0"
+    typeKey: Ring
+    typeIcon: {fileID: 0}
+    description: "\uC190\uAC00\uB77D\uC5D0 \uB07C\uC6B8 \uC218 \uC788\uB294 \uC7A5\uC2E0\uAD6C."
+    category: 0
+    maxEquipCount: 1
+    requiredLevel: 0
+  swordArtStyles:
+  - {fileID: 11400000, guid: 1b844bdf3947de140b680e74e35a23ae, type: 2}
+  - {fileID: 11400000, guid: 0b9381922b6f4064c9fa76ce99959125, type: 2}

@@ -17,6 +17,19 @@ namespace BladeAction.Item.Excel
         public string WeaponTypeKey;    // weaponTypeKey (Type=Weapon인 경우)
         public string ArmorTypeKey;     // armorTypeKey (Type=Armor인 경우)
         public string AccessoryTypeKey; // accessoryTypeKey (Type=Accessory인 경우)
+        public string SwordArtStyleKey; // swordArtStyleKey (Type=SwordArtStyle인 경우)
+
+        // 원본 CSV에서 해당 필드가 비어있지 않았는지 표시(머지 시 빈 값=미변경 처리용)
+        public bool HasName;
+        public bool HasDescription;
+        public bool HasType;
+        public bool HasRequiredLevel;
+        public bool HasMaxStack;
+        public bool HasStatKey;
+        public bool HasWeaponTypeKey;
+        public bool HasArmorTypeKey;
+        public bool HasAccessoryTypeKey;
+        public bool HasSwordArtStyleKey;
     }
 }
 

@@ -14,6 +14,36 @@ namespace BladeAction.Item
         [Tooltip("모든 스탯 프리셋 - 여기서 대량 관리")]
         public List<StatTable> statTables = new List<StatTable>();
         
+        private void OnValidate()
+        {
+            // 에셋 편집 시에도 전역 룰로 Clamp 적용
+            var rules = Resources.Load<BladeAction.Combat.StatLimitRules>("Data/Stat/StatLimitRules");
+            if (rules == null) return;
+            for (int i = 0; i < statTables.Count; i++)
+            {
+                var t = statTables[i];
+                if (t?.stats == null) continue;
+                t.stats.attackPower = Clamp("attack", t.stats.attackPower, rules);
+                t.stats.blockEfficiency = Clamp("blockEfficiency", t.stats.blockEfficiency, rules);
+                t.stats.blockPoiseConsumption = Clamp("blockPoiseConsumption", t.stats.blockPoiseConsumption, rules);
+                t.stats.parryEfficiency = Clamp("parryEfficiency", t.stats.parryEfficiency, rules);
+                t.stats.parryPoiseConsumption = Clamp("parryPoiseConsumption", t.stats.parryPoiseConsumption, rules);
+                t.stats.parryPoiseAttackPower = Clamp("parryPoiseAttackPower", t.stats.parryPoiseAttackPower, rules);
+                t.stats.maxHP = Clamp("maxHP", t.stats.maxHP, rules);
+                t.stats.damageReduction = Clamp("damageReduction", t.stats.damageReduction, rules);
+                t.stats.poise = Clamp("maxPoise", t.stats.poise, rules);
+            }
+        }
+        
+        private float Clamp(string key, float value, BladeAction.Combat.StatLimitRules rules)
+        {
+			if (rules.TryGetRange(key, out var min, out var max))
+			{
+				return Mathf.Clamp(value, min, max);
+			}
+            return value;
+        }
+        
         /// <summary>
         /// Key로 스탯 테이블 검색
         /// </summary>

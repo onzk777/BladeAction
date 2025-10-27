@@ -152,7 +152,7 @@ namespace BladeAction.Item.Editor
                         break;
                         
                     case ItemType.SwordArtStyle:
-                        EditorGUILayout.PropertyField(itemProp.FindPropertyRelative("swordArtStyle"), new GUIContent("검술 유파"));
+                        EditorGUILayout.PropertyField(itemProp.FindPropertyRelative("swordArtStyleKey"), new GUIContent("검술 유파 키"));
                         break;
                 }
                 

@@ -144,7 +144,7 @@ public class CombatStatusDisplay : MonoBehaviour
                 playerDR.text = $"DR: {effectiveDR}";
             }
         }
-        if (playerCrit != null) playerCrit.text = $"Crit: {combatant.Crit}%";
+        if (playerCrit != null) playerCrit.text = $"Crit: {combatant.CritChance * 100f:F1}%";
     }
 
     private void UpdateEnemyStatus()
@@ -167,7 +167,7 @@ public class CombatStatusDisplay : MonoBehaviour
                 enemyDR.text = $"DR: {effectiveDR}";
             }
         }
-        if (enemyCrit != null) enemyCrit.text = $"Crit: {combatant.Crit}%";
+        if (enemyCrit != null) enemyCrit.text = $"Crit: {combatant.CritChance * 100f:F1}%";
     }
 
     private string GetEffectiveAttackText(Combatant combatant, bool isPlayer)
@@ -177,13 +177,19 @@ public class CombatStatusDisplay : MonoBehaviour
         ICombatController controller = isPlayer ? CombatManager.Instance.PlayerController : CombatManager.Instance.EnemyController;
         if (controller?.Combatant?.AvailableCommands == null || controller.Combatant.AvailableCommands.Count == 0)
         {
-            return $"ATK: {combatant.ATK}";
+            int baseAtkOnly = BladeAction.Combat.StatsCalculationManager.Instance != null 
+                ? BladeAction.Combat.StatsCalculationManager.Instance.GetEffectiveATK(combatant)
+                : combatant.ATK;
+            return $"ATK: {baseAtkOnly}";
         }
         
         int selectedIndex = controller.GetSelectedCommandIndex();
         if (selectedIndex < 0 || selectedIndex >= controller.Combatant.AvailableCommands.Count)
         {
-            return $"ATK: {combatant.ATK}";
+            int baseAtkOnly = BladeAction.Combat.StatsCalculationManager.Instance != null 
+                ? BladeAction.Combat.StatsCalculationManager.Instance.GetEffectiveATK(combatant)
+                : combatant.ATK;
+            return $"ATK: {baseAtkOnly}";
         }
         
         var command = controller.Combatant.AvailableCommands[selectedIndex];
@@ -191,14 +197,20 @@ public class CombatStatusDisplay : MonoBehaviour
         // 다중 히트 공격의 경우 모든 히트의 damageRatio 표시
         if (command.hitCount > 1)
         {
-            return GenerateMultiHitATKText(combatant.ATK, controller, selectedIndex);
+            int baseAtk = BladeAction.Combat.StatsCalculationManager.Instance != null 
+                ? BladeAction.Combat.StatsCalculationManager.Instance.GetEffectiveATK(combatant)
+                : combatant.ATK;
+            return GenerateMultiHitATKText(baseAtk, controller, selectedIndex);
         }
         else
         {
             // 단일 히트 공격의 경우 기존 방식 사용
             float damageRatio = command.GetDamageRatio(0);
-            int effectiveATK = Mathf.RoundToInt(combatant.ATK * damageRatio);
-            return $"ATK: {effectiveATK}({combatant.ATK} * {damageRatio * 100:F0}%)";
+            int baseAtk = BladeAction.Combat.StatsCalculationManager.Instance != null 
+                ? BladeAction.Combat.StatsCalculationManager.Instance.GetEffectiveATK(combatant)
+                : combatant.ATK;
+            int effectiveATK = Mathf.RoundToInt(baseAtk * damageRatio);
+            return $"ATK: {effectiveATK}({baseAtk} * {damageRatio * 100:F0}%)";
         }
     }
     

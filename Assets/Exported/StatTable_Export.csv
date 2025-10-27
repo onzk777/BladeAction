@@ -1,16 +1,19 @@
 ﻿TableKey,Description,AttackPower,BlockEff,BlockPoiseCost,ParryEff,ParryPoiseCost,ParryPoiseAtk,MaxHP,DamageReduction,Poise
-Test_StraightSword_1,테스트용 임시 데이터,5,0,0,0,0,0,0,0,0
-Test_StraightSword_2,테스트용 임시 데이터,6,0,0,0,0,0,0,0,0
-Test_StraightSword_3,테스트용 임시 데이터,7,0,0,0,0,0,0,0,0
-Test_StraightSword_4,테스트용 임시 데이터,8,0,0,0,0,0,0,0,0
-Test_StraightSword_5,테스트용 임시 데이터,9,0,0,0,0,0,0,0,0
-Test_StraightSword_6,테스트용 임시 데이터,10,0,0,0,0,0,0,0,0
-Test_StraightSword_7,테스트용 임시 데이터,11,0,0,0,0,0,0,0,0
-Test_StraightSword_8,테스트용 임시 데이터,12,0,0,0,0,0,0,0,0
-Test_StraightSword_9,테스트용 임시 데이터,13,0,0,0,0,0,0,0,0
-Test_StraightSword_10,테스트용 임시 데이터,14,0,0,0,0,0,0,0,0
-Test_StraightSword_11,테스트용 임시 데이터,15,0,0,0,0,0,0,0,0
-Test_StraightSword_12,테스트용 임시 데이터,16,0,0,0,0,0,0,0,0
-Test_StraightSword_13,테스트용 임시 데이터,17,0,0,0,0,0,0,0,0
-Test_StraightSword_14,테스트용 임시 데이터,18,0,0,0,0,0,0,0,0
-Test_StraightSword_15,테스트용 임시 데이터,19,0,0,0,0,0,0,0,0
+Test_StraightSword_1,테스트용 직검 1,5,50,15,80,0,20,0,0,0
+Test_StraightSword_2,테스트용 직검 2,6,50,0,80,0,0,0,0,0
+Test_StraightSword_3,테스트용 직검 3,7,50,0,80,0,0,0,0,0
+Test_StraightSword_4,테스트용 직검 4,8,50,0,80,0,0,0,0,0
+Test_StraightSword_5,테스트용 직검 5,9,50,0,80,0,0,0,0,0
+Test_StraightSword_6,테스트용 직검 6,10,50,0,80,0,0,0,0,0
+Test_StraightSword_7,테스트용 직검 7,11,50,0,80,0,0,0,0,0
+Test_StraightSword_8,테스트용 직검 8,12,50,0,80,0,0,0,0,0
+Test_StraightSword_9,테스트용 직검 9,13,50,0,80,0,0,0,0,0
+Test_StraightSword_10,테스트용 직검 10,14,50,0,80,0,0,0,0,0
+Test_StraightSword_11,테스트용 직검 11,15,50,0,80,0,0,0,0,0
+Test_StraightSword_12,테스트용 직검 12,16,50,0,80,0,0,0,0,0
+Test_StraightSword_13,테스트용 직검 13,17,50,0,80,0,0,0,0,0
+Test_StraightSword_14,테스트용 직검 14,18,50,0,80,0,0,0,0,0
+Test_StraightSword_15,테스트용 직검 15,19,50,0,80,0,0,0,0,0
+Test_CurvedBlade_1,테스트용 곡검,15,40,15,90,0,0,0,0,0
+Test_Armor_Cloth,테스트용 천옷,,,,,,,10,0,10
+Test_Armor_Metal,테스트용 금속 갑옷,,,-10,,-5,,25,5,15

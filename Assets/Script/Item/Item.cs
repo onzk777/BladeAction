@@ -49,8 +49,9 @@ namespace BladeAction.Item
         [DatabaseKey(typeof(ItemTypeDatabase), "accessoryTypes", "typeKey", "typeName")]
         public string accessoryTypeKey;
         
-        [Tooltip("검술 유파 (유파 아이템인 경우) - ScriptableObject 직접 참조")]
-        public SwordArtStyleData swordArtStyle;
+        [Tooltip("검술 유파 키 (유파 아이템인 경우)")]
+        [DatabaseKey(typeof(SwordArtStyleDatabase), "styles", "key", "displayName")]
+        public string swordArtStyleKey;
         
         [Header("스탯 (재사용 방식)")]
         [Tooltip("스탯 테이블 사용 여부 (체크하면 스탯 테이블 연결, 체크 해제하면 스탯 없는 아이템)")]
@@ -75,11 +76,21 @@ namespace BladeAction.Item
             var table = statDatabase.GetStatTable(statTableKey);
             return table != null ? table.stats : new EquipmentStats();
         }
+
+        /// <summary>
+        /// 검술 유파 SO 가져오기 (SwordArtStyleDatabase에서 조회)
+        /// </summary>
+        public SwordArtStyleData GetSwordArtStyle(SwordArtStyleDatabase styleDatabase)
+        {
+            if (styleDatabase == null || string.IsNullOrEmpty(swordArtStyleKey))
+                return null;
+            return styleDatabase.GetStyle(swordArtStyleKey);
+        }
         
         /// <summary>
         /// 무기 타입 가져오기 (ItemTypeDatabase에서 조회)
-        /// </summary>
-        public WeaponTypeData GetWeaponType(ItemTypeDatabase typeDatabase)
+        /// </summary]
+        public WeaponTypeEntry GetWeaponType(ItemTypeDatabase typeDatabase)
         {
             if (typeDatabase == null || string.IsNullOrEmpty(weaponTypeKey))
                 return null;
@@ -89,8 +100,8 @@ namespace BladeAction.Item
         
         /// <summary>
         /// 방어구 타입 가져오기 (ItemTypeDatabase에서 조회)
-        /// </summary>
-        public ArmorTypeData GetArmorType(ItemTypeDatabase typeDatabase)
+        /// </summary]
+        public ArmorTypeEntry GetArmorType(ItemTypeDatabase typeDatabase)
         {
             if (typeDatabase == null || string.IsNullOrEmpty(armorTypeKey))
                 return null;
@@ -100,8 +111,8 @@ namespace BladeAction.Item
         
         /// <summary>
         /// 보조장비 타입 가져오기 (ItemTypeDatabase에서 조회)
-        /// </summary>
-        public AccessoryTypeData GetAccessoryType(ItemTypeDatabase typeDatabase)
+        /// </summary]
+        public AccessoryTypeEntry GetAccessoryType(ItemTypeDatabase typeDatabase)
         {
             if (typeDatabase == null || string.IsNullOrEmpty(accessoryTypeKey))
                 return null;

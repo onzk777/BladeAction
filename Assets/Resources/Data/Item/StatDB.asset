@@ -16,180 +16,216 @@ MonoBehaviour:
   - tableKey: Test_StraightSword_1
     stats:
       attackPower: 5
-      blockEfficiency: 0
-      blockPoiseConsumption: 0
-      parryEfficiency: 0
+      blockEfficiency: 0.571
+      blockPoiseConsumption: 15
+      parryEfficiency: 1
       parryPoiseConsumption: 0
-      parryPoiseAttackPower: 0
+      parryPoiseAttackPower: 20
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 1"
   - tableKey: Test_StraightSword_2
     stats:
       attackPower: 6
-      blockEfficiency: 0
-      blockPoiseConsumption: 0
-      parryEfficiency: 0
-      parryPoiseConsumption: 0
+      blockEfficiency: 1
+      blockPoiseConsumption: 10
+      parryEfficiency: 1
+      parryPoiseConsumption: 3
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 2"
   - tableKey: Test_StraightSword_3
     stats:
       attackPower: 7
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 3"
   - tableKey: Test_StraightSword_4
     stats:
       attackPower: 8
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 4"
   - tableKey: Test_StraightSword_5
     stats:
       attackPower: 9
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 5"
   - tableKey: Test_StraightSword_6
     stats:
       attackPower: 10
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 6"
   - tableKey: Test_StraightSword_7
     stats:
       attackPower: 11
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 7"
   - tableKey: Test_StraightSword_8
     stats:
       attackPower: 12
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 8"
   - tableKey: Test_StraightSword_9
     stats:
       attackPower: 13
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 9"
   - tableKey: Test_StraightSword_10
     stats:
       attackPower: 14
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 10"
   - tableKey: Test_StraightSword_11
     stats:
       attackPower: 15
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 11"
   - tableKey: Test_StraightSword_12
     stats:
       attackPower: 16
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 12"
   - tableKey: Test_StraightSword_13
     stats:
       attackPower: 17
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 13"
   - tableKey: Test_StraightSword_14
     stats:
       attackPower: 18
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 14"
   - tableKey: Test_StraightSword_15
     stats:
       attackPower: 19
-      blockEfficiency: 0
+      blockEfficiency: 50
       blockPoiseConsumption: 0
-      parryEfficiency: 0
+      parryEfficiency: 80
       parryPoiseConsumption: 0
       parryPoiseAttackPower: 0
       maxHP: 0
       damageReduction: 0
       poise: 0
-    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC784\uC2DC \uB370\uC774\uD130"
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80 15"
+  - tableKey: Test_CurvedBlade_1
+    stats:
+      attackPower: 15
+      blockEfficiency: 40
+      blockPoiseConsumption: 15
+      parryEfficiency: 90
+      parryPoiseConsumption: 0
+      parryPoiseAttackPower: 0
+      maxHP: 0
+      damageReduction: 0
+      poise: 0
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uACE1\uAC80"
+  - tableKey: Test_Armor_Cloth
+    stats:
+      attackPower: 0
+      blockEfficiency: 0
+      blockPoiseConsumption: 0
+      parryEfficiency: 0
+      parryPoiseConsumption: 0
+      parryPoiseAttackPower: 0
+      maxHP: 10
+      damageReduction: 0
+      poise: 10
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uCC9C\uC637"
+  - tableKey: Test_Armor_Metal
+    stats:
+      attackPower: 0
+      blockEfficiency: 0
+      blockPoiseConsumption: -10
+      parryEfficiency: 0
+      parryPoiseConsumption: -5
+      parryPoiseAttackPower: 0
+      maxHP: 25
+      damageReduction: 5
+      poise: 15
+    description: "\uD14C\uC2A4\uD2B8\uC6A9 \uAE08\uC18D \uAC11\uC637"

@@ -10,16 +10,16 @@ namespace BladeAction.Item
         public float attackPower = 0f;
         
         [Header("막기 관련")]
-        [Tooltip("막기 효율 (%)")]
-        [Range(0f, 100f)]
+        [Tooltip("막기 효율 (ratio, 내부 0~1, 표시 %)")]
+        [BladeAction.StatLimit("blockEfficiency")]
         public float blockEfficiency = 0f;
         
         [Tooltip("막기 Poise 소모량")]
         public float blockPoiseConsumption = 0f;
         
         [Header("쳐내기 관련")]
-        [Tooltip("쳐내기 효율 (%)")]
-        [Range(0f, 100f)]
+        [Tooltip("쳐내기 효율 (ratio, 내부 0~1, 표시 %)")]
+        [BladeAction.StatLimit("parryEfficiency")]
         public float parryEfficiency = 0f;
         
         [Tooltip("쳐내기 Poise 소모량")]
@@ -32,11 +32,12 @@ namespace BladeAction.Item
         [Tooltip("HP 증가량")]
         public float maxHP = 0f;
         
-        [Tooltip("피해 감소율 (%)")]
-        [Range(0f, 100f)]
+        [Tooltip("피해 감소율 (ratio, 내부 0~1, 표시 %)")]
+        [BladeAction.StatLimit("damageReduction")]
         public float damageReduction = 0f;
         
         [Tooltip("Poise 증가량")]
+        [BladeAction.StatLimit("maxPoise")]
         public float poise = 0f;
         
         /// <summary>

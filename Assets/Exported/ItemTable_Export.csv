@@ -1,4 +1,8 @@
-﻿Key,Name,Description,Type,MaxStack,StatKey,WeaponTypeKey,ArmorTypeKey,AccessoryTypeKey
-itm_weapon_test1,테스트용 직검,테스트용 직검이다.,Weapon,5,Test_StraightSword,Sword,,
-itm_weapon_test2,테스트용 직검,테스트용 직검이다.,Weapon,1,Test_StraightSword,Sword,,
-itm_swordartstyle_imperial,제국 검술 유파,제국의 검술은 세계 제일!,SwordArtStyle,1,Test_StraightSword_2,,,
+﻿Key,Name,Description,Type,MaxStack,StatKey,WeaponTypeKey,ArmorTypeKey,AccessoryTypeKey,SwordArtStyleKey
+itm_weapon_test1,테스트용 직검,테스트용 직검이다.,Weapon,5,Test_StraightSword_1,StraightSword,,,
+itm_weapon_test2,테스트용 쌍검,테스트용 쌍검이다.,Weapon,1,Test_StraightSword_2,StraightSword,,,
+itm_swordartstyle_imperial,제국 검술 유파,제국 정규 검술 유파의 비전 두루마리이다.,SwordArtStyle,1,Test_StraightSword_2,,,,EmpireBladeWorks
+itm_swordartstyle_imperial,제국 검술 유파 2,제국 정규 검술 유파의 비전 두루마리이다.,SwordArtStyle,1,Test_StraightSword_2,,,,EmpireBladeWorks2
+itm_swordartstyle_street,길거리 막싸움,험악한 뒷골목을 전전하는 불량배들이 자연스럽게 터득하는 검술.,SwordArtStyle,1,Test_StraightSword_2,,,,StreetBlade
+itm_armor_test1,철갑옷,매우 튼튼한 철갑옷,Armor,0,Test_Armor_Metal,,MetalArmor,,
+itm_accessory_test1,돌반지,돌로 만든 싸구려 반지,Accessory,0,Test_Armor_Metal,,,Ring,

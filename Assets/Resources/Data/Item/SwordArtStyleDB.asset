@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ec091384baefa24396a2486d8b75ac3, type: 3}
+  m_Name: SwordArtStyleDB
+  m_EditorClassIdentifier: Assembly-CSharp::SwordArtStyleDatabase
+  styles:
+  - key: EmpireBladeWorks
+    displayName: "\uC81C\uAD6D \uC815\uADDC \uAC80\uC220"
+    asset: {fileID: 11400000, guid: 1b844bdf3947de140b680e74e35a23ae, type: 2}
+  - key: StreetBlade
+    displayName: "\uAE38\uAC70\uB9AC \uCE7C\uC2F8\uC6C0"
+    asset: {fileID: 11400000, guid: 0b9381922b6f4064c9fa76ce99959125, type: 2}

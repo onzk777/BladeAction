@@ -77,9 +77,9 @@ namespace BladeAction.Item.Editor
             GUI.enabled = true;
             
             GUI.enabled = loadedData.Count > 0 && itemDatabase != null;
-            if (GUILayout.Button("Import to Database (전체 교체)", GUILayout.Height(30)))
+            if (GUILayout.Button("Import (Merge 업데이트)", GUILayout.Height(30)))
             {
-                ImportToDatabase();
+                ImportMergeToDatabase();
             }
             GUI.enabled = true;
             
@@ -127,6 +127,57 @@ namespace BladeAction.Item.Editor
                 EditorGUILayout.EndScrollView();
             }
         }
+        /// <summary>
+        /// ItemDatabase로 임포트 (머지 업데이트 방식)
+        /// - 기존 아이템은 유지하고, CSV 필드만 갱신(빈 값은 미변경)
+        /// - Unity 전용 필드(icon, appearance 등)는 보존
+        /// - 신규 키는 추가
+        /// </summary>
+        private void ImportMergeToDatabase()
+        {
+            if (itemDatabase == null)
+            {
+                EditorUtility.DisplayDialog("오류", "ItemDatabase를 선택해주세요.", "확인");
+                return;
+            }
+            if (loadedData.Count == 0)
+            {
+                EditorUtility.DisplayDialog("오류", "먼저 CSV를 로드해주세요.", "확인");
+                return;
+            }
+
+            int updated = 0;
+            int added = 0;
+            foreach (var csv in loadedData)
+            {
+                if (string.IsNullOrEmpty(csv.Key))
+                    continue;
+                var existing = itemDatabase.GetItem(csv.Key);
+                if (existing != null)
+                {
+                    ItemMapper.UpdateItem(existing, csv);
+                    updated++;
+                }
+                else
+                {
+                    var created = ItemMapper.MapCSVToItem(csv);
+                    if (created != null)
+                    {
+                        itemDatabase.items.Add(created);
+                        added++;
+                    }
+                }
+            }
+
+            EditorUtility.SetDirty(itemDatabase);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            EditorUtility.DisplayDialog("성공",
+                $"✅ Merge Import 완료\n업데이트: {updated}개, 추가: {added}개\nUnity Asset 참조(아이콘 등)는 보존되었습니다.",
+                "확인");
+        }
+
         
         /// <summary>
         /// CSV 파일 로드
@@ -153,71 +204,7 @@ namespace BladeAction.Item.Editor
             Repaint();
         }
         
-        /// <summary>
-        /// ItemDatabase로 임포트 (전체 교체 방식)
-        /// </summary>
-        private void ImportToDatabase()
-        {
-            if (itemDatabase == null)
-            {
-                EditorUtility.DisplayDialog("오류", "ItemDatabase를 선택해주세요.", "확인");
-                return;
-            }
-            
-            if (loadedData.Count == 0)
-            {
-                EditorUtility.DisplayDialog("오류", "먼저 CSV를 로드해주세요.", "확인");
-                return;
-            }
-            
-            // 경고: 기존 데이터가 모두 삭제됨
-            if (itemDatabase.items.Count > 0)
-            {
-                bool confirm = EditorUtility.DisplayDialog(
-                    "경고",
-                    $"기존 아이템 {itemDatabase.items.Count}개가 삭제되고 CSV 데이터로 완전히 교체됩니다.\n\n" +
-                    $"주의: Unity Asset 참조(icon, weaponType 등)는 초기화됩니다!\n\n" +
-                    $"계속하시겠습니까?",
-                    "예, 교체합니다",
-                    "취소"
-                );
-                
-                if (!confirm)
-                {
-                    return;
-                }
-            }
-            
-            // 기존 데이터 전체 삭제
-            itemDatabase.items.Clear();
-            
-            // CSV 데이터 전체 추가
-            int importedCount = 0;
-            
-            foreach (var csvData in loadedData)
-            {
-                var newItem = ItemMapper.MapCSVToItem(csvData);
-                if (newItem != null)
-                {
-                    itemDatabase.items.Add(newItem);
-                    importedCount++;
-                }
-            }
-            
-            // 변경사항 저장
-            EditorUtility.SetDirty(itemDatabase);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-            
-            string message = $"✅ 임포트 완료!\n\n" +
-                           $"CSV 데이터로 완전히 교체되었습니다.\n" +
-                           $"임포트된 아이템: {importedCount}개\n\n" +
-                           $"⚠️ Unity Asset 참조(icon, weaponType 등)는\n" +
-                           $"ItemDatabase Inspector에서 수동으로 설정해주세요.";
-            
-            EditorUtility.DisplayDialog("성공", message, "확인");
-            Debug.Log(message);
-        }
+        // 전체 교체 Import는 요구사항에 따라 제거됨
         
         /// <summary>
         /// ItemDatabase를 CSV로 Export
@@ -251,34 +238,14 @@ namespace BladeAction.Item.Editor
             
             try
             {
-                using (var writer = new System.IO.StreamWriter(savePath, false, System.Text.Encoding.UTF8))
-                {
-                    // 헤더 작성
-                    writer.WriteLine("Key,Name,Description,Type,MaxStack,StatKey,WeaponTypeKey,ArmorTypeKey,AccessoryTypeKey");
-                    
-                    // 데이터 작성
-                    foreach (var item in itemDatabase.items)
-                    {
-                        if (item == null || string.IsNullOrEmpty(item.itemKey))
-                            continue;
-                        
-                        var line = string.Format(
-                            "{0},{1},{2},{3},{4},{5},{6},{7},{8}",
-                            EscapeCSV(item.itemKey),
-                            EscapeCSV(item.itemName),
-                            EscapeCSV(item.description),
-                            ItemMapper.ItemTypeToString(item.itemType),
-                            item.maxStack,
-                            EscapeCSV(item.statTableKey),
-                            EscapeCSV(item.weaponTypeKey),
-                            EscapeCSV(item.armorTypeKey),
-                            EscapeCSV(item.accessoryTypeKey)
-                        );
-                        
-                        writer.WriteLine(line);
-                    }
-                }
-                
+                // 디렉터리 보장
+                var dir = System.IO.Path.GetDirectoryName(savePath);
+                if (!System.IO.Directory.Exists(dir))
+                    System.IO.Directory.CreateDirectory(dir);
+
+                // 공유 위반 대응: 재시도 + 대체 파일명 저장
+                WriteCsvWithRetry(savePath);
+
                 string message = $"✅ Export 완료!\n\n" +
                                $"파일: {savePath}\n" +
                                $"아이템 개수: {itemDatabase.items.Count}개\n\n" +
@@ -315,6 +282,83 @@ namespace BladeAction.Item.Editor
             }
             
             return value;
+        }
+
+        private void WriteCsvWithRetry(string path)
+        {
+            const int maxRetry = 5;
+            const int retryDelayMs = 200;
+            int attempt = 0;
+
+            while (true)
+            {
+                try
+                {
+                    using (var fs = new System.IO.FileStream(path, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None))
+                    using (var writer = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8))
+                    {
+                        writer.WriteLine("Key,Name,Description,Type,MaxStack,StatKey,WeaponTypeKey,ArmorTypeKey,AccessoryTypeKey,SwordArtStyleKey");
+                        foreach (var item in itemDatabase.items)
+                        {
+                            if (item == null || string.IsNullOrEmpty(item.itemKey))
+                                continue;
+                            var line = string.Format(
+                                "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}",
+                                EscapeCSV(item.itemKey),
+                                EscapeCSV(item.itemName),
+                                EscapeCSV(item.description),
+                                ItemMapper.ItemTypeToString(item.itemType),
+                                item.maxStack,
+                                EscapeCSV(item.statTableKey),
+                                EscapeCSV(item.weaponTypeKey),
+                                EscapeCSV(item.armorTypeKey),
+                                EscapeCSV(item.accessoryTypeKey),
+                                EscapeCSV(item.swordArtStyleKey)
+                            );
+                            writer.WriteLine(line);
+                        }
+                    }
+                    return;
+                }
+                catch (System.IO.IOException ioEx) when (ioEx.HResult == unchecked((int)0x80070020) || ioEx.Message.Contains("Sharing violation"))
+                {
+                    attempt++;
+                    if (attempt >= maxRetry)
+                    {
+                        // 대체 파일명으로 저장 시도 (타임스탬프)
+                        var dir = System.IO.Path.GetDirectoryName(path);
+                        var name = System.IO.Path.GetFileNameWithoutExtension(path);
+                        var ext = System.IO.Path.GetExtension(path);
+                        var alt = System.IO.Path.Combine(dir, $"{name}_{System.DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+                        using (var fs = new System.IO.FileStream(alt, System.IO.FileMode.Create, System.IO.FileAccess.Write, System.IO.FileShare.None))
+                        using (var writer = new System.IO.StreamWriter(fs, System.Text.Encoding.UTF8))
+                        {
+                            writer.WriteLine("Key,Name,Description,Type,MaxStack,StatKey,WeaponTypeKey,ArmorTypeKey,AccessoryTypeKey,SwordArtStyleKey");
+                            foreach (var item in itemDatabase.items)
+                            {
+                                if (item == null || string.IsNullOrEmpty(item.itemKey))
+                                    continue;
+                                var line = string.Format(
+                                    "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}",
+                                    EscapeCSV(item.itemKey),
+                                    EscapeCSV(item.itemName),
+                                    EscapeCSV(item.description),
+                                    ItemMapper.ItemTypeToString(item.itemType),
+                                    item.maxStack,
+                                    EscapeCSV(item.statTableKey),
+                                    EscapeCSV(item.weaponTypeKey),
+                                    EscapeCSV(item.armorTypeKey),
+                                    EscapeCSV(item.accessoryTypeKey),
+                                    EscapeCSV(item.swordArtStyleKey)
+                                );
+                                writer.WriteLine(line);
+                            }
+                        }
+                        throw new System.Exception($"원본 경로가 다른 프로세스에서 사용 중입니다. 대체 파일로 저장했습니다: {alt}");
+                    }
+                    System.Threading.Thread.Sleep(retryDelayMs);
+                }
+            }
         }
     }
 }

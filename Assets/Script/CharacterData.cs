@@ -14,9 +14,16 @@ public class CharacterData : ScriptableObject
     public int baseATK = 20;
     [Tooltip("기본 방어력")]
     public int baseDR = 0;
-    [Tooltip("치명타 확률 (%)")]
+    [Tooltip("치명타 확률 (0~1)")]
+    [Range(0f, 1f)]
+    public float baseCritChance = 0f;
+    [Tooltip("치명타 배율 (배수, 예: 1.5 = 150%)")]
+    public float baseCritMultiplier = 1.5f;
+    
+    // 이하 필드는 구형(호환용) - 마이그레이션 후 사용하지 않음
+    [Tooltip("치명타 확률 (%) - Deprecated")]
     public int baseCrit = 0;
-    [Tooltip("치명타 배율 (%)")]
+    [Tooltip("치명타 배율 (%) - Deprecated")]
     public int baseCritRatio = 150;
     [Tooltip("최대 포이즈")]
     public int baseMaxPoise = 100;
@@ -34,8 +41,8 @@ public class CharacterData : ScriptableObject
     public int MaxHP => baseMaxHP;
     public int ATK => baseATK;
     public int DR => baseDR;
-    public int Crit => baseCrit;
-    public int CritRatio => baseCritRatio;
+    public float CritChance => baseCritChance;
+    public float CritMultiplier => baseCritMultiplier;
     public int MaxPoise => baseMaxPoise;
     public int ParryPoiseDamage => baseParryPoiseDamage;
 

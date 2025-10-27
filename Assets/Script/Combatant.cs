@@ -26,8 +26,8 @@ public abstract class Combatant
     public int MaxHP => CharacterData?.MaxHP ?? 0;
     public int ATK => CharacterData?.ATK ?? 0;
     public int DR => CharacterData?.DR ?? 0;
-    public int Crit => CharacterData?.Crit ?? 0;
-    public int CritRatio => CharacterData?.CritRatio ?? 100;
+    public float CritChance => CharacterData?.CritChance ?? 0f; // 0~1
+    public float CritMultiplier => CharacterData?.CritMultiplier ?? 1.5f; // multiplier
     public int MaxPoise => CharacterData?.MaxPoise ?? 0;
     public int ParryPoiseDamage => CharacterData?.ParryPoiseDamage ?? 25;
     
@@ -138,7 +138,8 @@ public abstract class Combatant
     /// </summary>
     public bool IsCriticalHit()
     {
-        return UnityEngine.Random.Range(0, 100) < Crit;
+        // 0.0~1.0f 확률 기반
+        return UnityEngine.Random.value < CritChance;
     }
     
     /// <summary>
@@ -146,7 +147,7 @@ public abstract class Combatant
     /// </summary>
     public int CalculateCriticalDamage(int baseDamage)
     {
-        return Mathf.RoundToInt(baseDamage * CritRatio / 100f);
+        return Mathf.RoundToInt(baseDamage * CritMultiplier);
     }
     
     /// <summary>

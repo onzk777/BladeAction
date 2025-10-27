@@ -33,6 +33,13 @@ namespace BladeAction.UI
         
         [Tooltip("설명(스크롤뷰 포함)을 감싸는 루트 오브젝트 (예: ItemDescription)")]
         [SerializeField] private GameObject descriptionContainer;
+
+        [Header("스탯 동적 생성")]
+        [Tooltip("스탯 1줄 표시용 프리팹 (예: ItemDetail_StatInfo)")]
+        [SerializeField] private GameObject statInfoItemPrefab;
+
+        // 동적 생성된 스탯 라인 캐시
+        private readonly List<TextMeshProUGUI> spawnedStatLines = new List<TextMeshProUGUI>();
         
         [Header("UI 컴포넌트 - 설명")]
         [Tooltip("아이템 설명 텍스트")]
@@ -204,16 +211,9 @@ namespace BladeAction.UI
         /// </summary>
         private void ShowStatInfo(BladeAction.Item.Item itemData)
         {
-            // 모든 스탯 텍스트 초기화
-            foreach (var statText in statInfoTexts)
-            {
-                if (statText != null)
-                {
-                    statText.text = "";
-                    statText.enabled = false;
-                }
-            }
-            
+            // 기존 동적 라인 비활성화 (풀 유지)
+            HideAllStatLines();
+
             // 장비 아이템인 경우 스탯 표시
             if (itemData.itemType == ItemType.Weapon || 
                 itemData.itemType == ItemType.Armor || 
@@ -224,32 +224,43 @@ namespace BladeAction.UI
                 {
                     List<string> statStrings = new List<string>();
                     
-                    // 스탯 수집
-                    if (stats.attackPower > 0)
-                        statStrings.Add($"공격력: +{stats.attackPower:F1}");
+                    // 스탯 수집 (0 숨김, 음수/양수만 표시)
+                    if (stats.attackPower != 0)
+                        statStrings.Add($"공격력: {FormatSigned(stats.attackPower, 1)}");
+
+                    if (stats.blockEfficiency != 0)
+                        statStrings.Add($"막기 효율: {FormatSignedPercent(stats.blockEfficiency)}%");
+
+                    if (stats.blockPoiseConsumption != 0)
+                        statStrings.Add($"막기 Poise 소모량: {FormatSigned(stats.blockPoiseConsumption, 1)}");
+
+                    if (stats.parryEfficiency != 0)
+                        statStrings.Add($"쳐내기 효율: {FormatSignedPercent(stats.parryEfficiency)}%");
+
+                    if (stats.parryPoiseConsumption != 0)
+                        statStrings.Add($"쳐내기 Poise 소모량: {FormatSigned(stats.parryPoiseConsumption, 1)}");
+
+                    if (stats.parryPoiseAttackPower != 0)
+                        statStrings.Add($"쳐내기 Poise 공격력: {FormatSigned(stats.parryPoiseAttackPower, 1)}");
+
+                    if (stats.maxHP != 0)
+                        statStrings.Add($"최대 HP: {FormatSigned(stats.maxHP, 0)}");
+
+                    if (stats.damageReduction != 0)
+                        statStrings.Add($"피해 감소: {FormatSignedPercent(stats.damageReduction)}%");
+
+                    if (stats.poise != 0)
+                        statStrings.Add($"Poise: {FormatSigned(stats.poise, 0)}");
                     
-                    if (stats.blockEfficiency > 0)
-                        statStrings.Add($"막기 효율: +{stats.blockEfficiency:F1}%");
-                    
-                    if (stats.parryEfficiency > 0)
-                        statStrings.Add($"쳐내기 효율: +{stats.parryEfficiency:F1}%");
-                    
-                    if (stats.maxHP > 0)
-                        statStrings.Add($"최대 HP: +{stats.maxHP:F0}");
-                    
-                    if (stats.damageReduction > 0)
-                        statStrings.Add($"피해 감소: +{stats.damageReduction:F1}%");
-                    
-                    if (stats.poise > 0)
-                        statStrings.Add($"Poise: +{stats.poise:F0}");
-                    
-                    // 스탯 텍스트 설정 (최대 6개)
-                    for (int i = 0; i < statStrings.Count && i < statInfoTexts.Length; i++)
+                    // 필요 개수만큼 라인 확보 후 채우기
+                    EnsureStatLineCount(statStrings.Count);
+                    for (int i = 0; i < statStrings.Count; i++)
                     {
-                        if (statInfoTexts[i] != null)
+                        var line = spawnedStatLines[i];
+                        if (line != null)
                         {
-                            statInfoTexts[i].text = statStrings[i];
-                            statInfoTexts[i].enabled = true;
+                            line.text = statStrings[i];
+                            line.gameObject.SetActive(true);
                         }
                     }
                 }
@@ -337,14 +348,7 @@ namespace BladeAction.UI
             }
             
             // 스탯 텍스트 숨김
-            foreach (var statText in statInfoTexts)
-            {
-                if (statText != null)
-                {
-                    statText.text = "";
-                    statText.enabled = false;
-                }
-            }
+            HideAllStatLines();
             
             // 설명 초기화
             if (descriptionText != null)
@@ -556,6 +560,64 @@ namespace BladeAction.UI
             Debug.Log($"  - Inventory: {(inventory != null ? inventory.inventoryName : "null")}");
         }
         
+        #endregion
+
+        #region 내부 유틸리티(동적 스탯)
+
+        private string FormatSigned(float value, int decimals)
+        {
+            // +기호 포함, 소수점 자릿수 선택 (F0 / F1 등)
+            string format = decimals <= 0 ? "+0" : "+0.".PadRight(3 + decimals, '0');
+            // 음수도 동일 포맷 사용 (표기는 자동 부호)
+            return value.ToString(format);
+        }
+
+        private string FormatSignedPercent(float ratio)
+        {
+            // 0.0~1.0f → 0~100, 정수 표기(F0), 부호 포함
+            float percent = ratio * 100f;
+            return percent.ToString("+0;−0"); // 양수 +0, 음수는 유니코드 마이너스 기호 사용
+        }
+
+        private void EnsureStatLineCount(int requiredCount)
+        {
+            if (statsContainer == null || statInfoItemPrefab == null)
+                return;
+
+            // 부족하면 생성
+            while (spawnedStatLines.Count < requiredCount)
+            {
+                var go = Instantiate(statInfoItemPrefab, statsContainer.transform);
+                var text = go.GetComponentInChildren<TextMeshProUGUI>();
+                if (text == null)
+                {
+                    // 프리팹 구조가 TextMeshProUGUI 하나를 포함한다는 전제
+                    text = go.AddComponent<TextMeshProUGUI>();
+                }
+                go.SetActive(false);
+                spawnedStatLines.Add(text);
+            }
+
+            // 남는 라인은 비활성화
+            for (int i = requiredCount; i < spawnedStatLines.Count; i++)
+            {
+                if (spawnedStatLines[i] != null)
+                    spawnedStatLines[i].gameObject.SetActive(false);
+            }
+        }
+
+        private void HideAllStatLines()
+        {
+            foreach (var line in spawnedStatLines)
+            {
+                if (line != null)
+                {
+                    line.text = string.Empty;
+                    line.gameObject.SetActive(false);
+                }
+            }
+        }
+
         #endregion
     }
 }

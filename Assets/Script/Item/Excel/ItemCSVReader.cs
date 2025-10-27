@@ -24,32 +24,56 @@ namespace BladeAction.Item.Excel
             
             try
             {
-                var lines = File.ReadAllLines(filePath);
-                
-                if (lines.Length < 2) // 헤더 + 최소 1개 데이터
+                // 공유 위반(엑셀 열림 등) 상황에서도 읽을 수 있도록 ReadWrite 공유 + 재시도
+                const int maxRetry = 5;
+                const int retryDelayMs = 200;
+                int attempt = 0;
+
+                while (true)
                 {
-                    Debug.LogWarning("CSV 파일이 비어있거나 데이터가 없습니다.");
-                    return result;
-                }
-                
-                // 첫 줄은 헤더이므로 건너뛰기
-                for (int i = 1; i < lines.Length; i++)
-                {
-                    var line = lines[i].Trim();
-                    
-                    // 빈 줄 건너뛰기
-                    if (string.IsNullOrEmpty(line))
-                        continue;
-                    
-                    var row = ParseLine(line, i);
-                    if (row != null)
+                    try
                     {
-                        result.Add(row);
+                        using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        using (var reader = new StreamReader(fs))
+                        {
+                            int lineIndex = 0;
+                            string header = reader.ReadLine(); // 헤더
+                            if (header == null)
+                            {
+                                Debug.LogWarning("CSV 파일이 비어있습니다.");
+                                return result;
+                            }
+
+                            // 헤더 컬럼 수 점검 (유연 처리)
+                            var headerCols = SplitCSVLine(header);
+                            if (headerCols.Length < 9)
+                            {
+                                Debug.LogWarning($"CSV 헤더 컬럼 수가 예상보다 적습니다({headerCols.Length}). 파싱은 계속 시도합니다.");
+                            }
+
+                            string line;
+                            while ((line = reader.ReadLine()) != null)
+                            {
+                                lineIndex++;
+                                line = line.Trim();
+                                if (string.IsNullOrEmpty(line))
+                                    continue;
+                                var row = ParseLine(line, lineIndex + 1); // 실제 라인 번호(헤더 포함)
+                                if (row != null)
+                                    result.Add(row);
+                            }
+                        }
+                        Debug.Log($"✅ CSV 로드 성공: {result.Count}개의 Item 데이터");
+                        return result;
+                    }
+                    catch (IOException ioEx) when (IsSharingViolation(ioEx))
+                    {
+                        attempt++;
+                        if (attempt >= maxRetry)
+                            throw;
+                        System.Threading.Thread.Sleep(retryDelayMs);
                     }
                 }
-                
-                Debug.Log($"✅ CSV 로드 성공: {result.Count}개의 Item 데이터");
-                return result;
             }
             catch (System.Exception ex)
             {
@@ -73,17 +97,42 @@ namespace BladeAction.Item.Excel
                     return null;
                 }
                 
+                // 트림된 값들 보관
+                string v0 = values[0].Trim();
+                string v1 = values[1].Trim();
+                string v2 = values[2].Trim();
+                string v3 = values[3].Trim();
+                string v4 = values[4].Trim();
+                string v5 = values[5].Trim();
+                string v6 = values[6].Trim();
+                string v7 = values[7].Trim();
+                string v8 = values[8].Trim();
+                string v9 = values.Length > 9 ? values[9].Trim() : "";
+
                 return new ItemCSVData
                 {
-                    Key = values[0].Trim(),
-                    Name = values[1].Trim(),
-                    Description = values[2].Trim(),
-                    Type = values[3].Trim(),
-                    MaxStack = ParseInt(values[4], lineNumber, "MaxStack"),
-                    StatKey = values[5].Trim(),
-                    WeaponTypeKey = values[6].Trim(),
-                    ArmorTypeKey = values[7].Trim(),
-                    AccessoryTypeKey = values[8].Trim()
+                    Key = v0,
+                    Name = v1,
+                    Description = v2,
+                    Type = v3,
+                    RequiredLevel = 0, // (옵션) 현재 포맷에 없으면 0
+                    MaxStack = ParseInt(v4, lineNumber, "MaxStack"),
+                    StatKey = v5,
+                    WeaponTypeKey = v6,
+                    ArmorTypeKey = v7,
+                    AccessoryTypeKey = v8,
+                    SwordArtStyleKey = v9,
+
+                    HasName = !string.IsNullOrEmpty(v1),
+                    HasDescription = !string.IsNullOrEmpty(v2),
+                    HasType = !string.IsNullOrEmpty(v3),
+                    HasRequiredLevel = false, // 컬럼 미포함
+                    HasMaxStack = !string.IsNullOrEmpty(v4),
+                    HasStatKey = !string.IsNullOrEmpty(v5),
+                    HasWeaponTypeKey = !string.IsNullOrEmpty(v6),
+                    HasArmorTypeKey = !string.IsNullOrEmpty(v7),
+                    HasAccessoryTypeKey = !string.IsNullOrEmpty(v8),
+                    HasSwordArtStyleKey = !string.IsNullOrEmpty(v9)
                 };
             }
             catch (System.Exception ex)
@@ -142,6 +191,13 @@ namespace BladeAction.Item.Excel
             
             Debug.LogWarning($"라인 {lineNumber}, 필드 '{fieldName}': int 변환 실패 ('{value}') - 0으로 처리");
             return 0;
+        }
+
+        private static bool IsSharingViolation(IOException ex)
+        {
+            // HResult 0x20 또는 0x21 계열이 공유 위반인 경우가 많음
+            const int ERROR_SHARING_VIOLATION = unchecked((int)0x80070020);
+            return ex.HResult == ERROR_SHARING_VIOLATION || ex.Message.Contains("Sharing violation");
         }
     }
 }

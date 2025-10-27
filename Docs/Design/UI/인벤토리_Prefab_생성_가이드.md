@@ -7,11 +7,12 @@ Unity 에디터에서 인벤토리 UI Prefab을 생성하는 방법을 단계별
 
 ## 🎯 생성할 Prefab 목록
 
-### 필수 Prefab (4개)
+### 필수 Prefab (5개)
 1. **ItemSlotUI** - 아이템 슬롯
 2. **EquipmentSlotUI** - 장비 슬롯  
-3. **EquippedSwordArtStyleUI** - 검술 아이템 ⭐ NEW
-4. **MainInventoryPanel** - 전체 인벤토리 UI
+3. **ActionCommandItemUI** - 검술 아이템 ⭐ NEW
+4. **ItemDetail_StatInfo** - 스탯 1줄 표시 (동적 생성용) ⭐ NEW (2025.10.27)
+5. **MainInventoryPanel** - 전체 인벤토리 UI
 
 ---
 

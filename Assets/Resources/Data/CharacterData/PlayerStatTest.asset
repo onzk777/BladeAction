@@ -16,6 +16,8 @@ MonoBehaviour:
   baseMaxHP: 100
   baseATK: 35
   baseDR: 0
+  baseCritChance: 0
+  baseCritMultiplier: 1.5
   baseCrit: 0
   baseCritRatio: 150
   baseMaxPoise: 100

@@ -98,8 +98,9 @@ namespace BladeAction.UI
                 return;
             }
             
-            // 유파 ScriptableObject 가져오기
-            var swordArtStyle = styleItemData.swordArtStyle;
+            // 유파 ScriptableObject 가져오기 (키 기반)
+            var db = EnsureStyleDatabase(styleItemData.swordArtStyleKey);
+            var swordArtStyle = styleItemData.GetSwordArtStyle(db);
             if (swordArtStyle == null)
             {
                 ShowEmptySlot();
@@ -146,7 +147,10 @@ namespace BladeAction.UI
             ShowCommandList(styleData);
             
             if (enableDebugLog)
-                Debug.Log($"[EquippedSwordArtStyleUI] 유파 표시: {styleData.styleName} ({styleData.CommandSet.Count}개 검술)");
+            {
+                int cmdCount = styleData != null && styleData.ActionCommands != null ? styleData.ActionCommands.Count : 0;
+                Debug.Log($"[EquippedSwordArtStyleUI] 유파 표시: {styleData.styleName} ({cmdCount}개 검술)");
+            }
         }
         
         /// <summary>
@@ -161,7 +165,8 @@ namespace BladeAction.UI
             ClearCommandList();
             
             // 검술 목록이 없으면 종료
-            if (styleData.CommandSet == null || styleData.CommandSet.Count == 0)
+            var commands = styleData.ActionCommands;
+            if (commands == null || commands.Count == 0)
             {
                 if (enableDebugLog)
                     Debug.LogWarning($"[EquippedSwordArtStyleUI] {styleData.styleName}에 검술이 없습니다.");
@@ -169,7 +174,7 @@ namespace BladeAction.UI
             }
             
             // 검술 아이템 UI 생성
-            foreach (var command in styleData.CommandSet)
+            foreach (var command in commands)
             {
                 if (command == null)
                     continue;
@@ -277,6 +282,32 @@ namespace BladeAction.UI
         }
         
         #endregion
+        
+        private static SwordArtStyleDatabase cachedStyleDatabase;
+        private SwordArtStyleDatabase EnsureStyleDatabase(string preferredKey)
+        {
+            if (cachedStyleDatabase != null)
+                return cachedStyleDatabase;
+
+            // Resources에서 자동 검색 (파일명/경로 무관)
+            var found = Resources.LoadAll<SwordArtStyleDatabase>(string.Empty);
+            if (found != null && found.Length > 0)
+            {
+                if (!string.IsNullOrEmpty(preferredKey))
+                {
+                    foreach (var db in found)
+                    {
+                        if (db != null && db.ContainsKey(preferredKey))
+                        {
+                            cachedStyleDatabase = db;
+                            return cachedStyleDatabase;
+                        }
+                    }
+                }
+                cachedStyleDatabase = found[0];
+            }
+            return cachedStyleDatabase;
+        }
     }
 }
 

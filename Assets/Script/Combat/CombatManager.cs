@@ -1621,9 +1621,12 @@ public class CombatManager : MonoBehaviour
         
         // 히트별 damageRatio 사용
         float currentHitDamageRatio = command.GetDamageRatio(hitIndex);
-        int baseDamage = Mathf.RoundToInt(attacker.ATK * currentHitDamageRatio);
+        int attackerATK = BladeAction.Combat.StatsCalculationManager.Instance != null 
+            ? BladeAction.Combat.StatsCalculationManager.Instance.GetEffectiveATK(attacker)
+            : attacker.ATK;
+        int baseDamage = Mathf.RoundToInt(attackerATK * currentHitDamageRatio);
         
-        Debug.Log($"[피해량 계산] 기본 피해량: {attacker.ATK} × {currentHitDamageRatio} = {baseDamage}");
+        Debug.Log($"[피해량 계산] 기본 피해량: {attackerATK} × {currentHitDamageRatio} = {baseDamage}");
         
         // 치명타 판정
         bool isCritical = attacker.IsCriticalHit();

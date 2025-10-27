@@ -37,11 +37,11 @@ namespace BladeAction.Item.Excel
                 weaponTypeKey = csvData.WeaponTypeKey,
                 armorTypeKey = csvData.ArmorTypeKey,
                 accessoryTypeKey = csvData.AccessoryTypeKey,
+                swordArtStyleKey = csvData.SwordArtStyleKey,
                 
                 // Unity Asset 참조는 null (Inspector에서 수동 설정)
                 icon = null,
-                appearance = null,
-                swordArtStyle = null
+                appearance = null
             };
             
             return item;
@@ -55,18 +55,19 @@ namespace BladeAction.Item.Excel
             if (existing == null || csvData == null)
                 return;
             
-            // CSV 데이터만 업데이트
-            existing.itemName = csvData.Name;
-            existing.description = csvData.Description;
-            existing.itemType = ParseItemType(csvData.Type);
-            existing.requiredLevel = csvData.RequiredLevel;
-            existing.maxStack = csvData.MaxStack;
-            existing.statTableKey = csvData.StatKey;
-            existing.weaponTypeKey = csvData.WeaponTypeKey;
-            existing.armorTypeKey = csvData.ArmorTypeKey;
-            existing.accessoryTypeKey = csvData.AccessoryTypeKey;
+            // CSV 데이터만 업데이트 (빈 값은 미변경)
+            if (csvData.HasName) existing.itemName = csvData.Name;
+            if (csvData.HasDescription) existing.description = csvData.Description;
+            if (csvData.HasType) existing.itemType = ParseItemType(csvData.Type);
+            if (csvData.HasRequiredLevel) existing.requiredLevel = csvData.RequiredLevel;
+            if (csvData.HasMaxStack) existing.maxStack = csvData.MaxStack;
+            if (csvData.HasStatKey) existing.statTableKey = csvData.StatKey;
+            if (csvData.HasWeaponTypeKey) existing.weaponTypeKey = csvData.WeaponTypeKey;
+            if (csvData.HasArmorTypeKey) existing.armorTypeKey = csvData.ArmorTypeKey;
+            if (csvData.HasAccessoryTypeKey) existing.accessoryTypeKey = csvData.AccessoryTypeKey;
+            if (csvData.HasSwordArtStyleKey) existing.swordArtStyleKey = csvData.SwordArtStyleKey;
             
-            // Unity Asset 참조는 유지! (icon, appearance, swordArtStyle)
+            // Unity Asset 참조는 유지! (icon, appearance)
         }
         
         /// <summary>
