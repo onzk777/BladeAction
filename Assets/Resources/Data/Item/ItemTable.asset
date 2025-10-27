@@ -28,7 +28,7 @@ MonoBehaviour:
     accessoryTypeKey: 
     swordArtStyle: {fileID: 0}
     useStatTable: 1
-    statTableKey: Test_StraightSword
+    statTableKey: Test_StraightSword_1
   - itemKey: itm_weapon_test2
     itemName: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80"
     description: "\uD14C\uC2A4\uD2B8\uC6A9 \uC9C1\uAC80\uC774\uB2E4."
@@ -42,7 +42,7 @@ MonoBehaviour:
     accessoryTypeKey: 
     swordArtStyle: {fileID: 0}
     useStatTable: 1
-    statTableKey: Test_StraightSword
+    statTableKey: Test_StraightSword_2
   - itemKey: itm_swordartstyle_imperial
     itemName: "\uC81C\uAD6D \uAC80\uC220 \uC720\uD30C"
     description: "\uC81C\uAD6D \uC815\uADDC \uAC80\uC220 \uC720\uD30C\uC758 \uBE44\uC804
@@ -56,7 +56,7 @@ MonoBehaviour:
     armorTypeKey: 
     accessoryTypeKey: 
     swordArtStyle: {fileID: 11400000, guid: 1b844bdf3947de140b680e74e35a23ae, type: 2}
-    useStatTable: 1
+    useStatTable: 0
     statTableKey: Test_StraightSword_2
   - itemKey: itm_swordartstyle_street
     itemName: "\uAE38\uAC70\uB9AC \uB9C9\uC2F8\uC6C0"
@@ -71,5 +71,5 @@ MonoBehaviour:
     armorTypeKey: 
     accessoryTypeKey: 
     swordArtStyle: {fileID: 11400000, guid: 1b844bdf3947de140b680e74e35a23ae, type: 2}
-    useStatTable: 1
+    useStatTable: 0
     statTableKey: Test_StraightSword_2

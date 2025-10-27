@@ -23,6 +23,9 @@ namespace BladeAction.UI
         [Tooltip("아이템 그리드 컨테이너 (ItemSlotUI들이 생성될 부모)")]
         [SerializeField] private Transform itemGridContainer;
         
+        [Tooltip("아이템 그리드가 들어있는 ScrollRect")]
+        [SerializeField] private ScrollRect itemScrollRect;
+        
         [Tooltip("장비 슬롯 컨테이너 (EquipmentSlotUI들이 생성될 부모)")]
         [SerializeField] private Transform equipmentSlotContainer;
         
@@ -519,6 +522,51 @@ namespace BladeAction.UI
                 if (enableDebugLog)
                     Debug.Log($"[InventoryUI] 아이템 선택: {item}");
             }
+
+            // 선택 슬롯을 뷰포트 최상단으로 자동 스크롤
+            ScrollToItemSlotTop(selectedItemSlot);
+        }
+
+        /// <summary>
+        /// 선택된 아이템 슬롯이 ScrollRect의 뷰포트 최상단에 오도록 스크롤 조정
+        /// </summary>
+        private void ScrollToItemSlotTop(ItemSlotUI targetSlot)
+        {
+            if (itemScrollRect == null || targetSlot == null)
+                return;
+
+            var content = itemScrollRect.content;
+            var viewport = itemScrollRect.viewport != null ? itemScrollRect.viewport : (RectTransform)itemScrollRect.transform;
+            var target = targetSlot.GetComponent<RectTransform>();
+            if (content == null || viewport == null || target == null)
+                return;
+
+            // 레이아웃 최신화 후 위치 계산
+            Canvas.ForceUpdateCanvases();
+
+            // content 기준 target의 로컬 위치를 얻고, 그 값을 content의 앵커 위치로 반영
+            Vector2 localPointInContent;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                content,
+                RectTransformUtility.WorldToScreenPoint(null, target.position),
+                null,
+                out localPointInContent
+            );
+
+            // target의 상단이 viewport 상단에 맞닿도록 content의 anchoredPosition 조정
+            float contentHeight = content.rect.height;
+            float viewportHeight = viewport.rect.height;
+            float targetTopY = localPointInContent.y + (target.rect.height * (1f - target.pivot.y));
+
+            // ScrollRect는 보통 위로 갈수록 양수/음수 방향이 반대이므로 보정
+            Vector2 anchored = content.anchoredPosition;
+            anchored.y = -(targetTopY) ;
+
+            // 클램핑: content가 viewport를 벗어나지 않도록 제한
+            float maxY = Mathf.Max(0f, contentHeight - viewportHeight);
+            anchored.y = Mathf.Clamp(anchored.y, 0f, maxY);
+
+            content.anchoredPosition = anchored;
         }
         
         /// <summary>

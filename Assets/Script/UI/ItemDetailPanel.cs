@@ -27,6 +27,13 @@ namespace BladeAction.UI
         [Tooltip("스탯 정보 텍스트 배열 (최대 6개)")]
         [SerializeField] private TextMeshProUGUI[] statInfoTexts = new TextMeshProUGUI[6];
         
+        [Header("UI 컨테이너")]
+        [Tooltip("스탯 정보를 감싸는 루트 오브젝트 (예: ItemStatsInfo)")]
+        [SerializeField] private GameObject statsContainer;
+        
+        [Tooltip("설명(스크롤뷰 포함)을 감싸는 루트 오브젝트 (예: ItemDescription)")]
+        [SerializeField] private GameObject descriptionContainer;
+        
         [Header("UI 컴포넌트 - 설명")]
         [Tooltip("아이템 설명 텍스트")]
         [SerializeField] private TextMeshProUGUI descriptionText;
@@ -160,6 +167,17 @@ namespace BladeAction.UI
             
             // 버튼 상태 업데이트
             UpdateButtons(item, itemData);
+
+            // 스탯 토글 버튼 가시성: StatTable 미연결 시 토글 기능 숨김
+            bool canShowStats = itemData.useStatTable && !string.IsNullOrEmpty(itemData.statTableKey);
+            if (toggleButton != null)
+            {
+                toggleButton.gameObject.SetActive(canShowStats);
+            }
+            if (toggleButtonText != null)
+            {
+                toggleButtonText.gameObject.SetActive(canShowStats);
+            }
         }
         
         /// <summary>
@@ -334,6 +352,12 @@ namespace BladeAction.UI
                 descriptionText.text = "";
             }
             
+            // 컨테이너 가시성 초기화 (기본: 설명 보임, 스탯 숨김)
+            if (descriptionContainer != null)
+                descriptionContainer.SetActive(true);
+            if (statsContainer != null)
+                statsContainer.SetActive(false);
+            
             // 버튼 비활성화
             if (equipButton != null)
                 equipButton.interactable = false;
@@ -505,21 +529,11 @@ namespace BladeAction.UI
         /// </summary>
         private void UpdateToggleDisplay()
         {
-            if (descriptionText != null)
-            {
-                descriptionText.gameObject.SetActive(showDescription);
-            }
-            
-            if (statInfoTexts != null)
-            {
-                foreach (var statText in statInfoTexts)
-                {
-                    if (statText != null)
-                    {
-                        statText.gameObject.SetActive(!showDescription);
-                    }
-                }
-            }
+            // 상위 컨테이너 오브젝트 기준으로 가시성 전환
+            if (descriptionContainer != null)
+                descriptionContainer.SetActive(showDescription);
+            if (statsContainer != null)
+                statsContainer.SetActive(!showDescription);
             
             if (toggleButtonText != null)
             {
