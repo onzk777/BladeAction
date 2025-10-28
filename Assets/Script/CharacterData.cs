@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using BladeAction.Combat;
 
 [CreateAssetMenu(fileName = "CharacterData", menuName = "Character/CharacterData", order = 1)]
 public class CharacterData : ScriptableObject
@@ -7,48 +8,86 @@ public class CharacterData : ScriptableObject
     [Header("캐릭터 기본 정보")]
     public string characterName = "Unknown";
     
-    [Header("1차 스탯 (맨몸 상태 - 기초 데이터)")]
-    [Tooltip("최대 체력")]
+    [Header("기본 전투 스탯")]
+    [Tooltip("캐릭터의 기본 전투 스탯 (맨몸 상태)")]
+    public CombatStats baseStats = new CombatStats
+    {
+        maxHP = 100,
+        attack = 20,
+        defenseDR = 0,
+        critChance = 0.1f,
+        critMultiplier = 1.5f,
+        maxPoise = 100,
+        parryPoiseDamage = 25,
+        guardDamageReduction = 0.5f,
+        guardDRBonus = 5
+    };
+    
+    // ===== 이하 필드는 구형 (호환용) - 삭제 예정 =====
+    [Header("구형 스탯 필드 (Deprecated)")]
+    [System.Obsolete("Use baseStats.maxHP instead")]
+    [Tooltip("최대 체력 - Deprecated: baseStats.maxHP 사용")]
     public int baseMaxHP = 100;
-    [Tooltip("기본 공격력")]
+    
+    [System.Obsolete("Use baseStats.attack instead")]
+    [Tooltip("기본 공격력 - Deprecated: baseStats.attack 사용")]
     public int baseATK = 20;
-    [Tooltip("기본 방어력")]
+    
+    [System.Obsolete("Use baseStats.defenseDR instead")]
+    [Tooltip("기본 방어력 - Deprecated: baseStats.defenseDR 사용")]
     public int baseDR = 0;
-    [Tooltip("치명타 확률 (0~1)")]
+    
+    [System.Obsolete("Use baseStats.critChance instead")]
+    [Tooltip("치명타 확률 (0~1) - Deprecated: baseStats.critChance 사용")]
     [Range(0f, 1f)]
     public float baseCritChance = 0f;
-    [Tooltip("치명타 배율 (배수, 예: 1.5 = 150%)")]
+    
+    [System.Obsolete("Use baseStats.critMultiplier instead")]
+    [Tooltip("치명타 배율 (배수, 예: 1.5 = 150%) - Deprecated: baseStats.critMultiplier 사용")]
     public float baseCritMultiplier = 1.5f;
     
     // 이하 필드는 구형(호환용) - 마이그레이션 후 사용하지 않음
-    [Tooltip("치명타 확률 (%) - Deprecated")]
+    [System.Obsolete("Use baseCritChance (0~1) instead")]
+    [Tooltip("치명타 확률 (%) - Deprecated: baseCritChance 사용")]
     public int baseCrit = 0;
-    [Tooltip("치명타 배율 (%) - Deprecated")]
+    
+    [System.Obsolete("Use baseCritMultiplier (float multiplier) instead")]
+    [Tooltip("치명타 배율 (%) - Deprecated: baseCritMultiplier 사용")]
     public int baseCritRatio = 150;
-    [Tooltip("최대 포이즈")]
+    
+    [System.Obsolete("Use baseStats.maxPoise instead")]
+    [Tooltip("최대 포이즈 - Deprecated: baseStats.maxPoise 사용")]
     public int baseMaxPoise = 100;
-    [Tooltip("패링 시 포이즈 피해량")]
+    
+    [System.Obsolete("Use baseStats.parryPoiseDamage instead")]
+    [Tooltip("패링 시 포이즈 피해량 - Deprecated: baseStats.parryPoiseDamage 사용")]
     public int baseParryPoiseDamage = 25;
     
-    [Header("막기 관련 스테이터스")]
-    public int guardDRBonus = 5; // 막기 시 DR 보너스
-    public float guardDamageReduction = 0.5f; // 막기 시 피해 감소 비율 (0.5 = 50% 감소)
+    [System.Obsolete("막기 관련 스탯은 baseStats에 포함됨")]
+    [Header("막기 관련 스테이터스 (Deprecated)")]
+    public int guardDRBonus = 5;
     
-    [Header("임시 스탯 보너스")]
-    public int tempDRBonus = 0; // 임시 DR 보너스 (기타 상태 효과 등)
+    [System.Obsolete("Use baseStats.guardDamageReduction instead")]
+    public float guardDamageReduction = 0.5f;
     
-    // 1차 스탯 프로퍼티들 (기존 코드와의 호환성을 위해 유지)
-    public int MaxHP => baseMaxHP;
-    public int ATK => baseATK;
-    public int DR => baseDR;
-    public float CritChance => baseCritChance;
-    public float CritMultiplier => baseCritMultiplier;
-    public int MaxPoise => baseMaxPoise;
-    public int ParryPoiseDamage => baseParryPoiseDamage;
+    [System.Obsolete("Use baseStats.tempDRBonus instead")]
+    [Header("임시 스탯 보너스 (Deprecated)")]
+    public int tempDRBonus = 0;
+    
+    // 1차 스탯 프로퍼티들 (호환성을 위해 baseStats 참조)
+    public int MaxHP => (int)baseStats.maxHP;
+    public int ATK => (int)baseStats.attack;
+    public int DR => (int)baseStats.defenseDR;
+    public float CritChance => baseStats.critChance;
+    public float CritMultiplier => baseStats.critMultiplier;
+    public int MaxPoise => (int)baseStats.maxPoise;
+    public int ParryPoiseDamage => (int)baseStats.parryPoiseDamage;
 
     /// <summary>
     /// 1차 스탯 데이터를 반환합니다 (기초 데이터)
+    /// [DEPRECATED] 구형 스탯 구조체를 사용합니다. 직접 프로퍼티를 사용하세요.
     /// </summary>
+    [System.Obsolete("Use properties directly (ATK, MaxHP, CritChance, CritMultiplier, etc.) instead")]
     public CharacterBaseStats GetBaseStats()
     {
         return new CharacterBaseStats

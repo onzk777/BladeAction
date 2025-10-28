@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using BladeAction.BT;
 
-public class EnemyCombatant : Combatant
+public class EnemyCharacter : Character
 {
     // ========================================
     // 필드 (Fields)
@@ -48,11 +48,11 @@ public class EnemyCombatant : Combatant
     // ========================================
     
     /// <summary>
-    /// EnemyCombatant를 생성합니다.
+    /// EnemyCharacter를 생성합니다.
     /// </summary>
     /// <param name="data">캐릭터 데이터 (원본 확률 포함)</param>
     /// <param name="controller">EnemyController 참조</param>
-    public EnemyCombatant(CharacterData data, EnemyController controller) : base(data)
+    public EnemyCharacter(CharacterData data, EnemyController controller) : base(data)
     {
         this.controller = controller;
         
@@ -61,17 +61,17 @@ public class EnemyCombatant : Combatant
         if (data != null && data.npcBehavior != null)
         {
             runtimeProbabilities = new NPCRuntimeProbabilities(data.npcBehavior);
-            Debug.Log($"[EnemyCombatant] {Name} 런타임 확률 초기화 완료");
+            Debug.Log($"[EnemyCharacter] {Name} 런타임 확률 초기화 완료");
         }
         else
         {
-            Debug.LogWarning($"[EnemyCombatant] {Name} CharacterData 또는 npcBehavior가 null입니다!");
+            Debug.LogWarning($"[EnemyCharacter] {Name} CharacterData 또는 npcBehavior가 null입니다!");
         }
         
         // BTBlackboard 인스턴스 생성
         // 개체별 BT 실행 상태 관리 (executeOncePerCombat 등)
         btBlackboard = new BladeAction.BT.BTBlackboard(data?.characterName ?? "Unknown");
-        Debug.Log($"[EnemyCombatant] {Name} BT 블랙보드 초기화 완료");
+        Debug.Log($"[EnemyCharacter] {Name} BT 블랙보드 초기화 완료");
     }
 
     public void SetController(EnemyController newController)
@@ -104,7 +104,7 @@ public class EnemyCombatant : Combatant
         // BT 결과에 따른 검술 선택
         int selectedIndex = GetSelectedCommandFromBT();
         
-        Debug.Log($"[EnemyCombatant] ✅ {Name} 검술 선택: {selectedIndex}번");
+        Debug.Log($"[EnemyCharacter] ✅ {Name} 검술 선택: {selectedIndex}번");
         
         return new CommandSelection { selectedIndex = selectedIndex };
     }
@@ -114,7 +114,7 @@ public class EnemyCombatant : Combatant
     /// 
     /// 호출 시점:
     /// 1. CombatManager.PerformTurn() - 턴 시작 시 (공격/방어 무관)
-    /// 2. EnemyCombatant.ChooseCommand() - 검술 선택 시 (중복 방지됨)
+    /// 2. EnemyCharacter.ChooseCommand() - 검술 선택 시 (중복 방지됨)
     /// 
     /// 중복 방지:
     /// - btEvaluatedThisTurn 플래그로 한 턴에 한 번만 실행
@@ -122,26 +122,26 @@ public class EnemyCombatant : Combatant
     /// </summary>
     public void ExecuteBehaviorTrees()
     {
-        Debug.Log($"[EnemyCombatant] 🔍 ExecuteBehaviorTrees 호출");
+        Debug.Log($"[EnemyCharacter] 🔍 ExecuteBehaviorTrees 호출");
         Debug.Log($"  - CharacterData: {CharacterData?.name ?? "null"}");
         Debug.Log($"  - BT 수: {CharacterData?.behaviorTrees?.Count ?? 0}");
         
         if (CharacterData?.behaviorTrees == null || CharacterData.behaviorTrees.Count == 0)
         {
-            Debug.LogWarning("[EnemyCombatant] ⚠️ BT가 설정되지 않았습니다!");
+            Debug.LogWarning("[EnemyCharacter] ⚠️ BT가 설정되지 않았습니다!");
             Debug.LogWarning($"  - CharacterData: {(CharacterData == null ? "null" : CharacterData.name)}");
             Debug.LogWarning($"  - behaviorTrees: {(CharacterData?.behaviorTrees == null ? "null" : $"Count={CharacterData.behaviorTrees.Count}")}");
             Debug.LogError("  → Unity Inspector에서 'Behavior Tree 설정'에 BT 에셋을 할당하세요!");
             return;
         }
         
-        Debug.Log($"[EnemyCombatant] ✅ BT 발견: {CharacterData.behaviorTrees.Count}개");
+        Debug.Log($"[EnemyCharacter] ✅ BT 발견: {CharacterData.behaviorTrees.Count}개");
         
         // BT 실행 컨텍스트 생성
-        var playerCombatant = CharacterManager.Instance?.PlayerCombatant;
-        if (playerCombatant == null)
+        var playerCharacter = CharacterManager.Instance?.PlayerCharacter;
+        if (playerCharacter == null)
         {
-            Debug.LogWarning("[EnemyCombatant] PlayerCombatant를 찾을 수 없습니다.");
+            Debug.LogWarning("[EnemyCharacter] PlayerCharacter를 찾을 수 없습니다.");
             return;
         }
         
@@ -152,7 +152,7 @@ public class EnemyCombatant : Combatant
         currentBTContext = BladeAction.BT.BehaviorTreeExecutor.EvaluateMultipleTrees(
             CharacterData.behaviorTrees,
             this,
-            playerCombatant,
+            playerCharacter,
             currentTurn,
             isAttackTurn,
             btBlackboard  // ← 블랙보드 전달!
@@ -166,7 +166,7 @@ public class EnemyCombatant : Combatant
         
         // 평가 완료 플래그 설정 (이번 턴에는 재평가 안 함)
         btEvaluatedThisTurn = true;
-        Debug.Log($"[EnemyCombatant] 🎯 BT 평가 완료 - 이번 턴에는 재평가 안 함");
+        Debug.Log($"[EnemyCharacter] 🎯 BT 평가 완료 - 이번 턴에는 재평가 안 함");
     }
     
     /// <summary>
@@ -214,7 +214,7 @@ public class EnemyCombatant : Combatant
     {
         if (runtimeProbabilities == null) return;
         
-        Debug.Log($"[EnemyCombatant] 현재 확률 상태:");
+        Debug.Log($"[EnemyCharacter] 현재 확률 상태:");
         Debug.Log($"  - 공격 성공률: {runtimeProbabilities.AttackPerfectRate:P0}");
         Debug.Log($"  - 쳐내기 성공률: {runtimeProbabilities.ParryPerfectRate:P0}");
         Debug.Log($"  - 막기 시도율: {runtimeProbabilities.GuardAttemptRate:P0}");
@@ -275,7 +275,7 @@ public class EnemyCombatant : Combatant
     public void ResetBTEvaluation()
     {
         btEvaluatedThisTurn = false;
-        Debug.Log($"[EnemyCombatant] {Name} BT 평가 플래그 리셋 - 새 턴 준비 완료");
+        Debug.Log($"[EnemyCharacter] {Name} BT 평가 플래그 리셋 - 새 턴 준비 완료");
     }
     
     /// <summary>
@@ -304,7 +304,7 @@ public class EnemyCombatant : Combatant
         if (currentBTContext.selectedCommandIndex.HasValue)
         {
             int idx = Mathf.Clamp(currentBTContext.selectedCommandIndex.Value, 0, AvailableCommands.Count - 1);
-            Debug.Log($"[EnemyCombatant] BT 검술 인덱스 선택: {idx} ('{AvailableCommands[idx].commandName}')");
+            Debug.Log($"[EnemyCharacter] BT 검술 인덱스 선택: {idx} ('{AvailableCommands[idx].commandName}')");
             return idx;
         }
         
@@ -335,12 +335,12 @@ public class EnemyCombatant : Combatant
                         break;
                     }
                 }
-                Debug.Log($"[EnemyCombatant] BT 태그 검술 선택: '{currentBTContext.selectedCommandTag}' -> '{selectedCommand.commandName}' (인덱스: {idx})");
+                Debug.Log($"[EnemyCharacter] BT 태그 검술 선택: '{currentBTContext.selectedCommandTag}' -> '{selectedCommand.commandName}' (인덱스: {idx})");
                 return idx >= 0 ? idx : Random.Range(0, AvailableCommands.Count);
             }
             else
             {
-                Debug.LogWarning($"[EnemyCombatant] 태그 '{currentBTContext.selectedCommandTag}'를 가진 검술이 없음 - 랜덤 선택");
+                Debug.LogWarning($"[EnemyCharacter] 태그 '{currentBTContext.selectedCommandTag}'를 가진 검술이 없음 - 랜덤 선택");
             }
         }
         
@@ -348,7 +348,8 @@ public class EnemyCombatant : Combatant
         // 4. 랜덤 선택 (기본)
         // ========================================
         int randomIdx = Random.Range(0, AvailableCommands.Count);
-        Debug.Log($"[EnemyCombatant] BT 검술 선택 없음 -> 랜덤 선택: {randomIdx} ('{AvailableCommands[randomIdx].commandName}')");
+        Debug.Log($"[EnemyCharacter] BT 검술 선택 없음 -> 랜덤 선택: {randomIdx} ('{AvailableCommands[randomIdx].commandName}')");
         return randomIdx;
     }
 }
+

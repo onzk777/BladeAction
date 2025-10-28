@@ -22,8 +22,8 @@ namespace BladeAction.BT
         /// <returns>실행 결과 컨텍스트</returns>
         public static BehaviorTreeContext EvaluateTree(
             BehaviorTreeData tree, 
-            Combatant self, 
-            Combatant target,
+            Character self, 
+            Character target,
             int currentTurn,
             bool isAttackTurn,
             BTBlackboard blackboard = null)
@@ -103,8 +103,8 @@ namespace BladeAction.BT
         /// <returns>병합된 실행 결과 컨텍스트</returns>
         public static BehaviorTreeContext EvaluateMultipleTrees(
             List<BehaviorTreeData> trees,
-            Combatant self,
-            Combatant target,
+            Character self,
+            Character target,
             int currentTurn,
             bool isAttackTurn,
             BTBlackboard blackboard = null)

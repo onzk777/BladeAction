@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using UnityEngine;
 using BladeAction.BT;
 
-public class PlayerCombatant : Combatant
+public class PlayerCharacter : Character
 {
     public int selectedIndex = 0; // 인스펙터에서 지정하는 테스트용 인덱스
     public bool useTestMode;  // true면 테스트 모드로 동작
@@ -38,14 +38,14 @@ public class PlayerCombatant : Combatant
     /// </summary>
     public BehaviorTreeContext CurrentBTContext => currentBTContext;
     
-    public PlayerCombatant(CharacterData data, PlayerController controller) : base(data)
+    public PlayerCharacter(CharacterData data, PlayerController controller) : base(data)
     {
         this.controller = controller;
         
         // BTBlackboard 인스턴스 생성
         // 현재는 사용하지 않지만, 향후 자동 전투 시스템 추가 시 사용
         btBlackboard = new BTBlackboard(data?.characterName ?? "Player");
-        Debug.Log($"[PlayerCombatant] {Name} BT 블랙보드 초기화 완료 (향후 자동 전투 대비)");
+        Debug.Log($"[PlayerCharacter] {Name} BT 블랙보드 초기화 완료 (향후 자동 전투 대비)");
     }
     
     public void SetController(PlayerController newController)
@@ -74,11 +74,11 @@ public class PlayerCombatant : Combatant
             ActionCommandSelectionManager.Instance.playerActionSelectUI != null)
         {
             idx = ActionCommandSelectionManager.Instance.playerActionSelectUI.GetCurrentSelectedButtonIndex();
-            Debug.Log($"[PlayerCombatant] UI에서 선택된 인덱스: {idx}");
+            Debug.Log($"[PlayerCharacter] UI에서 선택된 인덱스: {idx}");
         }
         else
         {
-            Debug.LogWarning("[PlayerCombatant] ActionCommandSelectionManager 또는 PlayerActionSelectUI를 찾을 수 없음 - 기본값 0 사용");
+            Debug.LogWarning("[PlayerCharacter] ActionCommandSelectionManager 또는 PlayerActionSelectUI를 찾을 수 없음 - 기본값 0 사용");
             idx = 0;
         }
         
@@ -104,29 +104,29 @@ public class PlayerCombatant : Combatant
     /// </summary>
     public void ExecuteBehaviorTrees()
     {
-        Debug.Log($"[PlayerCombatant] 🔍 ExecuteBehaviorTrees 호출");
+        Debug.Log($"[PlayerCharacter] 🔍 ExecuteBehaviorTrees 호출");
         
         // 중복 평가 방지
         if (btEvaluatedThisTurn)
         {
-            Debug.Log($"[PlayerCombatant] 이미 이번 턴에 BT 평가 완료 - 스킵");
+            Debug.Log($"[PlayerCharacter] 이미 이번 턴에 BT 평가 완료 - 스킵");
             return;
         }
         
         if (CharacterData?.behaviorTrees == null || CharacterData.behaviorTrees.Count == 0)
         {
-            Debug.Log("[PlayerCombatant] BT가 설정되지 않음 - 스킵 (정상, Player는 UI 기반)");
+            Debug.Log("[PlayerCharacter] BT가 설정되지 않음 - 스킵 (정상, Player는 UI 기반)");
             btEvaluatedThisTurn = true; // 평가 완료 처리
             return;
         }
         
-        Debug.Log($"[PlayerCombatant] ✅ BT 발견: {CharacterData.behaviorTrees.Count}개");
+        Debug.Log($"[PlayerCharacter] ✅ BT 발견: {CharacterData.behaviorTrees.Count}개");
         
         // BT 실행 컨텍스트 생성
-        var enemyCombatant = CharacterManager.Instance?.EnemyCombatant;
-        if (enemyCombatant == null)
+        var enemyCharacter = CharacterManager.Instance?.EnemyCharacter;
+        if (enemyCharacter == null)
         {
-            Debug.LogWarning("[PlayerCombatant] EnemyCombatant를 찾을 수 없습니다.");
+            Debug.LogWarning("[PlayerCharacter] EnemyCharacter를 찾을 수 없습니다.");
             btEvaluatedThisTurn = true;
             return;
         }
@@ -138,7 +138,7 @@ public class PlayerCombatant : Combatant
         currentBTContext = BehaviorTreeExecutor.EvaluateMultipleTrees(
             CharacterData.behaviorTrees,
             this,
-            enemyCombatant,
+            enemyCharacter,
             currentTurn,
             isAttackTurn,
             btBlackboard
@@ -149,7 +149,7 @@ public class PlayerCombatant : Combatant
         
         // 평가 완료 플래그 설정
         btEvaluatedThisTurn = true;
-        Debug.Log($"[PlayerCombatant] 🎯 BT 평가 완료 - 이번 턴에는 재평가 안 함");
+        Debug.Log($"[PlayerCharacter] 🎯 BT 평가 완료 - 이번 턴에는 재평가 안 함");
     }
     
     /// <summary>
@@ -184,6 +184,7 @@ public class PlayerCombatant : Combatant
     public void ResetBTEvaluation()
     {
         btEvaluatedThisTurn = false;
-        Debug.Log($"[PlayerCombatant] {Name} BT 평가 플래그 리셋 - 새 턴 준비 완료");
+        Debug.Log($"[PlayerCharacter] {Name} BT 평가 플래그 리셋 - 새 턴 준비 완료");
     }
 }
+

@@ -12,8 +12,8 @@ public class BattleResult
         ManualEnd
     }
 
-    public Combatant winner { get; set; }
-    public Combatant loser { get; set; }
+    public Character winner { get; set; }
+    public Character loser { get; set; }
     public BattleEndReason EndReason { get; set; }
     public float EndTime { get; set; }
 

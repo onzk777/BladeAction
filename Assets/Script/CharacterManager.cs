@@ -13,8 +13,8 @@ public class CharacterManager : MonoBehaviour
     public CharacterData PlayerData { get; private set; }
     public CharacterData EnemyData { get; private set; }
 
-    public PlayerCombatant PlayerCombatant { get; private set; }
-    public EnemyCombatant EnemyCombatant { get; private set; }
+    public PlayerCharacter PlayerCharacter { get; private set; }
+    public EnemyCharacter EnemyCharacter { get; private set; }
 
     private void Awake()
     {
@@ -53,11 +53,11 @@ public class CharacterManager : MonoBehaviour
         PlayerData.InstantiateBehaviorTrees();
         EnemyData.InstantiateBehaviorTrees();
 
-        // Combatant 인스턴스 생성 (CharacterData를 통해 1차 스탯 초기화)
-        PlayerCombatant = new PlayerCombatant(PlayerData, null);
-        EnemyCombatant = new EnemyCombatant(EnemyData, null);
+        // Character 인스턴스 생성 (CharacterData를 통해 1차 스탯 초기화)
+        PlayerCharacter = new PlayerCharacter(PlayerData, null);
+        EnemyCharacter = new EnemyCharacter(EnemyData, null);
 
-        Debug.Log("[CharacterManager] CharacterData, BT 인스턴스화 및 Combatant 초기화 완료.");
+        Debug.Log("[CharacterManager] CharacterData, BT 인스턴스화 및 Character 초기화 완료.");
     }
 
     /// <summary>
@@ -67,18 +67,18 @@ public class CharacterManager : MonoBehaviour
     {
         if (type == CharacterType.Player)
         {
-            if (PlayerCombatant is PlayerCombatant playerCombatantInstance)
+            if (PlayerCharacter is PlayerCharacter playerCharacterInstance)
             {
-                playerCombatantInstance.SetController(controller as PlayerController);
-                Debug.Log($"[CharacterManager] PlayerController 연결 완료: {controller.Combatant.Name}");
+                playerCharacterInstance.SetController(controller as PlayerController);
+                Debug.Log($"[CharacterManager] PlayerController 연결 완료: {controller.Character.Name}");
             }
         }
         else if (type == CharacterType.Enemy)
         {
-            if (EnemyCombatant is EnemyCombatant enemyCombatantInstance)
+            if (EnemyCharacter is EnemyCharacter enemyCharacterInstance)
             {
-                enemyCombatantInstance.SetController(controller as EnemyController);
-                Debug.Log($"[CharacterManager] EnemyController 연결 완료: {controller.Combatant.Name}");
+                enemyCharacterInstance.SetController(controller as EnemyController);
+                Debug.Log($"[CharacterManager] EnemyController 연결 완료: {controller.Character.Name}");
             }
         }
     }

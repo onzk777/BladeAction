@@ -195,11 +195,11 @@ namespace BladeAction.BT
         }
         
         /// <summary>
-        /// 특정 Combatant의 로그 가져오기
+        /// 특정 Character의 로그 가져오기
         /// </summary>
-        public List<BTEvaluationLog> GetLogsByCombatant(string combatantName)
+        public List<BTEvaluationLog> GetLogsByCharacter(string characterName)
         {
-            return evaluationLogs.FindAll(log => log.combatantName == combatantName);
+            return evaluationLogs.FindAll(log => log.combatantName == characterName);
         }
         
         /// <summary>

@@ -52,11 +52,11 @@ public struct AIContext
     public float posturePoints;             // 현재 자세 포인트
     public bool isInterrupted;              // 중단 상태인지 여부
     public bool isGuarding;                 // 현재 막기 상태인지 여부
-    public Combatant defenderCombatant;     // 방어자 Combatant (BT 확률 참조용)
+    public Character defenderCharacter;     // 방어자 Character (BT 확률 참조용)
     
     public AIContext(int hitIndex, float turnElapsedTime, bool isPlayerAttacker, 
                      int totalHitCount, float posturePoints, bool isInterrupted, bool isGuarding = false,
-                     Combatant defender = null)
+                     Character defender = null)
     {
         this.hitIndex = hitIndex;
         this.turnElapsedTime = turnElapsedTime;
@@ -65,6 +65,6 @@ public struct AIContext
         this.posturePoints = posturePoints;
         this.isInterrupted = isInterrupted;
         this.isGuarding = isGuarding;
-        this.defenderCombatant = defender;
+        this.defenderCharacter = defender;
     }
 }

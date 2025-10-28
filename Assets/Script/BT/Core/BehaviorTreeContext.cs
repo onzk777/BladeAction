@@ -11,10 +11,10 @@ namespace BladeAction.BT
     {
         [Header("전투 참가자")]
         [Tooltip("NPC 자신 (BT를 실행하는 캐릭터)")]
-        public Combatant self;
+        public Character self;
         
         [Tooltip("상대방 (플레이어)")]
-        public Combatant target;
+        public Character target;
         
         [Header("턴 정보")]
         [Tooltip("현재 턴 번호")]
@@ -48,7 +48,7 @@ namespace BladeAction.BT
         /// <param name="turnNumber">현재 턴 번호</param>
         /// <param name="attackTurn">공격 턴 여부</param>
         /// <param name="btBlackboard">개체별 상태 저장소 (null이면 임시 생성)</param>
-        public void Initialize(Combatant selfCombatant, Combatant targetCombatant, int turnNumber, bool attackTurn, BTBlackboard btBlackboard = null)
+        public void Initialize(Character selfCombatant, Character targetCombatant, int turnNumber, bool attackTurn, BTBlackboard btBlackboard = null)
         {
             self = selfCombatant;
             target = targetCombatant;

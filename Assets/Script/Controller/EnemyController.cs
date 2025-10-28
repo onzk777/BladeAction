@@ -3,7 +3,7 @@ using Spine.Unity;
 
 public class EnemyController : MonoBehaviour, ICombatController
 {
-    public Combatant Combatant => CharacterManager.Instance?.EnemyCombatant;
+    public Character Character => CharacterManager.Instance?.EnemyCharacter;
 
     [Header("테스트 모드 설정")]
     [Tooltip("테스트 모드 ON/OFF")]
@@ -38,7 +38,7 @@ public class EnemyController : MonoBehaviour, ICombatController
     }
 
     // 외부에서 combatant에 접근할 수 있도록 프로퍼티로 공개
-    public int CommandCount => Combatant?.AvailableCommands.Count ?? 0;
+    public int CommandCount => Character?.AvailableCommands.Count ?? 0;
     
     private int currentCommandIndex;
     private int? cachedSelectedIndex = null; // 선택 결과 캐시 (턴당 한 번만 계산)
@@ -63,14 +63,14 @@ public class EnemyController : MonoBehaviour, ICombatController
             yield return null;
         }
 
-        // Combatant가 준비될 때까지 대기
-        while (Combatant == null)
+        // Character가 준비될 때까지 대기
+        while (Character == null)
         {
             yield return null;
         }
 
         // 유파 장착
-        Combatant?.EquipSwordArtStyle(equippedStyle);
+        Character?.EquipSwordArtStyle(equippedStyle);
         
         // Spine 애니메이션 애셋을 Skeleton Mecanim에 연결
         SetupSkeletonMecanim();
@@ -127,10 +127,10 @@ public class EnemyController : MonoBehaviour, ICombatController
         else
         {
             // 도메인 모델에게 선택 로직 위임
-            var selection = Combatant?.ChooseCommand();
+            var selection = Character?.ChooseCommand();
             idx = Mathf.Clamp(selection?.selectedIndex ?? 0, 0, CommandCount - 1);
         }
-        return Combatant?.AvailableCommands[idx];
+        return Character?.AvailableCommands[idx];
     }
     
     /// <summary>
@@ -187,7 +187,7 @@ public class EnemyController : MonoBehaviour, ICombatController
             // 2. 확률 적용 (ApplyBehaviorTreeResults)
             // 3. 검술 선택 (GetSelectedCommandFromBT)
             
-            var selection = Combatant?.ChooseCommand();
+            var selection = Character?.ChooseCommand();
             selectedIndex = selection?.selectedIndex ?? 0;
             selectedIndex = Mathf.Clamp(selectedIndex, 0, CommandCount - 1);
         }
@@ -209,10 +209,10 @@ public class EnemyController : MonoBehaviour, ICombatController
     public ActionCommandData GetSelectedCommand()
     {
         int idx = GetSelectedCommandIndex();
-        return Combatant?.AvailableCommands[idx];
+        return Character?.AvailableCommands[idx];
     }
 
-    public void ReceiveCommandResult(CombatantCommandResult result)
+    public void ReceiveCommandResult(CharacterCommandResult result)
     {
         // 아직 쓸데 없음
     }

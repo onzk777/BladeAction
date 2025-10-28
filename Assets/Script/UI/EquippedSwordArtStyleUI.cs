@@ -13,7 +13,7 @@ namespace BladeAction.UI
     {
         [Header("인벤토리 참조")]
         [Tooltip("인벤토리 참조 (런타임에 설정)")]
-        [SerializeField] private CombatantInventory inventory;
+        [SerializeField] private CharacterInventory inventory;
         
         [Header("UI 컴포넌트 - 유파 정보")]
         [Tooltip("유파 아이콘")]
@@ -60,7 +60,7 @@ namespace BladeAction.UI
         /// <summary>
         /// 인벤토리 참조 설정
         /// </summary>
-        public void Initialize(CombatantInventory inventory)
+        public void Initialize(CharacterInventory inventory)
         {
             this.inventory = inventory;
             Refresh();

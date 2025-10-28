@@ -82,7 +82,7 @@ public class CombatStatusDisplay : MonoBehaviour
         }
 
         // CharacterManager의 데이터가 준비될 때까지 대기
-        while (CharacterManager.Instance.PlayerCombatant == null || CharacterManager.Instance.EnemyCombatant == null)
+        while (CharacterManager.Instance.PlayerCharacter == null || CharacterManager.Instance.EnemyCharacter == null)
         {
             yield return null;
         }
@@ -102,39 +102,39 @@ public class CombatStatusDisplay : MonoBehaviour
     private void SubscribeToStatusEvents()
     {
         // 플레이어 스테이터스 이벤트 구독
-        if (CharacterManager.Instance.PlayerCombatant != null)
+        if (CharacterManager.Instance.PlayerCharacter != null)
         {
-            CharacterManager.Instance.PlayerCombatant.OnStatsChanged += OnPlayerStatsChanged;
+            CharacterManager.Instance.PlayerCharacter.OnStatsChanged += OnPlayerStatsChanged;
         }
 
         // 적 스테이터스 이벤트 구독
-        if (CharacterManager.Instance.EnemyCombatant != null)
+        if (CharacterManager.Instance.EnemyCharacter != null)
         {
-            CharacterManager.Instance.EnemyCombatant.OnStatsChanged += OnEnemyStatsChanged;
+            CharacterManager.Instance.EnemyCharacter.OnStatsChanged += OnEnemyStatsChanged;
         }
     }
 
-    private void OnPlayerStatsChanged(Combatant combatant)
+    private void OnPlayerStatsChanged(Character combatant)
     {
         UpdatePlayerStatus();
     }
 
-    private void OnEnemyStatsChanged(Combatant combatant)
+    private void OnEnemyStatsChanged(Character combatant)
     {
         UpdateEnemyStatus();
     }
 
     private void UpdatePlayerStatus()
     {
-        if (CharacterManager.Instance?.PlayerCombatant == null) return;
+        if (CharacterManager.Instance?.PlayerCharacter == null) return;
 
-        var combatant = CharacterManager.Instance.PlayerCombatant;
+        var combatant = CharacterManager.Instance.PlayerCharacter;
         if (playerHP != null) playerHP.text = $"HP: {combatant.GetHPStatus()}";
         if (playerPoise != null) playerPoise.text = $"Poise: {combatant.GetPoiseStatus()}";
         if (playerATK != null) playerATK.text = GetEffectiveAttackText(combatant, true);
         if (playerDR != null) 
         {
-            int effectiveDR = combatant.GetEffectiveDR();
+            int effectiveDR = combatant.GetFinalDR();
             if (combatant.tempDRBonus > 0)
             {
                 playerDR.text = $"DR: {effectiveDR} ({combatant.DR} + {combatant.tempDRBonus})";
@@ -149,15 +149,15 @@ public class CombatStatusDisplay : MonoBehaviour
 
     private void UpdateEnemyStatus()
     {
-        if (CharacterManager.Instance?.EnemyCombatant == null) return;
+        if (CharacterManager.Instance?.EnemyCharacter == null) return;
 
-        var combatant = CharacterManager.Instance.EnemyCombatant;
+        var combatant = CharacterManager.Instance.EnemyCharacter;
         if (enemyHP != null) enemyHP.text = $"HP: {combatant.GetHPStatus()}";
         if (enemyPoise != null) enemyPoise.text = $"Poise: {combatant.GetPoiseStatus()}";
         if (enemyATK != null) enemyATK.text = GetEffectiveAttackText(combatant, false);
         if (enemyDR != null) 
         {
-            int effectiveDR = combatant.GetEffectiveDR();
+            int effectiveDR = combatant.GetFinalDR();
             if (combatant.tempDRBonus > 0)
             {
                 enemyDR.text = $"DR: {effectiveDR} ({combatant.DR} + {combatant.tempDRBonus})";
@@ -170,35 +170,35 @@ public class CombatStatusDisplay : MonoBehaviour
         if (enemyCrit != null) enemyCrit.text = $"Crit: {combatant.CritChance * 100f:F1}%";
     }
 
-    private string GetEffectiveAttackText(Combatant combatant, bool isPlayer)
+    private string GetEffectiveAttackText(Character combatant, bool isPlayer)
     {
         if (CombatManager.Instance == null) return $"ATK: {combatant.ATK}";
         
         ICombatController controller = isPlayer ? CombatManager.Instance.PlayerController : CombatManager.Instance.EnemyController;
-        if (controller?.Combatant?.AvailableCommands == null || controller.Combatant.AvailableCommands.Count == 0)
+        if (controller?.Character?.AvailableCommands == null || controller.Character.AvailableCommands.Count == 0)
         {
             int baseAtkOnly = BladeAction.Combat.StatsCalculationManager.Instance != null 
-                ? BladeAction.Combat.StatsCalculationManager.Instance.GetEffectiveATK(combatant)
+                ? BladeAction.Combat.StatsCalculationManager.Instance.GetFinalATK(combatant)
                 : combatant.ATK;
             return $"ATK: {baseAtkOnly}";
         }
         
         int selectedIndex = controller.GetSelectedCommandIndex();
-        if (selectedIndex < 0 || selectedIndex >= controller.Combatant.AvailableCommands.Count)
+        if (selectedIndex < 0 || selectedIndex >= controller.Character.AvailableCommands.Count)
         {
             int baseAtkOnly = BladeAction.Combat.StatsCalculationManager.Instance != null 
-                ? BladeAction.Combat.StatsCalculationManager.Instance.GetEffectiveATK(combatant)
+                ? BladeAction.Combat.StatsCalculationManager.Instance.GetFinalATK(combatant)
                 : combatant.ATK;
             return $"ATK: {baseAtkOnly}";
         }
         
-        var command = controller.Combatant.AvailableCommands[selectedIndex];
+        var command = controller.Character.AvailableCommands[selectedIndex];
         
         // 다중 히트 공격의 경우 모든 히트의 damageRatio 표시
         if (command.hitCount > 1)
         {
             int baseAtk = BladeAction.Combat.StatsCalculationManager.Instance != null 
-                ? BladeAction.Combat.StatsCalculationManager.Instance.GetEffectiveATK(combatant)
+                ? BladeAction.Combat.StatsCalculationManager.Instance.GetFinalATK(combatant)
                 : combatant.ATK;
             return GenerateMultiHitATKText(baseAtk, controller, selectedIndex);
         }
@@ -207,7 +207,7 @@ public class CombatStatusDisplay : MonoBehaviour
             // 단일 히트 공격의 경우 기존 방식 사용
             float damageRatio = command.GetDamageRatio(0);
             int baseAtk = BladeAction.Combat.StatsCalculationManager.Instance != null 
-                ? BladeAction.Combat.StatsCalculationManager.Instance.GetEffectiveATK(combatant)
+                ? BladeAction.Combat.StatsCalculationManager.Instance.GetFinalATK(combatant)
                 : combatant.ATK;
             int effectiveATK = Mathf.RoundToInt(baseAtk * damageRatio);
             return $"ATK: {effectiveATK}({baseAtk} * {damageRatio * 100:F0}%)";
@@ -219,12 +219,12 @@ public class CombatStatusDisplay : MonoBehaviour
     /// </summary>
     private string GenerateMultiHitATKText(int baseATK, ICombatController controller, int commandIndex)
     {
-        if (controller?.Combatant?.AvailableCommands == null || commandIndex >= controller.Combatant.AvailableCommands.Count)
+        if (controller?.Character?.AvailableCommands == null || commandIndex >= controller.Character.AvailableCommands.Count)
         {
             return $"ATK: {baseATK}";
         }
         
-        var command = controller.Combatant.AvailableCommands[commandIndex];
+        var command = controller.Character.AvailableCommands[commandIndex];
         string result = $"ATK: {baseATK}\n";
         
         for (int i = 0; i < command.hitCount; i++)
@@ -257,25 +257,25 @@ public class CombatStatusDisplay : MonoBehaviour
     [ContextMenu("Test Player Take Damage")]
     public void TestPlayerTakeDamage()
     {
-        CharacterManager.Instance?.PlayerCombatant?.TakeDamage(10);
+        CharacterManager.Instance?.PlayerCharacter?.TakeDamage(10);
     }
 
     [ContextMenu("Test Enemy Take Damage")]
     public void TestEnemyTakeDamage()
     {
-        CharacterManager.Instance?.EnemyCombatant?.TakeDamage(10);
+        CharacterManager.Instance?.EnemyCharacter?.TakeDamage(10);
     }
 
     [ContextMenu("Test Player Lose Poise")]
     public void TestPlayerLosePoise()
     {
-        CharacterManager.Instance?.PlayerCombatant?.LosePoise(25);
+        CharacterManager.Instance?.PlayerCharacter?.LosePoise(25);
     }
 
     [ContextMenu("Test Enemy Lose Poise")]
     public void TestEnemyLosePoise()
     {
-        CharacterManager.Instance?.EnemyCombatant?.LosePoise(25);
+        CharacterManager.Instance?.EnemyCharacter?.LosePoise(25);
     }
 
     public void whosTurnText(bool isPlayer)
@@ -620,14 +620,14 @@ public class CombatStatusDisplay : MonoBehaviour
     private void OnDestroy()
     {
         // 이벤트 구독 해제
-        if (CharacterManager.Instance?.PlayerCombatant != null)
+        if (CharacterManager.Instance?.PlayerCharacter != null)
         {
-            CharacterManager.Instance.PlayerCombatant.OnStatsChanged -= OnPlayerStatsChanged;
+            CharacterManager.Instance.PlayerCharacter.OnStatsChanged -= OnPlayerStatsChanged;
         }
 
-        if (CharacterManager.Instance?.EnemyCombatant != null)
+        if (CharacterManager.Instance?.EnemyCharacter != null)
         {
-            CharacterManager.Instance.EnemyCombatant.OnStatsChanged -= OnEnemyStatsChanged;
+            CharacterManager.Instance.EnemyCharacter.OnStatsChanged -= OnEnemyStatsChanged;
         }
 
         // 가이드 정리

@@ -55,7 +55,7 @@ public class DefaultAIDefenseDecisionMaker : IAIDefenseDecisionMaker
     private float GetParrySuccessRate(AIContext context)
     {
         // 1순위: EnemyCombatant.runtimeProbabilities (BT 적용 후!)
-        if (context.defenderCombatant is EnemyCombatant enemyCombatant)
+        if (context.defenderCharacter is EnemyCharacter enemyCombatant)
         {
             if (enemyCombatant.RuntimeProbabilities != null)
             {
@@ -74,7 +74,7 @@ public class DefaultAIDefenseDecisionMaker : IAIDefenseDecisionMaker
     private bool GetParryWhileGuarding(AIContext context)
     {
         // 1순위: EnemyCombatant.runtimeProbabilities (BT 적용 후!)
-        if (context.defenderCombatant is EnemyCombatant enemyCombatant)
+        if (context.defenderCharacter is EnemyCharacter enemyCombatant)
         {
             if (enemyCombatant.RuntimeProbabilities != null)
             {
@@ -170,7 +170,7 @@ public class DefaultAIDefenseDecisionMaker : IAIDefenseDecisionMaker
     private float GetGuardAttemptRate(AIContext context)
     {
         // 1순위: EnemyCombatant.runtimeProbabilities (BT 적용 후!) ⭐
-        if (context.defenderCombatant is EnemyCombatant enemyCombatant)
+        if (context.defenderCharacter is EnemyCharacter enemyCombatant)
         {
             if (enemyCombatant.RuntimeProbabilities != null)
             {

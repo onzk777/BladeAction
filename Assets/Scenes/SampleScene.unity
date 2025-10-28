@@ -511,55 +511,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &844327313
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 844327315}
-  - component: {fileID: 844327314}
-  m_Layer: 0
-  m_Name: InventoryTestManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &844327314
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 844327313}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d384243403262bb4d9a5b0980660a040, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::InventoryTestManager
-  autoInitialize: 1
-  addTestItems: 1
-  selectedItemIndex: 0
-  addQuantity: 1
-  currentInventoryItems: []
---- !u!4 &844327315
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 844327313}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 759.9243, y: 487.78845, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1802975865
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1369,6 +1320,63 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9341043674d18f64190536e11c93aa17, type: 3}
+--- !u!1001 &6170844198051906125
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1553249510034411843, guid: 8f07b1ed3a758214195b57ea14d55659, type: 3}
+      propertyPath: m_Name
+      value: InventoryTestManager
+      objectReference: {fileID: 0}
+    - target: {fileID: 7005675859966457619, guid: 8f07b1ed3a758214195b57ea14d55659, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 759.9243
+      objectReference: {fileID: 0}
+    - target: {fileID: 7005675859966457619, guid: 8f07b1ed3a758214195b57ea14d55659, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 487.78845
+      objectReference: {fileID: 0}
+    - target: {fileID: 7005675859966457619, guid: 8f07b1ed3a758214195b57ea14d55659, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7005675859966457619, guid: 8f07b1ed3a758214195b57ea14d55659, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7005675859966457619, guid: 8f07b1ed3a758214195b57ea14d55659, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7005675859966457619, guid: 8f07b1ed3a758214195b57ea14d55659, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7005675859966457619, guid: 8f07b1ed3a758214195b57ea14d55659, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7005675859966457619, guid: 8f07b1ed3a758214195b57ea14d55659, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7005675859966457619, guid: 8f07b1ed3a758214195b57ea14d55659, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7005675859966457619, guid: 8f07b1ed3a758214195b57ea14d55659, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 8f07b1ed3a758214195b57ea14d55659, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -1377,5 +1385,5 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 693361161}
-  - {fileID: 844327315}
+  - {fileID: 6170844198051906125}
   - {fileID: 1802975865}

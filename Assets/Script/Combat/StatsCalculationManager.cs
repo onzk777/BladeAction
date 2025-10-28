@@ -24,53 +24,131 @@ namespace BladeAction.Combat
             }
         }
 
-        public CombatStats GetEffectiveStats(Combatant combatant)
+        /// <summary>
+        /// Character의 최종 스탯을 계산하고 반환합니다 (Base + Equipment → Clamp)
+        /// </summary>
+        public CombatStats GetFinalStats(Character character)
         {
-            if (combatant == null || combatant.CharacterData == null)
+            if (character == null || character.CharacterData == null)
                 return default;
 
-            var baseStats = MapCharacterDataToCombatStats(combatant.CharacterData);
-            var equipDelta = MapEquipmentsToDelta(combatant);
+            var baseStats = ConvertToCombatStats(character.CharacterData);
+            var equipDelta = CalculateEquipmentDelta(character);
             var raw = baseStats + equipDelta;
             var clamped = StatLimiter.ClampAll(raw, statLimitRules);
             return clamped;
         }
 
-        public int GetEffectiveATK(Combatant combatant)
+        /// <summary>
+        /// Character의 최종 공격력을 반환합니다
+        /// </summary>
+        public int GetFinalATK(Character character)
         {
-            var stats = GetEffectiveStats(combatant);
+            var stats = GetFinalStats(character);
             return Mathf.RoundToInt(stats.attack);
         }
 
-        private CombatStats MapCharacterDataToCombatStats(CharacterData cd)
+        /// <summary>
+        /// Character의 특정 스탯을 키로 조회합니다
+        /// </summary>
+        public float GetFinalStat(Character character, string statKey)
+        {
+            var stats = GetFinalStats(character);
+            return GetStatByKey(stats, statKey);
+        }
+
+        /// <summary>
+        /// 모든 스탯을 재계산하고 Character에 커밋합니다
+        /// MaxHP 선반영 후 HP를 [0..MaxHP] 보정 (비율 보존)
+        /// </summary>
+        public CombatStats RecalculateAndCommit(Character character)
+        {
+            if (character == null)
+            {
+                Debug.LogWarning("[StatsCalculationManager] RecalculateAndCommit: Character is null");
+                return default;
+            }
+
+            var finalStats = GetFinalStats(character);
+
+            // MaxHP 선반영
+            int oldMaxHP = character.MaxHP;
+            int newMaxHP = Mathf.RoundToInt(finalStats.maxHP);
+
+            // HP 비율 보존하면서 새 MaxHP에 맞춰 조정
+            if (oldMaxHP > 0)
+            {
+                float hpRatio = (float)character.currentHP / oldMaxHP;
+                character.currentHP = Mathf.RoundToInt(newMaxHP * hpRatio);
+            }
+            character.currentHP = Mathf.Clamp(character.currentHP, 0, newMaxHP);
+
+            // Poise 업데이트 (현재값은 유지, 최대값만 갱신)
+            int newMaxPoise = Mathf.RoundToInt(finalStats.maxPoise);
+            character.currentPoise = Mathf.Clamp(character.currentPoise, 0, newMaxPoise);
+
+            // 스탯 변경 이벤트 발행
+            character.NotifyStatsChanged();
+
+            Debug.Log($"[StatsCalculationManager] {character.Name} 스탯 재계산 완료 - " +
+                      $"ATK:{finalStats.attack:F0}, MaxHP:{newMaxHP}, HP:{character.currentHP}, MaxPoise:{newMaxPoise}");
+
+            return finalStats;
+        }
+
+        /// <summary>
+        /// CombatStats에서 키로 스탯 값 조회
+        /// </summary>
+        private float GetStatByKey(CombatStats stats, string key)
+        {
+            switch (key)
+            {
+                case "attack": return stats.attack;
+                case "maxHP": return stats.maxHP;
+                case "maxPoise": return stats.maxPoise;
+                case "critChance": return stats.critChance;
+                case "critMultiplier": return stats.critMultiplier;
+                case "damageReduction": return stats.damageReduction;
+                case "blockEfficiency": return stats.blockEfficiency;
+                case "parryEfficiency": return stats.parryEfficiency;
+                case "blockPoiseConsumption": return stats.blockPoiseConsumption;
+                case "parryPoiseConsumption": return stats.parryPoiseConsumption;
+                case "parryPoiseAttackPower": return stats.parryPoiseAttackPower;
+                case "guardDamageReduction": return stats.guardDamageReduction;
+                case "defenseDR": return stats.defenseDR;
+                case "parryPoiseDamage": return stats.parryPoiseDamage;
+                case "poiseGain": return stats.poiseGain;
+                default:
+                    Debug.LogWarning($"[StatsCalculationManager] Unknown stat key: {key}");
+                    return 0f;
+            }
+        }
+
+        private CombatStats ConvertToCombatStats(CharacterData data)
         {
             CombatStats s = new CombatStats();
-            s.attack = cd.ATK;
-            s.defenseDR = cd.DR;
-            s.maxHP = cd.MaxHP;
-            s.maxPoise = cd.MaxPoise;
-            s.parryPoiseDamage = cd.ParryPoiseDamage;
-            s.critChance = cd.CritChance;              // 0~1
-            s.critMultiplier = cd.CritMultiplier;      // multiplier
-            s.guardDamageReduction = cd.guardDamageReduction; // 0~1
+            s.attack = data.ATK;
+            s.defenseDR = data.DR;
+            s.maxHP = data.MaxHP;
+            s.maxPoise = data.MaxPoise;
+            s.parryPoiseDamage = data.ParryPoiseDamage;
+            s.critChance = data.CritChance;              // 0~1
+            s.critMultiplier = data.CritMultiplier;      // multiplier
+            s.guardDamageReduction = data.baseStats.guardDamageReduction; // 0~1
+            s.guardDRBonus = data.baseStats.guardDRBonus;
             // 나머지는 0 기본
             return s;
         }
 
-        private CombatStats MapEquipmentsToDelta(Combatant combatant)
+        private CombatStats CalculateEquipmentDelta(Character character)
         {
             CombatStats delta = new CombatStats();
 
-            // CombatantInventory 연결 지점은 UI 쪽에서만 보유 중. CharacterManager 등에서 접근 가능하도록 여유 구현이 없으므로, 
-            // 우선 장비 합산은 ItemDatabase/StatDatabase를 통해 ItemDetailPanel 경로가 아닌, Combatant가 보유한 인벤토리 참조가 필요.
-            // 현재 구조에서는 테스트를 위해 CharacterManager에서 플레이어/적 컨트롤러가 가진 인벤토리를 노출하고 있다면 그 참조를 사용해야 한다.
-            // 본 1차 구현에서는 합산 로직만 정의하고, 실제 인벤토리 소스 연결은 추후 Combatant에 주입하는 단계에서 마무리한다.
+            // Character가 직접 보유한 인벤토리 참조
+            if (character.Inventory == null)
+                return delta;
 
-            var inventoryProvider = Object.FindFirstObjectByType<InventoryProvider>();
-            CombatantInventory inv = inventoryProvider != null ? inventoryProvider.GetInventoryFor(combatant) : null;
-            if (inv == null) return delta;
-
-            var equippedItems = inv.GetAllEquippedItems();
+            var equippedItems = character.Inventory.GetAllEquippedItems();
             foreach (var item in equippedItems)
             {
                 if (item == null) continue;
@@ -94,27 +172,6 @@ namespace BladeAction.Combat
             }
 
             return delta;
-        }
-    }
-
-    /// <summary>
-    /// Combatant별 인벤토리를 제공하기 위한 간단한 훅(임시).
-    /// 실제 프로젝트 구조에 맞게 Combatant가 직접 보유/주입받도록 교체 예정.
-    /// </summary>
-    public class InventoryProvider : MonoBehaviour
-    {
-        public BladeAction.Item.CombatantInventory playerInventory;
-        public BladeAction.Item.CombatantInventory enemyInventory;
-
-        public BladeAction.Item.CombatantInventory GetInventoryFor(Combatant combatant)
-        {
-            // 단순 매핑(이후 Combatant 참조 기반으로 개선)
-            if (CharacterManager.Instance != null)
-            {
-                if (combatant == CharacterManager.Instance.PlayerCombatant) return playerInventory;
-                if (combatant == CharacterManager.Instance.EnemyCombatant) return enemyInventory;
-            }
-            return null;
         }
     }
 }

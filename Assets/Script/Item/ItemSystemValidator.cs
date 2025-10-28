@@ -16,7 +16,7 @@ public class ItemSystemValidator : MonoBehaviour
     [SerializeField] private string testItemKey = "test_sword_001";
     [SerializeField] private int testQuantity = 5;
     
-    private CombatantInventory testInventory;
+    private CharacterInventory testInventory;
     
     // 검증 로그 구분자
     private const string LOG_PREFIX = "🔍 [ITEM_VALIDATOR]";
@@ -59,18 +59,18 @@ public class ItemSystemValidator : MonoBehaviour
     }
     
     /// <summary>
-    /// 1단계: CombatantInventory 기본 구조 검증
+    /// 1단계: CharacterInventory 기본 구조 검증
     /// </summary>
     [ContextMenu("1단계: 기본 구조 검증")]
     public void ValidateBasicStructure()
     {
-        LogSeparator("1단계: CombatantInventory 기본 구조 검증 시작");
+        LogSeparator("1단계: CharacterInventory 기본 구조 검증 시작");
         
         try
         {
             // 테스트 인벤토리 생성
-            testInventory = new CombatantInventory();
-            LogSuccess("CombatantInventory 인스턴스 생성 성공");
+            testInventory = new CharacterInventory();
+            LogSuccess("CharacterInventory 인스턴스 생성 성공");
             
             // ItemDatabase.Instance 접근 테스트
             LogInfo("ItemDatabase.Instance 접근 테스트 중...");

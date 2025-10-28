@@ -73,13 +73,13 @@ public class BTMonitorUI : MonoBehaviour
         if (enemyBTStatusText == null) return;
         
         var characterManager = CharacterManager.Instance;
-        if (characterManager == null || characterManager.EnemyCombatant == null)
+        if (characterManager == null || characterManager.EnemyCharacter == null)
         {
             enemyBTStatusText.text = "<color=#888888>Enemy 없음</color>";
             return;
         }
         
-        var enemy = characterManager.EnemyCombatant;
+        var enemy = characterManager.EnemyCharacter;
         StringBuilder sb = new StringBuilder();
         
         sb.AppendLine($"<color=#FF6B6B>╔═══ Enemy: {enemy.Name} ═══╗</color>");
@@ -146,13 +146,13 @@ public class BTMonitorUI : MonoBehaviour
         if (playerBTStatusText == null) return;
         
         var characterManager = CharacterManager.Instance;
-        if (characterManager == null || characterManager.PlayerCombatant == null)
+        if (characterManager == null || characterManager.PlayerCharacter == null)
         {
             playerBTStatusText.text = "<color=#888888>Player 없음</color>";
             return;
         }
         
-        var player = characterManager.PlayerCombatant;
+        var player = characterManager.PlayerCharacter;
         StringBuilder sb = new StringBuilder();
         
         sb.AppendLine($"<color=#00FF00>╔═══ Player: {player.Name} ═══╗</color>");

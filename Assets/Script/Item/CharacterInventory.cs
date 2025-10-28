@@ -5,11 +5,11 @@ using UnityEngine;
 namespace BladeAction.Item
 {
     /// <summary>
-    /// 전투원의 인벤토리 시스템
+    /// 캐릭터의 인벤토리 시스템
     /// 아이템 소유, 장비 관리, 이벤트 통신
     /// </summary>
     [System.Serializable]
-    public class CombatantInventory
+    public class CharacterInventory
     {
         [Header("인벤토리 설정")]
         [Tooltip("최대 아이템 슬롯 수")]
@@ -31,9 +31,26 @@ namespace BladeAction.Item
         public bool isLocked = false;
         
         /// <summary>
+        /// 이 인벤토리의 소유자 (스탯 재계산용)
+        /// </summary>
+        [System.NonSerialized]
+        public Character Owner;
+        
+        /// <summary>
+        /// 스탯 재계산이 필요한지 여부 (더티 플래그)
+        /// </summary>
+        [System.NonSerialized]
+        private bool isDirty = false;
+        
+        /// <summary>
+        /// 스탯 재계산이 필요한지 여부 (외부 접근용)
+        /// </summary>
+        public bool IsDirty => isDirty;
+        
+        /// <summary>
         /// 기본 생성자
         /// </summary>
-        public CombatantInventory()
+        public CharacterInventory()
         {
             InitializeDefaultEquipmentSlots();
         }
@@ -259,6 +276,10 @@ namespace BladeAction.Item
                 if (RemoveItem(itemKey, 1))
                 {
                     SafeTriggerEvent(events => events.TriggerItemEquipped(itemKey, slotType, inventoryName));
+                    
+                    // 스탯 재계산 트리거
+                    TriggerStatsRecalculation();
+                    
                     return true;
                 }
             }
@@ -286,6 +307,9 @@ namespace BladeAction.Item
                 if (success)
                 {
                     SafeTriggerEvent(events => events.TriggerItemUnequipped(unequippedKey, slotType, inventoryName));
+                    
+                    // 스탯 재계산 트리거
+                    TriggerStatsRecalculation();
                 }
                 return success;
             }
@@ -394,6 +418,37 @@ namespace BladeAction.Item
         {
             return $"Inventory: {items.Count}/{maxItemSlots} slots used\n" +
                    $"Equipment: {equipmentSlots.Count(s => !s.IsEmpty())}/{equipmentSlots.Count} slots equipped";
+        }
+        
+        #endregion
+        
+        #region 스탯 재계산
+        
+        /// <summary>
+        /// 스탯 재계산 트리거 (장착/해제 시 호출)
+        /// </summary>
+        private void TriggerStatsRecalculation()
+        {
+            if (Owner == null)
+                return;
+            
+            isDirty = true;
+            
+            // StatsCalculationManager를 통해 스탯 재계산 및 커밋
+            var manager = BladeAction.Combat.StatsCalculationManager.Instance;
+            if (manager != null)
+            {
+                manager.RecalculateAndCommit(Owner);
+                isDirty = false;
+            }
+        }
+        
+        /// <summary>
+        /// 강제로 스탯 재계산 (외부에서 호출 가능)
+        /// </summary>
+        public void ForceRecalculateStats()
+        {
+            TriggerStatsRecalculation();
         }
         
         #endregion

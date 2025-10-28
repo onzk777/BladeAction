@@ -68,7 +68,7 @@ public class HPPanelController : MonoBehaviour
         }
 
         // CharacterManager의 데이터가 준비될 때까지 대기
-        while (CharacterManager.Instance.PlayerCombatant == null || CharacterManager.Instance.EnemyCombatant == null)
+        while (CharacterManager.Instance.PlayerCharacter == null || CharacterManager.Instance.EnemyCharacter == null)
         {
             yield return null;
         }
@@ -83,16 +83,16 @@ public class HPPanelController : MonoBehaviour
 
     private void InitializeHPValues()
     {
-        if (CharacterManager.Instance?.PlayerCombatant != null)
+        if (CharacterManager.Instance?.PlayerCharacter != null)
         {
-            currentPlayerHP = CharacterManager.Instance.PlayerCombatant.currentHP;
-            maxPlayerHP = CharacterManager.Instance.PlayerCombatant.MaxHP;
+            currentPlayerHP = CharacterManager.Instance.PlayerCharacter.currentHP;
+            maxPlayerHP = CharacterManager.Instance.PlayerCharacter.MaxHP;
         }
 
-        if (CharacterManager.Instance?.EnemyCombatant != null)
+        if (CharacterManager.Instance?.EnemyCharacter != null)
         {
-            currentEnemyHP = CharacterManager.Instance.EnemyCombatant.currentHP;
-            maxEnemyHP = CharacterManager.Instance.EnemyCombatant.MaxHP;
+            currentEnemyHP = CharacterManager.Instance.EnemyCharacter.currentHP;
+            maxEnemyHP = CharacterManager.Instance.EnemyCharacter.MaxHP;
         }
 
         if (debugMode)
@@ -104,15 +104,15 @@ public class HPPanelController : MonoBehaviour
     private void SubscribeToHPEvents()
     {
         // 플레이어 HP 이벤트 구독
-        if (CharacterManager.Instance?.PlayerCombatant != null)
+        if (CharacterManager.Instance?.PlayerCharacter != null)
         {
-            CharacterManager.Instance.PlayerCombatant.OnHPChanged += OnPlayerHPChanged;
+            CharacterManager.Instance.PlayerCharacter.OnHPChanged += OnPlayerHPChanged;
         }
 
         // 적 HP 이벤트 구독
-        if (CharacterManager.Instance?.EnemyCombatant != null)
+        if (CharacterManager.Instance?.EnemyCharacter != null)
         {
-            CharacterManager.Instance.EnemyCombatant.OnHPChanged += OnEnemyHPChanged;
+            CharacterManager.Instance.EnemyCharacter.OnHPChanged += OnEnemyHPChanged;
         }
     }
 
@@ -261,32 +261,32 @@ public class HPPanelController : MonoBehaviour
     [ContextMenu("Test Player Take Damage")]
     public void TestPlayerTakeDamage()
     {
-        if (CharacterManager.Instance?.PlayerCombatant != null)
+        if (CharacterManager.Instance?.PlayerCharacter != null)
         {
-            CharacterManager.Instance.PlayerCombatant.TakeDamage(10);
+            CharacterManager.Instance.PlayerCharacter.TakeDamage(10);
         }
     }
 
     [ContextMenu("Test Enemy Take Damage")]
     public void TestEnemyTakeDamage()
     {
-        if (CharacterManager.Instance?.EnemyCombatant != null)
+        if (CharacterManager.Instance?.EnemyCharacter != null)
         {
-            CharacterManager.Instance.EnemyCombatant.TakeDamage(10);
+            CharacterManager.Instance.EnemyCharacter.TakeDamage(10);
         }
     }
 
     private void OnDestroy()
     {
         // 이벤트 구독 해제
-        if (CharacterManager.Instance?.PlayerCombatant != null)
+        if (CharacterManager.Instance?.PlayerCharacter != null)
         {
-            CharacterManager.Instance.PlayerCombatant.OnHPChanged -= OnPlayerHPChanged;
+            CharacterManager.Instance.PlayerCharacter.OnHPChanged -= OnPlayerHPChanged;
         }
 
-        if (CharacterManager.Instance?.EnemyCombatant != null)
+        if (CharacterManager.Instance?.EnemyCharacter != null)
         {
-            CharacterManager.Instance.EnemyCombatant.OnHPChanged -= OnEnemyHPChanged;
+            CharacterManager.Instance.EnemyCharacter.OnHPChanged -= OnEnemyHPChanged;
         }
 
         // 코루틴 정리

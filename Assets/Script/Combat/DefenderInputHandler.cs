@@ -646,9 +646,9 @@ public class DefenderInputHandler : BaseInputHandler
         if (CombatManager.Instance != null)
         {
             var currentController = CombatManager.Instance.CurrentController;
-            if (currentController != null && currentController.Combatant != null)
+            if (currentController != null && currentController.Character != null)
             {
-                return currentController.Combatant.IsInterrupted;
+                return currentController.Character.IsInterrupted;
             }
         }
         return false;
@@ -859,21 +859,21 @@ public class DefenderInputHandler : BaseInputHandler
         
         // 🆕 현재 자세 포인트 가져오기
         float posturePoints = 100f; // 기본값
-        if (combatManager.CurrentController?.Combatant != null)
+        if (combatManager.CurrentController?.Character != null)
         {
-            posturePoints = combatManager.CurrentController.Combatant.CurrentPoise;
+            posturePoints = combatManager.CurrentController.Character.CurrentPoise;
         }
         
         // 🆕 중단 상태 확인
-        bool isInterrupted = combatManager.CurrentController?.Combatant?.IsInterrupted ?? false;
+        bool isInterrupted = combatManager.CurrentController?.Character?.IsInterrupted ?? false;
         
         // 🆕 총 히트 수 가져오기
         int totalHitCount = combatManager.CurrentResult?.HitCount ?? 1;
         
-        // 방어자 Combatant 가져오기 (BT 확률 참조용)
-        Combatant defenderCombatant = combatManager.IsPlayerAttacker 
-            ? CharacterManager.Instance?.EnemyCombatant 
-            : CharacterManager.Instance?.PlayerCombatant;
+        // 방어자 Character 가져오기 (BT 확률 참조용)
+        Character defenderCharacter = combatManager.IsPlayerAttacker 
+            ? CharacterManager.Instance?.EnemyCharacter 
+            : CharacterManager.Instance?.PlayerCharacter;
         
         return new AIContext(
             projectile.hitIndex,
@@ -883,7 +883,7 @@ public class DefenderInputHandler : BaseInputHandler
             posturePoints,
             isInterrupted,
             aiIsGuarding,
-            defenderCombatant  // ← 방어자 Combatant 전달!
+            defenderCharacter  // ← 방어자 Character 전달!
         );
     }
     
@@ -959,18 +959,18 @@ public class DefenderInputHandler : BaseInputHandler
         float turnElapsedTime = TurnTimer.ElapsedTime;
         
         // 🆕 자세 포인트 가져오기
-        float posturePoints = combatManager.CurrentController?.Combatant?.CurrentPoise ?? 100f;
+        float posturePoints = combatManager.CurrentController?.Character?.CurrentPoise ?? 100f;
         
         // 🆕 중단 상태 확인
-        bool isInterrupted = combatManager.CurrentController?.Combatant?.IsInterrupted ?? false;
+        bool isInterrupted = combatManager.CurrentController?.Character?.IsInterrupted ?? false;
         
         // 🆕 총 히트 수 가져오기
         int totalHitCount = combatManager.CurrentResult?.HitCount ?? 1;
         
-        // 방어자 Combatant 가져오기 (BT 확률 참조용)
-        Combatant defenderCombatant = combatManager.IsPlayerAttacker 
-            ? CharacterManager.Instance?.EnemyCombatant 
-            : CharacterManager.Instance?.PlayerCombatant;
+        // 방어자 Character 가져오기 (BT 확률 참조용)
+        Character defenderCharacter = combatManager.IsPlayerAttacker 
+            ? CharacterManager.Instance?.EnemyCharacter 
+            : CharacterManager.Instance?.PlayerCharacter;
         
         return new AIContext(
             0, // 막기 의사결정 시에는 hitIndex 0 사용
@@ -980,7 +980,7 @@ public class DefenderInputHandler : BaseInputHandler
             posturePoints,
             isInterrupted,
             false, // 막기 의사결정 시에는 아직 막기 중이 아님
-            defenderCombatant  // ← 방어자 Combatant 전달!
+            defenderCharacter  // ← 방어자 Character 전달!
         );
     }
     

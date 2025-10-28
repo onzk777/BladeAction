@@ -1,14 +1,18 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using BladeAction.Item;
 
-public abstract class Combatant
+public abstract class Character
 {
     public CharacterData CharacterData { get; protected set; }
     public string Name => CharacterData?.characterName ?? "Unknown";
     public SwordArtStyleData EquippedStyle { get; protected set; }
     public event Action<SwordArtStyleData> OnStyleEquipped;
     public event Action<SwordArtStyleData> OnStyleUnequipped;
+    
+    // 인벤토리 (장비 스탯 적용용)
+    public CharacterInventory Inventory { get; set; }
     
     // 2차 스탯 (런타임 상태)
     [Header("2차 스탯 (런타임 상태)")]
@@ -17,10 +21,10 @@ public abstract class Combatant
     public int tempDRBonus = 0; // 임시 DR 보너스
     
     // 이벤트들
-    public event Action<Combatant> OnStatsChanged;
+    public event Action<Character> OnStatsChanged;
     public event Action<int, int> OnHPChanged;
     public event Action<int, int> OnPoiseChanged;
-    public event Action<Combatant> OnDefeated;
+    public event Action<Character> OnDefeated;
     
     // 1차 스탯 프로퍼티들 (CharacterData에서 가져옴)
     public int MaxHP => CharacterData?.MaxHP ?? 0;
@@ -41,7 +45,7 @@ public abstract class Combatant
     public IReadOnlyList<ActionCommandData> AvailableCommands => _availableCommands;
     private List<ActionCommandData> _availableCommands = new List<ActionCommandData>();
 
-    public Combatant(CharacterData characterData)
+    public Character(CharacterData characterData)
     {
         CharacterData = characterData;
         InitializeRuntimeStats();
@@ -57,7 +61,7 @@ public abstract class Combatant
             currentHP = CharacterData.MaxHP;
             currentPoise = CharacterData.MaxPoise;
             tempDRBonus = 0;
-            Debug.Log($"[Combatant] {Name} 런타임 스테이터스 초기화 - HP: {currentHP}/{MaxHP}, Poise: {currentPoise}/{MaxPoise}");
+            Debug.Log($"[Character] {Name} 런타임 스테이터스 초기화 - HP: {currentHP}/{MaxHP}, Poise: {currentPoise}/{MaxPoise}");
         }
     }
     
@@ -68,7 +72,7 @@ public abstract class Combatant
     {
         int oldPoise = currentPoise;
         currentPoise = MaxPoise;
-        Debug.Log($"[Combatant] {Name} Poise 회복: {oldPoise} → {currentPoise}");
+        Debug.Log($"[Character] {Name} Poise 회복: {oldPoise} → {currentPoise}");
         OnPoiseChanged?.Invoke(oldPoise, currentPoise);
         OnStatsChanged?.Invoke(this);
     }
@@ -81,10 +85,10 @@ public abstract class Combatant
     {
         int oldPoise = currentPoise;
         currentPoise = Mathf.Max(0, currentPoise - amount);
-        Debug.Log($"[Combatant] {Name} Poise 감소: {oldPoise} → {currentPoise} (감소량: {amount})");
+        Debug.Log($"[Character] {Name} Poise 감소: {oldPoise} → {currentPoise} (감소량: {amount})");
         OnPoiseChanged?.Invoke(oldPoise, currentPoise);
         OnStatsChanged?.Invoke(this);
-        if (IsInterrupted) Debug.LogWarning($"[Combatant] {Name} Poise 소진! 중단 발생!");
+        if (IsInterrupted) Debug.LogWarning($"[Character] {Name} Poise 소진! 중단 발생!");
     }
     
     /// <summary>
@@ -110,7 +114,7 @@ public abstract class Combatant
     {
         int oldHP = currentHP;
         currentHP = Mathf.Min(MaxHP, currentHP + amount);
-        Debug.Log($"[Combatant] {Name} HP 회복: {oldHP} → {currentHP} (회복량: {amount})");
+        Debug.Log($"[Character] {Name} HP 회복: {oldHP} → {currentHP} (회복량: {amount})");
         OnHPChanged?.Invoke(oldHP, currentHP);
         OnStatsChanged?.Invoke(this);
     }
@@ -122,13 +126,13 @@ public abstract class Combatant
     {
         int oldHP = currentHP;
         currentHP = Mathf.Max(0, currentHP - finalDamage);
-        Debug.Log($"[Combatant] {Name} 피해 받음: {oldHP} → {currentHP} (최종 피해: {finalDamage})");
+        Debug.Log($"[Character] {Name} 피해 받음: {oldHP} → {currentHP} (최종 피해: {finalDamage})");
         OnHPChanged?.Invoke(oldHP, currentHP);
         OnStatsChanged?.Invoke(this);
         
         if (IsDefeated)
         {
-            Debug.LogWarning($"[Combatant] {Name} HP 소진! 패배!");
+            Debug.LogWarning($"[Character] {Name} HP 소진! 패배!");
             OnDefeated?.Invoke(this);
         }
     }
@@ -151,21 +155,21 @@ public abstract class Combatant
     }
     
     /// <summary>
-    /// 유효 DR 반환 (기본 DR + 임시 보너스)
+    /// 최종 DR 반환 (기본 DR + 임시 보너스)
     /// </summary>
-    public int GetEffectiveDR()
+    public int GetFinalDR()
     {
         return DR + tempDRBonus;
     }
     
     /// <summary>
-    /// 막기 시 유효 DR 반환 (기본 DR + 막기 보너스 + 임시 보너스)
+    /// 막기 시 최종 DR 반환 (기본 DR + 막기 보너스 + 임시 보너스)
     /// </summary>
-    public int GetGuardEffectiveDR()
+    public int GetGuardFinalDR()
     {
         if (CharacterData != null)
         {
-            return DR + CharacterData.guardDRBonus + tempDRBonus;
+            return DR + CharacterData.baseStats.guardDRBonus + tempDRBonus;
         }
         return DR + tempDRBonus;
     }
@@ -175,7 +179,7 @@ public abstract class Combatant
     /// </summary>
     public float GetGuardDamageReduction()
     {
-        return CharacterData?.guardDamageReduction ?? 0.5f;
+        return CharacterData?.baseStats.guardDamageReduction ?? 0.5f;
     }
     
     /// <summary>
@@ -184,7 +188,7 @@ public abstract class Combatant
     public void SetTempDRBonus(int bonus)
     {
         tempDRBonus = bonus;
-        Debug.Log($"[Combatant] {Name} 임시 DR 보너스 설정: {bonus} (총 DR: {GetEffectiveDR()})");
+        Debug.Log($"[Character] {Name} 임시 DR 보너스 설정: {bonus} (총 DR: {GetFinalDR()})");
         OnStatsChanged?.Invoke(this);
     }
     
@@ -194,7 +198,15 @@ public abstract class Combatant
     public void ClearTempDRBonus()
     {
         tempDRBonus = 0;
-        Debug.Log($"[Combatant] {Name} 임시 DR 보너스 제거 (총 DR: {GetEffectiveDR()})");
+        Debug.Log($"[Character] {Name} 임시 DR 보너스 제거 (총 DR: {GetFinalDR()})");
+        OnStatsChanged?.Invoke(this);
+    }
+    
+    /// <summary>
+    /// 스탯 변경 이벤트를 발행합니다 (외부 시스템용)
+    /// </summary>
+    public void NotifyStatsChanged()
+    {
         OnStatsChanged?.Invoke(this);
     }
 
@@ -223,3 +235,4 @@ public abstract class Combatant
         }
     }
 }
+

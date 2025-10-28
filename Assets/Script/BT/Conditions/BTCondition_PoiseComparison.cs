@@ -60,13 +60,13 @@ namespace BladeAction.BT
             if (context?.self == null || context?.target == null)
                 return false;
             
-            Combatant targetCombatant = (target == ComparisonTarget.Self) ? context.self : context.target;
+            Character targetCharacter = (target == ComparisonTarget.Self) ? context.self : context.target;
             
-            if (targetCombatant == null)
+            if (targetCharacter == null)
                 return false;
             
-            float currentPoise = targetCombatant.CurrentPoise;
-            float maxPoise = targetCombatant.MaxPoise;
+            float currentPoise = targetCharacter.CurrentPoise;
+            float maxPoise = targetCharacter.MaxPoise;
             
             if (maxPoise <= 0)
                 return false;

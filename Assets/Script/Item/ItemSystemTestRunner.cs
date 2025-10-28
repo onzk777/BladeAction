@@ -19,7 +19,7 @@ public class ItemSystemTestRunner : MonoBehaviour
     private const string LOG_WARNING = "⚠️";
     private const string LOG_INFO = "ℹ️";
     
-    private CombatantInventory testInventory;
+    private CharacterInventory testInventory;
     
     private void Start()
     {
@@ -55,18 +55,18 @@ public class ItemSystemTestRunner : MonoBehaviour
     }
     
     /// <summary>
-    /// 1단계: CombatantInventory 기본 구조 검증
+    /// 1단계: CharacterInventory 기본 구조 검증
     /// </summary>
     [ContextMenu("1단계: 기본 구조 검증")]
     public void RunPhase1Test()
     {
-        LogSeparator("1단계: CombatantInventory 기본 구조 검증");
+        LogSeparator("1단계: CharacterInventory 기본 구조 검증");
         
         try
         {
             // 인스턴스 생성 테스트
-            testInventory = new CombatantInventory();
-            LogSuccess("CombatantInventory 생성 완료");
+            testInventory = new CharacterInventory();
+            LogSuccess("CharacterInventory 생성 완료");
             
             // 기본 설정값 확인
             ValidateBasicSettings();
@@ -400,7 +400,7 @@ public class ItemSystemTestRunner : MonoBehaviour
         if (testInventory == null)
         {
             LogInfo("테스트 인벤토리 자동 초기화 중...");
-            testInventory = new CombatantInventory();
+            testInventory = new CharacterInventory();
         }
         
         try
@@ -552,7 +552,7 @@ public class ItemSystemTestRunner : MonoBehaviour
         if (testInventory == null)
         {
             LogInfo("테스트 인벤토리 자동 초기화 중...");
-            testInventory = new CombatantInventory();
+            testInventory = new CharacterInventory();
         }
         
         try
@@ -842,7 +842,7 @@ public class ItemSystemTestRunner : MonoBehaviour
             if (testInventory == null)
             {
                 LogInfo("테스트 인벤토리 자동 초기화 중...");
-                testInventory = new CombatantInventory();
+                testInventory = new CharacterInventory();
             }
             
             // ItemEvents 인스턴스 확인

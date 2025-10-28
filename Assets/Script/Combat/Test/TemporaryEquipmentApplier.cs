@@ -5,15 +5,20 @@ using BladeAction.Combat;
 namespace BladeAction.Test
 {
     /// <summary>
-    /// 전투 시작 시 전투원에게 임시 장비를 장착시켜 StatsCalculationManager 경로로 합산/Clamp 되는지 검증하는 유틸
+    /// [DEPRECATED] 전투 시작 시 전투원에게 임시 장비를 장착시켜 StatsCalculationManager 경로로 합산/Clamp 되는지 검증하는 유틸
+    /// 
+    /// 현재는 Combatant.Inventory를 직접 사용하므로 이 클래스는 더 이상 필요하지 않습니다.
+    /// Character 생성 시 Inventory를 직접 할당하고, EquipItem을 호출하면 자동으로 스탯이 재계산됩니다.
+    /// 
     /// - 씬에 배치하고, 플레이어/적 인벤토리를 인스펙터에 할당 후 테스트
     /// - 로그로 유효 ATK 전/후를 출력
     /// </summary>
+    [System.Obsolete("Use Combatant.Inventory directly instead")]
     public class TemporaryEquipmentApplier : MonoBehaviour
     {
         [Header("Inventory (임시)")]
-        public CombatantInventory playerInventory;
-        public CombatantInventory enemyInventory;
+        public CharacterInventory playerInventory;
+        public CharacterInventory enemyInventory;
 
         [Header("장착할 아이템 키(쉼표 구분)")]
         public string playerEquipKeysCsv;
@@ -21,23 +26,31 @@ namespace BladeAction.Test
 
         private void Start()
         {
-            var provider = Object.FindFirstObjectByType<InventoryProvider>();
-            if (provider != null)
+            // Combatant.Inventory를 직접 할당
+            if (CharacterManager.Instance?.PlayerCharacter != null)
             {
-                provider.playerInventory = playerInventory;
-                provider.enemyInventory = enemyInventory;
+                CharacterManager.Instance.PlayerCharacter.Inventory = playerInventory;
+                if (playerInventory != null)
+                    playerInventory.Owner = CharacterManager.Instance.PlayerCharacter;
+            }
+            
+            if (CharacterManager.Instance?.EnemyCharacter != null)
+            {
+                CharacterManager.Instance.EnemyCharacter.Inventory = enemyInventory;
+                if (enemyInventory != null)
+                    enemyInventory.Owner = CharacterManager.Instance.EnemyCharacter;
             }
 
-            TryEquipFor(CharacterManager.Instance?.PlayerCombatant, playerInventory, playerEquipKeysCsv, isPlayer:true);
-            TryEquipFor(CharacterManager.Instance?.EnemyCombatant, enemyInventory, enemyEquipKeysCsv, isPlayer:false);
+            TryEquipFor(CharacterManager.Instance?.PlayerCharacter, playerInventory, playerEquipKeysCsv, isPlayer:true);
+            TryEquipFor(CharacterManager.Instance?.EnemyCharacter, enemyInventory, enemyEquipKeysCsv, isPlayer:false);
         }
 
-        private void TryEquipFor(Combatant combatant, CombatantInventory inventory, string csv, bool isPlayer)
+        private void TryEquipFor(Character combatant, CharacterInventory inventory, string csv, bool isPlayer)
         {
             if (combatant == null || inventory == null) return;
 
             int beforeAtk = StatsCalculationManager.Instance != null
-                ? StatsCalculationManager.Instance.GetEffectiveATK(combatant)
+                ? StatsCalculationManager.Instance.GetFinalATK(combatant)
                 : combatant.ATK;
 
             if (!string.IsNullOrEmpty(csv))
@@ -70,7 +83,7 @@ namespace BladeAction.Test
             }
 
             int afterAtk = StatsCalculationManager.Instance != null
-                ? StatsCalculationManager.Instance.GetEffectiveATK(combatant)
+                ? StatsCalculationManager.Instance.GetFinalATK(combatant)
                 : combatant.ATK;
 
             Debug.Log($"[TemporaryEquipmentApplier] {(isPlayer ? "Player" : "Enemy")} ATK: {beforeAtk} -> {afterAtk}");

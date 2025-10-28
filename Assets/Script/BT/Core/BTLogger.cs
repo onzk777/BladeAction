@@ -171,7 +171,7 @@ namespace BladeAction.BT
             // 조건 타입별 상세 정보
             if (condition is BTCondition_HPComparison hpCond)
             {
-                Combatant target = hpCond.target == BTCondition_HPComparison.ComparisonTarget.Self ? 
+                Character target = hpCond.target == BTCondition_HPComparison.ComparisonTarget.Self ? 
                     context.self : context.target;
                 float currentHP = target?.HP ?? 0;
                 float maxHP = target?.MaxHP ?? 1;
@@ -182,7 +182,7 @@ namespace BladeAction.BT
             }
             else if (condition is BTCondition_PoiseComparison poiseCond)
             {
-                Combatant target = poiseCond.target == BTCondition_PoiseComparison.ComparisonTarget.Self ? 
+                Character target = poiseCond.target == BTCondition_PoiseComparison.ComparisonTarget.Self ? 
                     context.self : context.target;
                 float currentPoise = target?.CurrentPoise ?? 0;
                 float maxPoise = target?.MaxPoise ?? 1;
@@ -391,7 +391,7 @@ namespace BladeAction.BT
         {
             if (condition is BTCondition_HPComparison hpCond)
             {
-                Combatant target = hpCond.target == BTCondition_HPComparison.ComparisonTarget.Self ? 
+                Character target = hpCond.target == BTCondition_HPComparison.ComparisonTarget.Self ? 
                     context.self : context.target;
                 float currentHP = target?.HP ?? 0;
                 float maxHP = target?.MaxHP ?? 1;
@@ -400,7 +400,7 @@ namespace BladeAction.BT
             }
             else if (condition is BTCondition_PoiseComparison poiseCond)
             {
-                Combatant target = poiseCond.target == BTCondition_PoiseComparison.ComparisonTarget.Self ? 
+                Character target = poiseCond.target == BTCondition_PoiseComparison.ComparisonTarget.Self ? 
                     context.self : context.target;
                 float currentPoise = target?.CurrentPoise ?? 0;
                 float maxPoise = target?.MaxPoise ?? 1;

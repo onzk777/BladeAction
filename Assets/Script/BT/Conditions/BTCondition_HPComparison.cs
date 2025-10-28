@@ -63,16 +63,16 @@ namespace BladeAction.BT
                 return false;
             }
             
-            Combatant targetCombatant = (target == ComparisonTarget.Self) ? context.self : context.target;
+            Character targetCharacter = (target == ComparisonTarget.Self) ? context.self : context.target;
             
-            if (targetCombatant == null)
+            if (targetCharacter == null)
             {
-                Debug.LogWarning("[BTCondition_HPComparison] targetCombatant이 null");
+                Debug.LogWarning("[BTCondition_HPComparison] targetCharacter이 null");
                 return false;
             }
             
-            float currentHP = targetCombatant.HP;
-            float maxHP = targetCombatant.MaxHP;
+            float currentHP = targetCharacter.HP;
+            float maxHP = targetCharacter.MaxHP;
             
             if (maxHP <= 0)
             {

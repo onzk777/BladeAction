@@ -1,10 +1,10 @@
-﻿// CombatantCommandResult.cs (변경된 전체)
+// CharacterCommandResult.cs
 
 using System;
 using System.Collections.Generic;
-using static CombatantCommandResult;
+using static CharacterCommandResult;
 
-public class CombatantCommandResult
+public class CharacterCommandResult
 {
     public ActionCommandData Command { get; }
     public bool WasInterrupted { get; set; } = false;
@@ -12,7 +12,7 @@ public class CombatantCommandResult
     private List<HitResult> hitResults;
     public IReadOnlyList<HitResult> HitResults => hitResults;
 
-    public CombatantCommandResult(ActionCommandData cmd)
+    public CharacterCommandResult(ActionCommandData cmd)
     {
         Command = cmd;
         if (cmd == null) throw new ArgumentNullException(nameof(cmd)); // cmd가 null인 경우 예외 발생
@@ -48,3 +48,4 @@ public class CombatantCommandResult
         return count;
     }
 }
+

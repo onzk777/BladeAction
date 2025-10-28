@@ -21,11 +21,11 @@ public class InventoryTestManager : MonoBehaviour
     [Tooltip("현재 인벤토리의 아이템 목록")]
     public List<string> currentInventoryItems = new List<string>();
     
-    private CombatantInventory testInventory;
+    private CharacterInventory testInventory;
     private InventoryUI inventoryUI;
     
     // Editor에서 접근하기 위한 public 프로퍼티
-    public CombatantInventory TestInventory => testInventory;
+    public CharacterInventory TestInventory => testInventory;
     public InventoryUI InventoryUI => inventoryUI;
     
     void Start()
@@ -245,7 +245,7 @@ public class InventoryTestManager : MonoBehaviour
                 Debug.Log("[InventoryTestManager] 테스트 초기화 시작");
                 
                 // 1. 테스트 인벤토리 생성 (생성자에서 자동 초기화됨)
-                testInventory = new CombatantInventory();
+                testInventory = new CharacterInventory();
                 Debug.Log($"✅ 테스트 인벤토리 생성: {testInventory.items.Count}개 아이템");
                 
                 // 2. InventoryUI 찾기 및 초기화

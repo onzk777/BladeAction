@@ -78,7 +78,7 @@ public class CombatManager : MonoBehaviour
     public bool IsNPCAttackTurn => !isPlayerAttacker;
     public bool IsPlayerAttackTurn => isPlayerAttacker;
 
-    // CharacterManager를 통해 Combatant 인스턴스 접근
+    // CharacterManager를 통해 Character 인스턴스 접근
 
     // 현재 히트 컨텍스트 전역화
     public int CurrentHit { get; private set; } // 현재 히트 인덱스. (연타 공격일 경우 체크용)
@@ -98,7 +98,7 @@ public class CombatManager : MonoBehaviour
     // FloatingText 생성 상태 추적 (입력 처리 결과와 분리)
     private bool floatingTextShown = false; // 공격자 FloatingText 생성 여부
     public ICombatController CurrentController { get; private set; } // player/enemy 컨트롤러의 인터페이스
-    public CombatantCommandResult CurrentResult { get; private set; } // 현재 커맨드 결과
+    public CharacterCommandResult CurrentResult { get; private set; } // 현재 커맨드 결과
     public static float CombatStartTime { get; private set; } // 전투 시작 시간 (초 단위 f.)
     public float GetInputDeadline() // 입력 마감 시간 계산
     {
@@ -301,7 +301,7 @@ public class CombatManager : MonoBehaviour
             
             // 🆕 디버그: 턴 완료 확인
             Debug.Log($"[RunCombat] ========== 턴 {CurrentTurnNumber} 완료 - 다음 턴으로 ==========");
-            Debug.Log($"[RunCombat] 플레이어 HP: {CharacterManager.Instance.PlayerCombatant.HP}, 적 HP: {CharacterManager.Instance.EnemyCombatant.HP}");
+            Debug.Log($"[RunCombat] 플레이어 HP: {CharacterManager.Instance.PlayerCharacter.HP}, 적 HP: {CharacterManager.Instance.EnemyCharacter.HP}");
             Debug.Log($"[RunCombat] isBattleEnded: {isBattleEnded}");
         }
         Debug.Log("전투 종료!");
@@ -319,18 +319,18 @@ public class CombatManager : MonoBehaviour
         if (CharacterManager.Instance != null)
         {
             // 플레이어 블랙보드 리셋
-            var playerCombatant = CharacterManager.Instance.PlayerCombatant as PlayerCombatant;
-            if (playerCombatant != null)
+            var playerCharacter = CharacterManager.Instance.PlayerCharacter as PlayerCharacter;
+            if (playerCharacter != null)
             {
-                playerCombatant.ResetBlackboard();
+                playerCharacter.ResetBlackboard();
                 Debug.Log("[CombatManager] 플레이어 블랙보드 리셋 완료");
             }
             
             // 적 블랙보드 리셋
-            var enemyCombatant = CharacterManager.Instance.EnemyCombatant as EnemyCombatant;
-            if (enemyCombatant != null)
+            var enemyCharacter = CharacterManager.Instance.EnemyCharacter as EnemyCharacter;
+            if (enemyCharacter != null)
             {
-                enemyCombatant.ResetBlackboard();
+                enemyCharacter.ResetBlackboard();
                 Debug.Log("[CombatManager] 적 블랙보드 리셋 완료");
             }
             
@@ -358,18 +358,18 @@ public class CombatManager : MonoBehaviour
         if (CharacterManager.Instance != null)
         {
             // 적 Combatant의 확률 리셋
-            var enemyCombatant = CharacterManager.Instance.EnemyCombatant as EnemyCombatant;
-            if (enemyCombatant != null)
+            var enemyCharacter = CharacterManager.Instance.EnemyCharacter as EnemyCharacter;
+            if (enemyCharacter != null)
             {
-                enemyCombatant.ResetProbabilities();
+                enemyCharacter.ResetProbabilities();
                 Debug.Log("[CombatManager] 적 NPC 확률 리셋 완료");
             }
             
             // TODO: 플레이어도 NPC일 수 있다면 여기에 추가
-            // var playerCombatant = CharacterManager.Instance.PlayerCombatant as EnemyCombatant;
-            // if (playerCombatant != null)
+            // var playerCharacter = CharacterManager.Instance.PlayerCharacter as EnemyCharacter;
+            // if (playerCharacter != null)
             // {
-            //     playerCombatant.ResetProbabilities();
+            //     playerCharacter.ResetProbabilities();
             // }
         }
         else
@@ -383,9 +383,9 @@ public class CombatManager : MonoBehaviour
         Debug.Log($"[턴 시작] PerformTurn 호출, currentCommandIndex 초기화");
         
         // 초기화 (순서 중요! isPlayerAttacker를 먼저 계산해야 defender가 올바름)
-        Combatant actor = controller.Combatant; // 현재 턴을 수행하는 Combatant (공격자)
-        isPlayerAttacker = (controller.Combatant == CharacterManager.Instance?.PlayerCombatant) ? true : false; // 플레이어 여부 (먼저 계산!)
-        Combatant defender = isPlayerAttacker ? CharacterManager.Instance.EnemyCombatant : CharacterManager.Instance.PlayerCombatant; // 피격자 (isPlayerAttacker 사용)
+        Character actor = controller.Character; // 현재 턴을 수행하는 Character (공격자)
+        isPlayerAttacker = (controller.Character == CharacterManager.Instance?.PlayerCharacter) ? true : false; // 플레이어 여부 (먼저 계산!)
+        Character defender = isPlayerAttacker ? CharacterManager.Instance.EnemyCharacter : CharacterManager.Instance.PlayerCharacter; // 피격자 (isPlayerAttacker 사용)
         
         // 🆕 BT 평가 (공격자 + 방어자 모두!)
         // 왜 필요한가?
@@ -395,13 +395,13 @@ public class CombatManager : MonoBehaviour
         Debug.Log($"[CombatManager] 🌳 BT 평가 시작 - 공격자: {actor.Name}, 방어자: {defender.Name}");
         
         // 1. 공격자 BT 평가 (isAttackTurn = true)
-        if (actor is PlayerCombatant playerActor)
+        if (actor is PlayerCharacter playerActor)
         {
             Debug.Log($"[CombatManager]   → Player 공격 턴 BT 평가");
             playerActor.ResetBTEvaluation();
             playerActor.ExecuteBehaviorTrees();
         }
-        else if (actor is EnemyCombatant enemyActor)
+        else if (actor is EnemyCharacter enemyActor)
         {
             Debug.Log($"[CombatManager]   → Enemy 공격 턴 BT 평가");
             enemyActor.ResetBTEvaluation();
@@ -409,13 +409,13 @@ public class CombatManager : MonoBehaviour
         }
         
         // 2. 방어자 BT 평가 (isAttackTurn = false)
-        if (defender is PlayerCombatant playerDefender)
+        if (defender is PlayerCharacter playerDefender)
         {
             Debug.Log($"[CombatManager]   → Player 방어 턴 BT 평가");
             playerDefender.ResetBTEvaluation();
             playerDefender.ExecuteBehaviorTrees();
         }
-        else if (defender is EnemyCombatant enemyDefender)
+        else if (defender is EnemyCharacter enemyDefender)
         {
             Debug.Log($"[CombatManager]   → Enemy 방어 턴 BT 평가");
             enemyDefender.ResetBTEvaluation();
@@ -442,7 +442,7 @@ public class CombatManager : MonoBehaviour
                 Debug.Log($"[CombatManager] Enemy UI 업데이트 - 선택된 검술: {selectedCommandIndex}번");
             }
         }      
-        CombatantCommandResult result = new CombatantCommandResult(command); // 커맨드 결과 객체 생성
+        CharacterCommandResult result = new CharacterCommandResult(command); // 커맨드 결과 객체 생성
         attackerInputHandler.SetIsPlayer(isPlayerAttacker); // 공격자 입력 핸들러 설정
         defenderInputHandler.SetIsPlayer(!isPlayerAttacker); // 방어자 입력 핸들러 설정
         Debug.Log($"[InputTrace][Turn] SetIsPlayer - attacker:{attackerInputHandler.IsPlayer} defender:{defenderInputHandler.IsPlayer} (isPlayerAttacker:{isPlayerAttacker}) Time:{Time.time:F4} Frame:{Time.frameCount}");
@@ -901,7 +901,7 @@ public class CombatManager : MonoBehaviour
     /// <summary>
     /// 공격자와 피격자의 애니메이션이 모두 완료될 때까지 대기
     /// </summary>
-    private IEnumerator WaitForAnimationsComplete(Combatant attacker, Combatant target)
+    private IEnumerator WaitForAnimationsComplete(Character attacker, Character target)
     {
         Debug.Log($"[CombatManager] 애니메이션 완료 대기 시작 - 공격자: {attacker.Name}, 피격자: {target.Name}");
         
@@ -1245,9 +1245,9 @@ public class CombatManager : MonoBehaviour
 
         Debug.Log($"[CombatManager] 판정 결과: {resultVersus} (공격자 완벽: {atkPerfect}, 방어자 완벽: {defPerfect}, 막기: {guard}) - 히트 {hitIndex}");
 
-        // 현재 공격자와 방어자 Combatant 찾기
-        Combatant attacker = isPlayerAttacker ? CharacterManager.Instance.PlayerCombatant : CharacterManager.Instance.EnemyCombatant;
-        Combatant defender = isPlayerAttacker ? CharacterManager.Instance.EnemyCombatant : CharacterManager.Instance.PlayerCombatant;
+        // 현재 공격자와 방어자 Character 찾기
+        Character attacker = isPlayerAttacker ? CharacterManager.Instance.PlayerCharacter : CharacterManager.Instance.EnemyCharacter;
+        Character defender = isPlayerAttacker ? CharacterManager.Instance.EnemyCharacter : CharacterManager.Instance.PlayerCharacter;
         
         // 현재 사용된 검술 커맨드 가져오기
         var currentCommand = CurrentResult?.Command;
@@ -1613,7 +1613,7 @@ public class CombatManager : MonoBehaviour
     /// <summary>
     /// 피해량 계산 및 적용
     /// </summary>
-    private void ProcessDamageCalculation(Combatant attacker, Combatant defender, ActionCommandData command, InputVersusResult.ResultType resultType, int hitIndex = 0)
+    private void ProcessDamageCalculation(Character attacker, Character defender, ActionCommandData command, InputVersusResult.ResultType resultType, int hitIndex = 0)
     {
         // ========== 피해량 계산 시작 ==========
         Debug.Log($"\n[피해량 계산] ========== {attacker.Name} → {defender.Name} ==========");
@@ -1622,7 +1622,7 @@ public class CombatManager : MonoBehaviour
         // 히트별 damageRatio 사용
         float currentHitDamageRatio = command.GetDamageRatio(hitIndex);
         int attackerATK = BladeAction.Combat.StatsCalculationManager.Instance != null 
-            ? BladeAction.Combat.StatsCalculationManager.Instance.GetEffectiveATK(attacker)
+            ? BladeAction.Combat.StatsCalculationManager.Instance.GetFinalATK(attacker)
             : attacker.ATK;
         int baseDamage = Mathf.RoundToInt(attackerATK * currentHitDamageRatio);
         
@@ -1650,11 +1650,11 @@ public class CombatManager : MonoBehaviour
         int effectiveDR;
         if (defenderInputHandler.IsGuardActive)
         {
-            effectiveDR = defender.GetGuardEffectiveDR();
+            effectiveDR = defender.GetGuardFinalDR();
         }
         else
         {
-            effectiveDR = defender.GetEffectiveDR();
+            effectiveDR = defender.GetFinalDR();
         }
         
         int damageAfterDR = ApplyDefenseReduction(damageAfterReduction, effectiveDR);
@@ -1662,7 +1662,7 @@ public class CombatManager : MonoBehaviour
         // DR 적용 결과 로그
         if (defenderInputHandler.IsGuardActive)
         {
-            Debug.Log($"[피해량 계산] 막기 상태 - 막기 DR 적용: {damageAfterReduction} - {effectiveDR} = {damageAfterDR} (기본 DR: {defender.DR}, 막기 보너스: {defender.CharacterData.guardDRBonus}, 임시 보너스: {defender.tempDRBonus})");
+            Debug.Log($"[피해량 계산] 막기 상태 - 막기 DR 적용: {damageAfterReduction} - {effectiveDR} = {damageAfterDR} (기본 DR: {defender.DR}, 막기 보너스: {defender.CharacterData.baseStats.guardDRBonus}, 임시 보너스: {defender.tempDRBonus})");
         }
         else
         {
@@ -1684,7 +1684,7 @@ public class CombatManager : MonoBehaviour
             if (defender.IsDefeated)
             {
                 Debug.LogWarning($"[피해량 계산] {defender.Name}이 패배했습니다! (HP: {defender.GetHPStatus()})");
-                EndBattle(defender == CharacterManager.Instance.PlayerCombatant ? BattleResult.BattleEndReason.PlayerDefeated : BattleResult.BattleEndReason.EnemyDefeated);
+                EndBattle(defender == CharacterManager.Instance.PlayerCharacter ? BattleResult.BattleEndReason.PlayerDefeated : BattleResult.BattleEndReason.EnemyDefeated);
                 return; // 피해 처리 후 즉시 종료
             }
         }
@@ -1804,20 +1804,20 @@ public class CombatManager : MonoBehaviour
         battleResult.EndTime = Time.time;
         
         // 승리자와 패배자 결정
-        Combatant winner = null;
-        Combatant loser = null;
+        Character winner = null;
+        Character loser = null;
         string winnerName = "";
         
         if (reason == BattleResult.BattleEndReason.PlayerDefeated)
         {
-            winner = CharacterManager.Instance.EnemyCombatant;
-            loser = CharacterManager.Instance.PlayerCombatant;
+            winner = CharacterManager.Instance.EnemyCharacter;
+            loser = CharacterManager.Instance.PlayerCharacter;
             winnerName = "적";
         }
         else if (reason == BattleResult.BattleEndReason.EnemyDefeated)
         {
-            winner = CharacterManager.Instance.PlayerCombatant;
-            loser = CharacterManager.Instance.EnemyCombatant;
+            winner = CharacterManager.Instance.PlayerCharacter;
+            loser = CharacterManager.Instance.EnemyCharacter;
             winnerName = "플레이어";
         }
         
@@ -1930,19 +1930,19 @@ public class CombatManager : MonoBehaviour
         if (CharacterManager.Instance != null)
         {
             // 플레이어 스테이터스 초기화
-            var playerCombatant = CharacterManager.Instance.PlayerCombatant;
-            if (playerCombatant != null)
+            var playerCharacter = CharacterManager.Instance.PlayerCharacter;
+            if (playerCharacter != null)
             {
-                playerCombatant.InitializeRuntimeStats();
-                Debug.Log($"[CombatManager] 플레이어 스테이터스 초기화 - HP: {playerCombatant.GetHPStatus()}, Poise: {playerCombatant.GetPoiseStatus()}");
+                playerCharacter.InitializeRuntimeStats();
+                Debug.Log($"[CombatManager] 플레이어 스테이터스 초기화 - HP: {playerCharacter.GetHPStatus()}, Poise: {playerCharacter.GetPoiseStatus()}");
             }
             
             // 적 스테이터스 초기화
-            var enemyCombatant = CharacterManager.Instance.EnemyCombatant;
-            if (enemyCombatant != null)
+            var enemyCharacter = CharacterManager.Instance.EnemyCharacter;
+            if (enemyCharacter != null)
             {
-                enemyCombatant.InitializeRuntimeStats();
-                Debug.Log($"[CombatManager] 적 스테이터스 초기화 - HP: {enemyCombatant.GetHPStatus()}, Poise: {enemyCombatant.GetPoiseStatus()}");
+                enemyCharacter.InitializeRuntimeStats();
+                Debug.Log($"[CombatManager] 적 스테이터스 초기화 - HP: {enemyCharacter.GetHPStatus()}, Poise: {enemyCharacter.GetPoiseStatus()}");
             }
         }
         

@@ -15,7 +15,7 @@ namespace BladeAction.UI
     {
         [Header("인벤토리 참조")]
         [Tooltip("표시할 인벤토리 (런타임에 설정)")]
-        [SerializeField] private CombatantInventory inventory;
+        [SerializeField] private CharacterInventory inventory;
         
         [Header("UI 컨테이너 참조")]
         [Tooltip("메인 패널 GameObject")]
@@ -123,7 +123,7 @@ namespace BladeAction.UI
         /// 인벤토리 및 UI 초기화
         /// </summary>
         /// <param name="inventory">표시할 인벤토리</param>
-        public void Initialize(CombatantInventory inventory)
+        public void Initialize(CharacterInventory inventory)
         {
             if (inventory == null)
             {
@@ -779,7 +779,7 @@ namespace BladeAction.UI
         /// <summary>
         /// 현재 인벤토리 반환
         /// </summary>
-        public CombatantInventory GetInventory()
+        public CharacterInventory GetInventory()
         {
             return inventory;
         }

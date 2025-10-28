@@ -6,7 +6,7 @@ using Spine.Unity;
 [RequireComponent(typeof(PlayerInput))]
 public class PlayerController : MonoBehaviour, ICombatController
 {
-    public Combatant Combatant => CharacterManager.Instance?.PlayerCombatant;    
+    public Character Character => CharacterManager.Instance?.PlayerCharacter;    
     private int currentCommandIndex;
     // Skeleton Mecanim의 Animator 컴포넌트 참조
 
@@ -41,7 +41,7 @@ public class PlayerController : MonoBehaviour, ICombatController
     {
         return equippedStyle.CommandSet[commandIndex];
     }
-    public int CommandCount => Combatant?.AvailableCommands.Count ?? 0;
+    public int CommandCount => Character?.AvailableCommands.Count ?? 0;
     
     public void SetSelectedCommandIndex(int commandIndex)
     {
@@ -113,14 +113,14 @@ public class PlayerController : MonoBehaviour, ICombatController
             yield return null;
         }
 
-        // Combatant가 준비될 때까지 대기
-        while (Combatant == null)
+        // Character가 준비될 때까지 대기
+        while (Character == null)
         {
             yield return null;
         }
 
         // 유파 장착
-        Combatant?.EquipSwordArtStyle(equippedStyle);
+        Character?.EquipSwordArtStyle(equippedStyle);
         
         // Spine 애니메이션 애셋을 Skeleton Mecanim에 연결
         SetupSkeletonMecanim();
@@ -245,7 +245,7 @@ public class PlayerController : MonoBehaviour, ICombatController
             // - 현재: UI 기반 선택
             // - 향후: BT 기반 선택 가능 (자동 전투 등)
             
-            var selection = Combatant?.ChooseCommand();
+            var selection = Character?.ChooseCommand();
             int selectedIndex = selection?.selectedIndex ?? 0;
             
             Debug.Log($"[PlayerController] 일반 모드 - 선택된 인덱스: {selectedIndex}");
@@ -344,7 +344,7 @@ public class PlayerController : MonoBehaviour, ICombatController
         Debug.Log("[PlayerController] 중단 애니메이션 재생 (Skeleton Mecanim)");
     }
     
-    public void ReceiveCommandResult(CombatantCommandResult result)
+    public void ReceiveCommandResult(CharacterCommandResult result)
     {
         // 아직 쓸데없음
     }

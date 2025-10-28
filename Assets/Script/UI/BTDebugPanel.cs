@@ -307,7 +307,7 @@ public class BTDebugPanel : MonoBehaviour
         
         foreach (var log in allLogs)
         {
-            // Combatant 필터
+            // Character 필터
             bool isEnemy = !log.combatantName.Contains("Player");
             if (isEnemy && !filterEnemy) continue;
             if (!isEnemy && !filterPlayer) continue;
