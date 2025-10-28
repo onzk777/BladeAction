@@ -1,6 +1,35 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using BladeAction.Combat;
+using BladeAction.Item;
+
+/// <summary>
+/// 초기 인벤토리 아이템 항목
+/// </summary>
+[System.Serializable]
+public class InitialItemEntry
+{
+    [Tooltip("아이템 ID")]
+    public string itemId;
+    
+    [Tooltip("수량")]
+    [Min(1)]
+    public int quantity = 1;
+}
+
+/// <summary>
+/// 초기 장착 장비 항목
+/// </summary>
+[System.Serializable]
+public class InitialEquipmentEntry
+{
+    [Tooltip("장비 슬롯")]
+    public EquipmentSlotType slotType;
+    
+    [Tooltip("아이템 ID")]
+    public string itemId;
+}
 
 [CreateAssetMenu(fileName = "CharacterData", menuName = "Character/CharacterData", order = 1)]
 public class CharacterData : ScriptableObject
@@ -23,100 +52,21 @@ public class CharacterData : ScriptableObject
         guardDRBonus = 5
     };
     
-    // ===== 이하 필드는 구형 (호환용) - 삭제 예정 =====
-    [Header("구형 스탯 필드 (Deprecated)")]
-    [System.Obsolete("Use baseStats.maxHP instead")]
-    [Tooltip("최대 체력 - Deprecated: baseStats.maxHP 사용")]
-    public int baseMaxHP = 100;
+    [Header("초기 인벤토리")]
+    [Tooltip("캐릭터 생성 시 보유할 아이템 목록")]
+    public List<InitialItemEntry> initialItems = new List<InitialItemEntry>();
     
-    [System.Obsolete("Use baseStats.attack instead")]
-    [Tooltip("기본 공격력 - Deprecated: baseStats.attack 사용")]
-    public int baseATK = 20;
+    [Tooltip("캐릭터 생성 시 장착할 장비 (슬롯별)")]
+    public List<InitialEquipmentEntry> initialEquipment = new List<InitialEquipmentEntry>();
     
-    [System.Obsolete("Use baseStats.defenseDR instead")]
-    [Tooltip("기본 방어력 - Deprecated: baseStats.defenseDR 사용")]
-    public int baseDR = 0;
-    
-    [System.Obsolete("Use baseStats.critChance instead")]
-    [Tooltip("치명타 확률 (0~1) - Deprecated: baseStats.critChance 사용")]
-    [Range(0f, 1f)]
-    public float baseCritChance = 0f;
-    
-    [System.Obsolete("Use baseStats.critMultiplier instead")]
-    [Tooltip("치명타 배율 (배수, 예: 1.5 = 150%) - Deprecated: baseStats.critMultiplier 사용")]
-    public float baseCritMultiplier = 1.5f;
-    
-    // 이하 필드는 구형(호환용) - 마이그레이션 후 사용하지 않음
-    [System.Obsolete("Use baseCritChance (0~1) instead")]
-    [Tooltip("치명타 확률 (%) - Deprecated: baseCritChance 사용")]
-    public int baseCrit = 0;
-    
-    [System.Obsolete("Use baseCritMultiplier (float multiplier) instead")]
-    [Tooltip("치명타 배율 (%) - Deprecated: baseCritMultiplier 사용")]
-    public int baseCritRatio = 150;
-    
-    [System.Obsolete("Use baseStats.maxPoise instead")]
-    [Tooltip("최대 포이즈 - Deprecated: baseStats.maxPoise 사용")]
-    public int baseMaxPoise = 100;
-    
-    [System.Obsolete("Use baseStats.parryPoiseDamage instead")]
-    [Tooltip("패링 시 포이즈 피해량 - Deprecated: baseStats.parryPoiseDamage 사용")]
-    public int baseParryPoiseDamage = 25;
-    
-    [System.Obsolete("막기 관련 스탯은 baseStats에 포함됨")]
-    [Header("막기 관련 스테이터스 (Deprecated)")]
-    public int guardDRBonus = 5;
-    
-    [System.Obsolete("Use baseStats.guardDamageReduction instead")]
-    public float guardDamageReduction = 0.5f;
-    
-    [System.Obsolete("Use baseStats.tempDRBonus instead")]
-    [Header("임시 스탯 보너스 (Deprecated)")]
-    public int tempDRBonus = 0;
-    
-    // 1차 스탯 프로퍼티들 (호환성을 위해 baseStats 참조)
-    public int MaxHP => (int)baseStats.maxHP;
+    // 편의 프로퍼티들 (baseStats 접근자)
+    public float MaxHP => baseStats.maxHP;
     public int ATK => (int)baseStats.attack;
     public int DR => (int)baseStats.defenseDR;
     public float CritChance => baseStats.critChance;
     public float CritMultiplier => baseStats.critMultiplier;
-    public int MaxPoise => (int)baseStats.maxPoise;
+    public float MaxPoise => baseStats.maxPoise;
     public int ParryPoiseDamage => (int)baseStats.parryPoiseDamage;
-
-    /// <summary>
-    /// 1차 스탯 데이터를 반환합니다 (기초 데이터)
-    /// [DEPRECATED] 구형 스탯 구조체를 사용합니다. 직접 프로퍼티를 사용하세요.
-    /// </summary>
-    [System.Obsolete("Use properties directly (ATK, MaxHP, CritChance, CritMultiplier, etc.) instead")]
-    public CharacterBaseStats GetBaseStats()
-    {
-        return new CharacterBaseStats
-        {
-            maxHP = baseMaxHP,
-            atk = baseATK,
-            dr = baseDR,
-            crit = baseCrit,
-            critRatio = baseCritRatio,
-            maxPoise = baseMaxPoise,
-            parryPoiseDamage = baseParryPoiseDamage,
-            guardDRBonus = guardDRBonus,
-            guardDamageReduction = guardDamageReduction
-        };
-    }
-    
-    [System.Serializable]
-    public struct CharacterBaseStats
-    {
-        public int maxHP;
-        public int atk;
-        public int dr;
-        public int crit;
-        public int critRatio;
-        public int maxPoise;
-        public int parryPoiseDamage;
-        public int guardDRBonus;
-        public float guardDamageReduction;
-    }
 
     [Header("NPC AI 설정")]
     [Tooltip("NPC 행동 확률 설정 (AI 전용)")]

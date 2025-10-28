@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using System.Linq;
 using BladeAction.Item;
@@ -13,9 +14,9 @@ namespace BladeAction.UI
     /// </summary>
     public class InventoryUI : MonoBehaviour
     {
-        [Header("인벤토리 참조")]
-        [Tooltip("표시할 인벤토리 (런타임에 설정)")]
-        [SerializeField] private CharacterInventory inventory;
+        [Header("Character 참조 (런타임 전용)")]
+        [Tooltip("표시할 Character - 이 Character의 Inventory를 표시합니다")]
+        private Character targetCharacter;
         
         [Header("UI 컨테이너 참조")]
         [Tooltip("메인 패널 GameObject")]
@@ -67,6 +68,11 @@ namespace BladeAction.UI
         
         #region Unity 생명주기
         
+        /// <summary>
+        /// 현재 표시 중인 Inventory (targetCharacter.Inventory의 간편 접근자)
+        /// </summary>
+        private CharacterInventory Inventory => targetCharacter?.Inventory;
+        
         private void Awake()
         {
             // 컴포넌트 유효성 검증
@@ -75,6 +81,9 @@ namespace BladeAction.UI
         
         private void Start()
         {
+            // UI Action Map 활성화 (인벤토리 토글 키 활성화)
+            EnableUIActionMap();
+            
             // 이벤트 구독
             if (autoSubscribeEvents)
             {
@@ -86,12 +95,150 @@ namespace BladeAction.UI
             {
                 panel.SetActive(false);
             }
+            
+            // 지연 초기화 (CharacterManager보다 늦게 실행될 수 있으므로)
+            StartCoroutine(DelayedAutoConnect());
+        }
+        
+        /// <summary>
+        /// 지연된 자동 연결 (CharacterManager 초기화 대기)
+        /// </summary>
+        private System.Collections.IEnumerator DelayedAutoConnect()
+        {
+            // 한 프레임 대기 (모든 Awake/Start 완료 대기)
+            yield return null;
+            
+            // 자동으로 PlayerCharacter의 Inventory 연결
+            AutoConnectToPlayerInventory();
+            
+            // 연결 실패 시 재시도 (최대 5프레임)
+            int retryCount = 0;
+            while (targetCharacter == null && retryCount < 5)
+            {
+                yield return null;
+                Debug.LogWarning($"[InventoryUI] PlayerCharacter 연결 재시도 ({retryCount + 1}/5)");
+                AutoConnectToPlayerInventory();
+                retryCount++;
+            }
+            
+            if (targetCharacter == null)
+            {
+                Debug.LogError("[InventoryUI] PlayerCharacter 연결 실패! CharacterManager가 초기화되지 않았을 수 있습니다.");
+            }
+        }
+        
+        /// <summary>
+        /// PlayerCharacter의 Inventory에 자동 연결
+        /// 외부에서 이미 Initialize()가 호출되었으면 스킵합니다.
+        /// </summary>
+        private void AutoConnectToPlayerInventory()
+        {
+            Debug.Log("[InventoryUI-AutoConnect] ========== 자동 연결 시작 ==========");
+            
+            // 이미 다른 곳에서 연결되었으면 스킵
+            if (targetCharacter != null)
+            {
+                Debug.Log($"[InventoryUI-AutoConnect] ❌ Character가 이미 할당되어 있습니다. (Name: {targetCharacter.Name})");
+                return;
+            }
+            
+            Debug.Log("[InventoryUI-AutoConnect] ✓ targetCharacter는 null, 연결 시도 중...");
+            
+            // CharacterManager 확인
+            if (CharacterManager.Instance == null)
+            {
+                Debug.LogWarning("[InventoryUI-AutoConnect] ❌ CharacterManager.Instance가 null입니다!");
+                return;
+            }
+            
+            Debug.Log("[InventoryUI-AutoConnect] ✓ CharacterManager.Instance 존재");
+            
+            // PlayerCharacter 확인
+            if (CharacterManager.Instance.PlayerCharacter == null)
+            {
+                Debug.LogWarning("[InventoryUI-AutoConnect] ❌ PlayerCharacter가 null입니다!");
+                return;
+            }
+            
+            Debug.Log($"[InventoryUI-AutoConnect] ✓ PlayerCharacter 존재: {CharacterManager.Instance.PlayerCharacter.Name}");
+            
+            // PlayerCharacter.Inventory 확인
+            if (CharacterManager.Instance.PlayerCharacter.Inventory == null)
+            {
+                Debug.LogWarning("[InventoryUI-AutoConnect] ❌ PlayerCharacter.Inventory가 null입니다!");
+                return;
+            }
+            
+            Debug.Log($"[InventoryUI-AutoConnect] ✓ PlayerCharacter.Inventory 존재: {CharacterManager.Instance.PlayerCharacter.Inventory.GetDebugInfo()}");
+            
+            // Character 연결
+            ConnectToCharacter(CharacterManager.Instance.PlayerCharacter);
+            
+            Debug.Log("[InventoryUI-AutoConnect] ✅✅✅ PlayerCharacter 자동 연결 완료 ✅✅✅");
+        }
+        
+        /// <summary>
+        /// 특정 Character의 Inventory를 이 UI에 연결합니다.
+        /// 확장성: 플레이어가 아닌 다른 Character의 Inventory도 표시 가능
+        /// </summary>
+        /// <param name="character">표시할 Character</param>
+        public void ConnectToCharacter(Character character)
+        {
+            if (character == null)
+            {
+                Debug.LogError("[InventoryUI] Character가 null입니다!");
+                return;
+            }
+            
+            if (character.Inventory == null)
+            {
+                Debug.LogError($"[InventoryUI] {character.Name}의 Inventory가 null입니다!");
+                return;
+            }
+            
+            // Character 연결
+            targetCharacter = character;
+            
+            if (enableDebugLog)
+                Debug.Log($"[InventoryUI] {character.Name}의 Inventory 연결 완료");
+            
+            // UI 초기화
+            InitializeUI();
         }
         
         private void OnDestroy()
         {
             // 이벤트 구독 해제
             UnsubscribeFromEvents();
+        }
+        
+        #endregion
+        
+        #region Input System 설정
+        
+        /// <summary>
+        /// UI Action Map 활성화 (B 키 등 UI 입력 활성화)
+        /// </summary>
+        private void EnableUIActionMap()
+        {
+            var playerInput = FindFirstObjectByType<PlayerInput>();
+            if (playerInput != null)
+            {
+                var uiActionMap = playerInput.actions.FindActionMap("UI");
+                if (uiActionMap != null)
+                {
+                    uiActionMap.Enable();
+                    Debug.Log("[InventoryUI] UI Action Map 활성화됨 (인벤토리 토글 키 사용 가능)");
+                }
+                else
+                {
+                    Debug.LogWarning("[InventoryUI] UI Action Map을 찾을 수 없습니다.");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[InventoryUI] PlayerInput 컴포넌트를 찾을 수 없습니다. 입력이 작동하지 않을 수 있습니다.");
+            }
         }
         
         #endregion
@@ -123,6 +270,10 @@ namespace BladeAction.UI
         /// 인벤토리 및 UI 초기화
         /// </summary>
         /// <param name="inventory">표시할 인벤토리</param>
+        /// <summary>
+        /// [Deprecated] 하위 호환성을 위해 남겨둠. ConnectToCharacter()를 사용하세요.
+        /// </summary>
+        [System.Obsolete("Initialize(CharacterInventory)는 deprecated입니다. ConnectToCharacter(Character)를 사용하세요.")]
         public void Initialize(CharacterInventory inventory)
         {
             if (inventory == null)
@@ -131,21 +282,41 @@ namespace BladeAction.UI
                 return;
             }
             
-            this.inventory = inventory;
+            // Inventory의 Owner(Character)를 찾아서 ConnectToCharacter 호출
+            if (inventory.Owner != null)
+            {
+                ConnectToCharacter(inventory.Owner);
+            }
+            else
+            {
+                Debug.LogWarning("[InventoryUI] Inventory.Owner가 null입니다! UI 초기화가 제한됩니다.");
+            }
+        }
+        
+        /// <summary>
+        /// UI 초기화 (내부용)
+        /// </summary>
+        private void InitializeUI()
+        {
+            if (Inventory == null)
+            {
+                Debug.LogError("[InventoryUI] Inventory가 null입니다!");
+                return;
+            }
             
             if (enableDebugLog)
-                Debug.Log($"[InventoryUI] 인벤토리 초기화: {inventory.inventoryName}");
+                Debug.Log($"[InventoryUI] UI 초기화: {Inventory.inventoryName}");
             
             // ItemDetailPanel 초기화
             if (itemDetailPanel != null)
             {
-                itemDetailPanel.Initialize(inventory);
+                itemDetailPanel.Initialize(Inventory);
             }
             
             // SwordArtDisplayUI 초기화
             if (EquippedSwordArtStyleUI != null)
             {
-                EquippedSwordArtStyleUI.Initialize(inventory);
+                EquippedSwordArtStyleUI.Initialize(Inventory);
             }
             
             // UI 생성
@@ -165,14 +336,14 @@ namespace BladeAction.UI
         /// </summary>
         private void CreateEquipmentSlots()
         {
-            if (inventory == null || equipmentSlotPrefab == null)
+            if (Inventory == null || equipmentSlotPrefab == null)
                 return;
             
             // 기존 슬롯 제거
             ClearEquipmentSlots();
             
             // 무기, 갑옷 슬롯만 메인 장비 패널에 생성
-            var mainSlots = inventory.equipmentSlots
+            var mainSlots = Inventory.equipmentSlots
                 .Where(slot => slot.slotType != EquipmentSlotType.Accessory && 
                               slot.slotType != EquipmentSlotType.SwordArtStyle)
                 .ToList();
@@ -225,12 +396,12 @@ namespace BladeAction.UI
         /// </summary>
         private void RefreshEquipmentSlots()
         {
-            if (inventory == null)
+            if (Inventory == null)
                 return;
             
-            for (int i = 0; i < equipmentSlots.Count && i < inventory.equipmentSlots.Count; i++)
+            for (int i = 0; i < equipmentSlots.Count && i < Inventory.equipmentSlots.Count; i++)
             {
-                var slot = inventory.equipmentSlots[i];
+                var slot = Inventory.equipmentSlots[i];
                 // 장신구 슬롯은 텍스트 숨김
                 bool hideText = slot.slotType == EquipmentSlotType.Accessory;
                 equipmentSlots[i].Setup(slot, hideText);
@@ -252,7 +423,7 @@ namespace BladeAction.UI
             }
             
             // 장신구 슬롯들 생성
-            var accessorySlots = inventory.equipmentSlots
+            var accessorySlots = Inventory.equipmentSlots
                 .Where(slot => slot.slotType == EquipmentSlotType.Accessory)
                 .ToList();
             
@@ -300,7 +471,7 @@ namespace BladeAction.UI
             }
             
             // 검술 유파 슬롯 찾기
-            var styleSlot = inventory.equipmentSlots
+            var styleSlot = Inventory.equipmentSlots
                 .FirstOrDefault(slot => slot.slotType == EquipmentSlotType.SwordArtStyle);
             
             if (styleSlot != null)
@@ -333,14 +504,14 @@ namespace BladeAction.UI
         /// </summary>
         private void CreateItemSlots()
         {
-            if (itemGridContainer == null || itemSlotPrefab == null || inventory == null)
+            if (itemGridContainer == null || itemSlotPrefab == null || Inventory == null)
                 return;
             
             // 기존 슬롯 제거
             ClearItemSlots();
             
             // 보유 아이템 수만큼 슬롯 생성
-            int itemCount = inventory.items.Count;
+            int itemCount = Inventory.items.Count;
             int slotsToCreate = Mathf.Max(itemCount, 1); // 최소 1개는 생성
             
             for (int i = 0; i < slotsToCreate; i++)
@@ -384,10 +555,10 @@ namespace BladeAction.UI
         /// </summary>
         private void RefreshItemGrid()
         {
-            if (inventory == null)
+            if (Inventory == null)
                 return;
             
-            int currentItemCount = inventory.items.Count;
+            int currentItemCount = Inventory.items.Count;
             int currentSlotCount = itemSlots.Count;
             
             // 슬롯 수가 아이템 수와 다르면 재생성
@@ -403,13 +574,13 @@ namespace BladeAction.UI
             }
             
             // 인벤토리 아이템을 슬롯에 할당
-            for (int i = 0; i < inventory.items.Count && i < itemSlots.Count; i++)
+            for (int i = 0; i < Inventory.items.Count && i < itemSlots.Count; i++)
             {
-                itemSlots[i].Setup(inventory.items[i]);
+                itemSlots[i].Setup(Inventory.items[i]);
             }
             
             if (enableDebugLog)
-                Debug.Log($"[InventoryUI] 아이템 그리드 동적 갱신 완료: {inventory.items.Count}개 아이템, {itemSlots.Count}개 슬롯");
+                Debug.Log($"[InventoryUI] 아이템 그리드 동적 갱신 완료: {Inventory.items.Count}개 아이템, {itemSlots.Count}개 슬롯");
         }
         
         #endregion
@@ -633,9 +804,9 @@ namespace BladeAction.UI
         {
             Debug.Log($"[InventoryUI] 장비 슬롯 클릭 이벤트 수신: {clickedSlot?.name ?? "null"}");
             
-            if (clickedSlot == null || inventory == null)
+            if (clickedSlot == null || Inventory == null)
             {
-                Debug.LogWarning($"[InventoryUI] 클릭 이벤트 무시: clickedSlot={clickedSlot != null}, inventory={inventory != null}");
+                Debug.LogWarning($"[InventoryUI] 클릭 이벤트 무시: clickedSlot={clickedSlot != null}, Inventory={Inventory != null}");
                 return;
             }
             
@@ -695,12 +866,22 @@ namespace BladeAction.UI
         }
         
         /// <summary>
+        /// 패널 활성화 상태 확인
+        /// </summary>
+        public bool IsPanelActive => panel != null && panel.activeSelf;
+        
+        /// <summary>
         /// 패널 열기/닫기 토글
         /// </summary>
         public void TogglePanel()
         {
+            Debug.Log("[InventoryUI] TogglePanel 호출됨!");
+            
             if (panel == null)
+            {
+                Debug.LogError("[InventoryUI] panel이 null입니다!");
                 return;
+            }
             
             bool isActive = !panel.activeSelf;
             panel.SetActive(isActive);
@@ -710,8 +891,7 @@ namespace BladeAction.UI
                 RefreshAll();
             }
             
-            if (enableDebugLog)
-                Debug.Log($"[InventoryUI] 패널 {(isActive ? "열기" : "닫기")}");
+            Debug.Log($"[InventoryUI] 패널 {(isActive ? "열기" : "닫기")}");
         }
         
         /// <summary>
@@ -781,7 +961,7 @@ namespace BladeAction.UI
         /// </summary>
         public CharacterInventory GetInventory()
         {
-            return inventory;
+            return Inventory;
         }
         
         /// <summary>
@@ -803,7 +983,8 @@ namespace BladeAction.UI
         private void PrintDebugInfo()
         {
             Debug.Log("[InventoryUI] 디버그 정보:");
-            Debug.Log($"  - Inventory: {(inventory != null ? inventory.inventoryName : "null")}");
+            Debug.Log($"  - Inventory: {(Inventory != null ? Inventory.inventoryName : "null")}");
+            Debug.Log($"  - Target Character: {(targetCharacter != null ? targetCharacter.Name : "null")}");
             Debug.Log($"  - Item Slots: {itemSlots.Count}");
             Debug.Log($"  - Equipment Slots: {equipmentSlots.Count}");
             Debug.Log($"  - Panel Active: {(panel != null ? panel.activeSelf : false)}");

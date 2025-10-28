@@ -304,7 +304,7 @@ public class PlayerController : MonoBehaviour, ICombatController
         string animationName = currentCommand.animationName;
         if (string.IsNullOrEmpty(animationName))
         {
-            Debug.LogError("[PlayerController] 현재 커맨드에 애니메이션 이름이 설정되지 않았습니다.");
+            Debug.LogWarning("[PlayerController] 현재 커맨드에 애니메이션 이름이 설정되지 않았습니다.");
             return;
         }
         

@@ -71,27 +71,24 @@ namespace BladeAction.Combat
 
             var finalStats = GetFinalStats(character);
 
-            // MaxHP 선반영
-            int oldMaxHP = character.MaxHP;
-            int newMaxHP = Mathf.RoundToInt(finalStats.maxHP);
+            // 현재 HP/Poise 비율 저장
+            float oldMaxHP = character.stats.maxHP;
+            float oldMaxPoise = character.stats.maxPoise;
+            float hpRatio = oldMaxHP > 0 ? character.stats.currentHP / oldMaxHP : 1f;
+            float poiseRatio = oldMaxPoise > 0 ? character.stats.currentPoise / oldMaxPoise : 1f;
 
-            // HP 비율 보존하면서 새 MaxHP에 맞춰 조정
-            if (oldMaxHP > 0)
-            {
-                float hpRatio = (float)character.currentHP / oldMaxHP;
-                character.currentHP = Mathf.RoundToInt(newMaxHP * hpRatio);
-            }
-            character.currentHP = Mathf.Clamp(character.currentHP, 0, newMaxHP);
+            // finalStats를 character.stats에 커밋
+            character.stats = finalStats;
 
-            // Poise 업데이트 (현재값은 유지, 최대값만 갱신)
-            int newMaxPoise = Mathf.RoundToInt(finalStats.maxPoise);
-            character.currentPoise = Mathf.Clamp(character.currentPoise, 0, newMaxPoise);
+            // HP/Poise 비율 보존
+            character.stats.currentHP = Mathf.Clamp(character.stats.maxHP * hpRatio, 0, character.stats.maxHP);
+            character.stats.currentPoise = Mathf.Clamp(character.stats.maxPoise * poiseRatio, 0, character.stats.maxPoise);
 
             // 스탯 변경 이벤트 발행
             character.NotifyStatsChanged();
 
             Debug.Log($"[StatsCalculationManager] {character.Name} 스탯 재계산 완료 - " +
-                      $"ATK:{finalStats.attack:F0}, MaxHP:{newMaxHP}, HP:{character.currentHP}, MaxPoise:{newMaxPoise}");
+                      $"ATK:{finalStats.attack:F0}, MaxHP:{finalStats.maxHP:F0}, HP:{character.stats.currentHP:F0}, MaxPoise:{finalStats.maxPoise:F0}");
 
             return finalStats;
         }

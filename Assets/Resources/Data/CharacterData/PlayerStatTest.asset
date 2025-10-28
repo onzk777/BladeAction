@@ -13,17 +13,41 @@ MonoBehaviour:
   m_Name: PlayerStatTest
   m_EditorClassIdentifier: 
   characterName: "\uD50C\uB808\uC774\uC5B4"
-  baseMaxHP: 100
-  baseATK: 35
+  baseStats:
+    maxHP: 110
+    maxPoise: 110
+    currentHP: 0
+    currentPoise: 0
+    attack: 35
+    critChance: 0
+    critMultiplier: 1.5
+    defenseDR: 0
+    tempDRBonus: 0
+    damageReduction: 0
+    guardDamageReduction: 0.5
+    guardDRBonus: 5
+    blockEfficiency: 0
+    blockPoiseConsumption: 0
+    parryEfficiency: 0
+    parryPoiseConsumption: 0
+    parryPoiseAttackPower: 0
+    parryPoiseDamage: 50
+    poiseGain: 0
+  initialItems: []
+  initialEquipment:
+  - slotType: 1
+    itemId: itm_weapon_test1
+  baseMaxHP: 0
+  baseATK: 0
   baseDR: 0
   baseCritChance: 0
-  baseCritMultiplier: 1.5
+  baseCritMultiplier: 1
   baseCrit: 0
   baseCritRatio: 150
-  baseMaxPoise: 100
-  baseParryPoiseDamage: 50
-  guardDRBonus: 5
-  guardDamageReduction: 0.5
+  baseMaxPoise: 0
+  baseParryPoiseDamage: 0
+  guardDRBonus: 0
+  guardDamageReduction: 0
   tempDRBonus: 0
   npcBehavior:
     attackPerfectRate: 0

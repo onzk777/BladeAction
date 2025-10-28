@@ -15,7 +15,7 @@ MonoBehaviour:
   statTables:
   - tableKey: Test_StraightSword_1
     stats:
-      attackPower: 5
+      attackPower: 500
       blockEfficiency: 0.571
       blockPoiseConsumption: 15
       parryEfficiency: 1

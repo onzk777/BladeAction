@@ -1,4 +1,5 @@
 using UnityEngine;
+using BladeAction.Item;
 
 public enum CharacterType { Player, Enemy }
 
@@ -56,8 +57,74 @@ public class CharacterManager : MonoBehaviour
         // Character 인스턴스 생성 (CharacterData를 통해 1차 스탯 초기화)
         PlayerCharacter = new PlayerCharacter(PlayerData, null);
         EnemyCharacter = new EnemyCharacter(EnemyData, null);
+        
+        // Inventory 생성 및 초기화
+        InitializeInventory(PlayerCharacter, PlayerData);
+        InitializeInventory(EnemyCharacter, EnemyData);
 
         Debug.Log("[CharacterManager] CharacterData, BT 인스턴스화 및 Character 초기화 완료.");
+    }
+    
+    /// <summary>
+    /// Character의 Inventory를 생성하고 CharacterData의 초기 데이터로 초기화합니다.
+    /// </summary>
+    private void InitializeInventory(Character character, CharacterData data)
+    {
+        // Inventory 생성 (생성자에서 자동으로 장비 슬롯 초기화됨)
+        var inventory = new CharacterInventory();
+        inventory.Owner = character;
+        character.Inventory = inventory;
+        
+        Debug.Log($"[CharacterManager] {character.Name} Inventory 생성 완료");
+        
+        // 초기 아이템 추가
+        if (data.initialItems != null && data.initialItems.Count > 0)
+        {
+            foreach (var itemEntry in data.initialItems)
+            {
+                if (!string.IsNullOrEmpty(itemEntry.itemId))
+                {
+                    bool added = inventory.AddItem(itemEntry.itemId, itemEntry.quantity);
+                    if (added)
+                    {
+                        Debug.Log($"[CharacterManager] {character.Name} 초기 아이템 추가: {itemEntry.itemId} x{itemEntry.quantity}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[CharacterManager] {character.Name} 초기 아이템 추가 실패: {itemEntry.itemId}");
+                    }
+                }
+            }
+        }
+        
+        // 초기 장비 장착
+        if (data.initialEquipment != null && data.initialEquipment.Count > 0)
+        {
+            foreach (var equipEntry in data.initialEquipment)
+            {
+                if (!string.IsNullOrEmpty(equipEntry.itemId))
+                {
+                    // 아이템이 인벤토리에 없으면 자동 추가
+                    if (!inventory.HasItem(equipEntry.itemId))
+                    {
+                        inventory.AddItem(equipEntry.itemId, 1);
+                    }
+                    
+                    // 장착
+                    bool equipped = inventory.EquipItem(equipEntry.itemId, equipEntry.slotType);
+                    if (equipped)
+                    {
+                        Debug.Log($"[CharacterManager] {character.Name} 초기 장비 장착: {equipEntry.itemId} → {equipEntry.slotType}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[CharacterManager] {character.Name} 초기 장비 장착 실패: {equipEntry.itemId}");
+                    }
+                }
+            }
+        }
+        
+        Debug.Log($"[CharacterManager] {character.Name} Inventory 초기화 완료 - {inventory.GetDebugInfo()}");
     }
 
     /// <summary>

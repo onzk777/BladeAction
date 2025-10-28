@@ -86,13 +86,13 @@ public class HPPanelController : MonoBehaviour
         if (CharacterManager.Instance?.PlayerCharacter != null)
         {
             currentPlayerHP = CharacterManager.Instance.PlayerCharacter.currentHP;
-            maxPlayerHP = CharacterManager.Instance.PlayerCharacter.MaxHP;
+            maxPlayerHP = (int)CharacterManager.Instance.PlayerCharacter.MaxHP;
         }
 
         if (CharacterManager.Instance?.EnemyCharacter != null)
         {
             currentEnemyHP = CharacterManager.Instance.EnemyCharacter.currentHP;
-            maxEnemyHP = CharacterManager.Instance.EnemyCharacter.MaxHP;
+            maxEnemyHP = (int)CharacterManager.Instance.EnemyCharacter.MaxHP;
         }
 
         if (debugMode)

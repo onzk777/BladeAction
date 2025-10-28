@@ -4,8 +4,16 @@ using System.Linq;
 using BladeAction.Item;
 using BladeAction.UI;
 
+/// <summary>
+/// 인벤토리 테스트를 위한 매니저
+/// TestMode가 false이면 비활성화됩니다.
+/// </summary>
 public class InventoryTestManager : MonoBehaviour
 {
+    [Header("테스트 모드")]
+    [Tooltip("테스트 모드 활성화 여부 (false면 이 스크립트는 아무것도 하지 않음)")]
+    public bool testMode = false;
+    
     [Header("테스트 설정")]
     public bool autoInitialize = true;
     public bool addTestItems = true;
@@ -30,6 +38,16 @@ public class InventoryTestManager : MonoBehaviour
     
     void Start()
     {
+        // TestMode가 false면 아무것도 하지 않음
+        if (!testMode)
+        {
+            Debug.Log("[InventoryTestManager] TestMode가 비활성화되어 있습니다. 스크립트 비활성화.");
+            enabled = false;
+            return;
+        }
+        
+        Debug.Log("[InventoryTestManager] TestMode 활성화 - 테스트 인벤토리로 초기화");
+        
         if (autoInitialize)
         {
             InitializeTest();
@@ -238,37 +256,46 @@ public class InventoryTestManager : MonoBehaviour
     /// <summary>
     /// Editor에서 접근하기 위한 public 메서드
     /// </summary>
-        public void InitializeTest()
+    public void InitializeTest()
+    {
+        // TestMode가 false면 절대 실행하지 않음
+        if (!testMode)
         {
-            if (testInventory == null)
-            {
-                Debug.Log("[InventoryTestManager] 테스트 초기화 시작");
-                
-                // 1. 테스트 인벤토리 생성 (생성자에서 자동 초기화됨)
-                testInventory = new CharacterInventory();
-                Debug.Log($"✅ 테스트 인벤토리 생성: {testInventory.items.Count}개 아이템");
-                
-                // 2. InventoryUI 찾기 및 초기화
-                inventoryUI = FindFirstObjectByType<InventoryUI>();
-                if (inventoryUI != null)
-                {
-                    inventoryUI.Initialize(testInventory);
-                    Debug.Log("✅ InventoryUI 초기화 완료");
-                }
-                else
-                {
-                    Debug.LogError("❌ InventoryUI를 찾을 수 없습니다!");
-                }
-                
-                // 3. 테스트 아이템 추가
-                if (addTestItems)
-                {
-                    AddTestItems();
-                }
-                
-                Debug.Log("[InventoryTestManager] 테스트 초기화 완료");
-            }
+            Debug.LogWarning("[InventoryTestManager] TestMode가 false입니다. InitializeTest() 무시됨.");
+            return;
         }
+        
+        if (testInventory == null)
+        {
+            Debug.Log("[InventoryTestManager] 테스트 초기화 시작");
+            
+            // 1. 테스트 인벤토리 생성 (생성자에서 자동 초기화됨)
+            testInventory = new CharacterInventory();
+            Debug.Log($"✅ 테스트 인벤토리 생성: {testInventory.items.Count}개 아이템");
+            
+            // 2. InventoryUI 찾기 및 초기화
+            inventoryUI = FindFirstObjectByType<InventoryUI>();
+            if (inventoryUI != null)
+            {
+                #pragma warning disable CS0618 // Initialize는 deprecated이지만 테스트용으로 사용
+                inventoryUI.Initialize(testInventory);
+                #pragma warning restore CS0618
+                Debug.Log("✅ InventoryUI 초기화 완료 (테스트 모드)");
+            }
+            else
+            {
+                Debug.LogError("❌ InventoryUI를 찾을 수 없습니다!");
+            }
+            
+            // 3. 테스트 아이템 추가
+            if (addTestItems)
+            {
+                AddTestItems();
+            }
+            
+            Debug.Log("[InventoryTestManager] 테스트 초기화 완료");
+        }
+    }
     
     #endregion
 }

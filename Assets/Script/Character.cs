@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using BladeAction.Item;
+using BladeAction.Combat;
 
 public abstract class Character
 {
@@ -14,11 +15,8 @@ public abstract class Character
     // 인벤토리 (장비 스탯 적용용)
     public CharacterInventory Inventory { get; set; }
     
-    // 2차 스탯 (런타임 상태)
-    [Header("2차 스탯 (런타임 상태)")]
-    public int currentHP;
-    public int currentPoise;
-    public int tempDRBonus = 0; // 임시 DR 보너스
+    // 런타임 전투 스탯 (StatsCalculationManager가 업데이트)
+    public CombatStats stats = new CombatStats();
     
     // 이벤트들
     public event Action<Character> OnStatsChanged;
@@ -26,20 +24,27 @@ public abstract class Character
     public event Action<int, int> OnPoiseChanged;
     public event Action<Character> OnDefeated;
     
-    // 1차 스탯 프로퍼티들 (CharacterData에서 가져옴)
-    public int MaxHP => CharacterData?.MaxHP ?? 0;
-    public int ATK => CharacterData?.ATK ?? 0;
-    public int DR => CharacterData?.DR ?? 0;
-    public float CritChance => CharacterData?.CritChance ?? 0f; // 0~1
-    public float CritMultiplier => CharacterData?.CritMultiplier ?? 1.5f; // multiplier
-    public int MaxPoise => CharacterData?.MaxPoise ?? 0;
-    public int ParryPoiseDamage => CharacterData?.ParryPoiseDamage ?? 25;
+    // 편의 프로퍼티들 (stats 필드로 리다이렉트)
+    public float MaxHP => stats.maxHP;
+    public float CurrentHP { get => stats.currentHP; set => stats.currentHP = value; }
+    public float MaxPoise => stats.maxPoise;
+    public float CurrentPoise { get => stats.currentPoise; set => stats.currentPoise = value; }
+    public int ATK => (int)stats.attack;
+    public int DR => (int)stats.defenseDR;
+    public float CritChance => stats.critChance;
+    public float CritMultiplier => stats.critMultiplier;
+    public int ParryPoiseDamage => (int)stats.parryPoiseDamage;
+    public int TempDRBonus { get => stats.tempDRBonus; set => stats.tempDRBonus = value; }
     
-    // 2차 스탯 프로퍼티들 (런타임 상태)
-    public int HP { get => currentHP; set => currentHP = value; }
-    public int CurrentPoise { get => currentPoise; set => currentPoise = value; }
-    public bool IsDefeated => currentHP <= 0;
-    public bool IsInterrupted => currentPoise <= 0;
+    // 하위 호환 프로퍼티
+    public int HP { get => (int)stats.currentHP; set => stats.currentHP = value; }
+    public int currentHP { get => (int)stats.currentHP; set => stats.currentHP = value; }
+    public int currentPoise { get => (int)stats.currentPoise; set => stats.currentPoise = value; }
+    public int tempDRBonus { get => stats.tempDRBonus; set => stats.tempDRBonus = value; }
+    
+    // 상태 확인
+    public bool IsDefeated => stats.currentHP <= 0;
+    public bool IsInterrupted => stats.currentPoise <= 0;
     
     // 스타일 데이터로부터 가져온 커맨드 목록
     public IReadOnlyList<ActionCommandData> AvailableCommands => _availableCommands;
@@ -53,15 +58,20 @@ public abstract class Character
     
     /// <summary>
     /// 런타임 스테이터스를 초기화합니다 (전투 시작 시 호출)
+    /// CharacterData.baseStats를 기반으로 stats를 초기화합니다.
     /// </summary>
     public void InitializeRuntimeStats()
     {
         if (CharacterData != null)
         {
-            currentHP = CharacterData.MaxHP;
-            currentPoise = CharacterData.MaxPoise;
-            tempDRBonus = 0;
-            Debug.Log($"[Character] {Name} 런타임 스테이터스 초기화 - HP: {currentHP}/{MaxHP}, Poise: {currentPoise}/{MaxPoise}");
+            // CharacterData의 baseStats를 복사
+            stats = CharacterData.baseStats;
+            
+            // currentHP/currentPoise를 maxHP/maxPoise로 초기화
+            stats.currentHP = stats.maxHP;
+            stats.currentPoise = stats.maxPoise;
+            
+            Debug.Log($"[Character] {Name} 런타임 스테이터스 초기화 - HP: {stats.currentHP}/{stats.maxHP}, Poise: {stats.currentPoise}/{stats.maxPoise}");
         }
     }
     
@@ -70,10 +80,10 @@ public abstract class Character
     /// </summary>
     public void ResetPoise()
     {
-        int oldPoise = currentPoise;
-        currentPoise = MaxPoise;
-        Debug.Log($"[Character] {Name} Poise 회복: {oldPoise} → {currentPoise}");
-        OnPoiseChanged?.Invoke(oldPoise, currentPoise);
+        float oldPoise = stats.currentPoise;
+        stats.currentPoise = stats.maxPoise;
+        Debug.Log($"[Character] {Name} Poise 회복: {oldPoise} → {stats.currentPoise}");
+        OnPoiseChanged?.Invoke((int)oldPoise, (int)stats.currentPoise);
         OnStatsChanged?.Invoke(this);
     }
     
@@ -83,10 +93,10 @@ public abstract class Character
     /// <param name="amount">감소할 Poise 양</param>
     public void LosePoise(int amount)
     {
-        int oldPoise = currentPoise;
-        currentPoise = Mathf.Max(0, currentPoise - amount);
-        Debug.Log($"[Character] {Name} Poise 감소: {oldPoise} → {currentPoise} (감소량: {amount})");
-        OnPoiseChanged?.Invoke(oldPoise, currentPoise);
+        float oldPoise = stats.currentPoise;
+        stats.currentPoise = Mathf.Max(0, stats.currentPoise - amount);
+        Debug.Log($"[Character] {Name} Poise 감소: {oldPoise} → {stats.currentPoise} (감소량: {amount})");
+        OnPoiseChanged?.Invoke((int)oldPoise, (int)stats.currentPoise);
         OnStatsChanged?.Invoke(this);
         if (IsInterrupted) Debug.LogWarning($"[Character] {Name} Poise 소진! 중단 발생!");
     }
@@ -96,7 +106,7 @@ public abstract class Character
     /// </summary>
     public string GetPoiseStatus()
     {
-        return $"{currentPoise}/{MaxPoise}";
+        return $"{stats.currentPoise:F0}/{stats.maxPoise:F0}";
     }
     
     /// <summary>
@@ -104,7 +114,7 @@ public abstract class Character
     /// </summary>
     public string GetHPStatus()
     {
-        return $"{currentHP}/{MaxHP}";
+        return $"{stats.currentHP:F0}/{stats.maxHP:F0}";
     }
     
     /// <summary>
@@ -112,10 +122,10 @@ public abstract class Character
     /// </summary>
     public void Heal(int amount)
     {
-        int oldHP = currentHP;
-        currentHP = Mathf.Min(MaxHP, currentHP + amount);
-        Debug.Log($"[Character] {Name} HP 회복: {oldHP} → {currentHP} (회복량: {amount})");
-        OnHPChanged?.Invoke(oldHP, currentHP);
+        float oldHP = stats.currentHP;
+        stats.currentHP = Mathf.Min(stats.maxHP, stats.currentHP + amount);
+        Debug.Log($"[Character] {Name} HP 회복: {oldHP} → {stats.currentHP} (회복량: {amount})");
+        OnHPChanged?.Invoke((int)oldHP, (int)stats.currentHP);
         OnStatsChanged?.Invoke(this);
     }
     
@@ -124,10 +134,10 @@ public abstract class Character
     /// </summary>
     public void TakeDamage(int finalDamage)
     {
-        int oldHP = currentHP;
-        currentHP = Mathf.Max(0, currentHP - finalDamage);
-        Debug.Log($"[Character] {Name} 피해 받음: {oldHP} → {currentHP} (최종 피해: {finalDamage})");
-        OnHPChanged?.Invoke(oldHP, currentHP);
+        float oldHP = stats.currentHP;
+        stats.currentHP = Mathf.Max(0, stats.currentHP - finalDamage);
+        Debug.Log($"[Character] {Name} 피해 받음: {oldHP} → {stats.currentHP} (최종 피해: {finalDamage})");
+        OnHPChanged?.Invoke((int)oldHP, (int)stats.currentHP);
         OnStatsChanged?.Invoke(this);
         
         if (IsDefeated)
@@ -142,8 +152,7 @@ public abstract class Character
     /// </summary>
     public bool IsCriticalHit()
     {
-        // 0.0~1.0f 확률 기반
-        return UnityEngine.Random.value < CritChance;
+        return UnityEngine.Random.value < stats.critChance;
     }
     
     /// <summary>
@@ -151,7 +160,7 @@ public abstract class Character
     /// </summary>
     public int CalculateCriticalDamage(int baseDamage)
     {
-        return Mathf.RoundToInt(baseDamage * CritMultiplier);
+        return Mathf.RoundToInt(baseDamage * stats.critMultiplier);
     }
     
     /// <summary>
@@ -159,7 +168,7 @@ public abstract class Character
     /// </summary>
     public int GetFinalDR()
     {
-        return DR + tempDRBonus;
+        return (int)stats.defenseDR + stats.tempDRBonus;
     }
     
     /// <summary>
@@ -167,11 +176,7 @@ public abstract class Character
     /// </summary>
     public int GetGuardFinalDR()
     {
-        if (CharacterData != null)
-        {
-            return DR + CharacterData.baseStats.guardDRBonus + tempDRBonus;
-        }
-        return DR + tempDRBonus;
+        return (int)stats.defenseDR + stats.guardDRBonus + stats.tempDRBonus;
     }
     
     /// <summary>
@@ -179,7 +184,7 @@ public abstract class Character
     /// </summary>
     public float GetGuardDamageReduction()
     {
-        return CharacterData?.baseStats.guardDamageReduction ?? 0.5f;
+        return stats.guardDamageReduction;
     }
     
     /// <summary>
@@ -187,7 +192,7 @@ public abstract class Character
     /// </summary>
     public void SetTempDRBonus(int bonus)
     {
-        tempDRBonus = bonus;
+        stats.tempDRBonus = bonus;
         Debug.Log($"[Character] {Name} 임시 DR 보너스 설정: {bonus} (총 DR: {GetFinalDR()})");
         OnStatsChanged?.Invoke(this);
     }
@@ -197,7 +202,7 @@ public abstract class Character
     /// </summary>
     public void ClearTempDRBonus()
     {
-        tempDRBonus = 0;
+        stats.tempDRBonus = 0;
         Debug.Log($"[Character] {Name} 임시 DR 보너스 제거 (총 DR: {GetFinalDR()})");
         OnStatsChanged?.Invoke(this);
     }
