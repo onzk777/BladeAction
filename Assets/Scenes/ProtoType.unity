@@ -331,6 +331,53 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8818721}
   m_CullTransparentMesh: 1
+--- !u!1 &47065667
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 47065669}
+  - component: {fileID: 47065668}
+  m_Layer: 0
+  m_Name: TestTemp
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &47065668
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 47065667}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2248880d55088ac40bc5981ad2f97751, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BladeAction.Combat.Test.StatsTest
+  runAllTestsOnStart: 0
+  testWeaponId: itm_weapon_test1
+  testArmorId: itm_armor_test1
+--- !u!4 &47065669
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 47065667}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 546.6662, y: 430.60324, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &83361295
 GameObject:
   m_ObjectHideFlags: 0
@@ -2907,7 +2954,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 0
-  orthographic size: 6.84375
+  orthographic size: 6.796875
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -9805,7 +9852,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1835480689424925425, guid: 9341043674d18f64190536e11c93aa17, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 1578.7886
+      value: 1267.0968
       objectReference: {fileID: 0}
     - target: {fileID: 1835480689424925425, guid: 9341043674d18f64190536e11c93aa17, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -9874,6 +9921,10 @@ PrefabInstance:
     - target: {fileID: 3508142194996273134, guid: 9341043674d18f64190536e11c93aa17, type: 3}
       propertyPath: m_AnchorMin.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3561474699959621189, guid: 9341043674d18f64190536e11c93aa17, type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4213193373064936565, guid: 9341043674d18f64190536e11c93aa17, type: 3}
       propertyPath: m_AnchorMax.y
@@ -10153,6 +10204,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8362133625460635894, guid: 9341043674d18f64190536e11c93aa17, type: 3}
       propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8601470736056311513, guid: 9341043674d18f64190536e11c93aa17, type: 3}
+      propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8748175413577914946, guid: 9341043674d18f64190536e11c93aa17, type: 3}
@@ -12332,3 +12387,4 @@ SceneRoots:
   - {fileID: 274036600}
   - {fileID: 1886614044}
   - {fileID: 1703707585}
+  - {fileID: 47065669}
