@@ -7,6 +7,73 @@ using System.Collections.Generic;
 [CreateAssetMenu(fileName = "SwordArtStyleDatabase", menuName = "Item/SwordArtStyle Database", order = 11)]
 public class SwordArtStyleDatabase : ScriptableObject
 {
+    private static SwordArtStyleDatabase _instance;
+    private static bool _hasSearchedForInstance = false;
+    
+    /// <summary>
+    /// 싱글톤 인스턴스
+    /// </summary>
+    public static SwordArtStyleDatabase Instance
+    {
+        get
+        {
+            if (_instance == null && !_hasSearchedForInstance)
+            {
+                FindAndCacheInstance();
+            }
+            return _instance;
+        }
+    }
+    
+    /// <summary>
+    /// Resources 폴더에서 SwordArtStyleDatabase 찾기 (강화된 검색)
+    /// </summary>
+    private static void FindAndCacheInstance()
+    {
+        _hasSearchedForInstance = true;
+        
+        try
+        {
+            // 1단계: 일반적인 경로들 우선 시도
+            string[] commonPaths = new string[]
+            {
+                "Data/Item/SwordArtStyleDB",
+                "Data/SwordArt/SwordArtStyleDB",
+                "Item/SwordArtStyleDB",
+                "SwordArtStyleDB",
+                "SwordArtStyleDatabase"
+            };
+            
+            foreach (var path in commonPaths)
+            {
+                _instance = Resources.Load<SwordArtStyleDatabase>(path);
+                if (_instance != null)
+                {
+                    Debug.Log($"[SwordArtStyleDatabase] 인스턴스 발견 (경로: {path}): '{_instance.name}' ({_instance.styles?.Count ?? 0}개 유파)");
+                    return;
+                }
+            }
+            
+            // 2단계: 전체 스캔 (Fallback)
+            Debug.Log("[SwordArtStyleDatabase] 일반 경로에서 찾지 못함. Resources 전체 스캔 시작...");
+            SwordArtStyleDatabase[] foundDatabases = Resources.LoadAll<SwordArtStyleDatabase>("");
+            
+            if (foundDatabases != null && foundDatabases.Length > 0)
+            {
+                _instance = foundDatabases[0];
+                Debug.Log($"[SwordArtStyleDatabase] 인스턴스 발견 (전체 스캔): '{_instance.name}' ({_instance.styles?.Count ?? 0}개 유파)");
+            }
+            else
+            {
+                Debug.LogError("[SwordArtStyleDatabase] Resources 폴더에서 SwordArtStyleDatabase를 찾을 수 없습니다!");
+            }
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"[SwordArtStyleDatabase] 인스턴스 검색 중 오류 발생: {ex.Message}");
+        }
+    }
+    
     [System.Serializable]
     public class Entry
     {

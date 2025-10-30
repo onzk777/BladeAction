@@ -25,8 +25,17 @@ public class ActionCommandSelectionManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);
-            Debug.Log("[ActionCommandSelectionManager] 싱글톤 인스턴스 생성 및 DontDestroyOnLoad 설정");
+            
+            // root GameObject일 때만 DontDestroyOnLoad 적용
+            if (transform.parent == null)
+            {
+                DontDestroyOnLoad(gameObject);
+                Debug.Log("[ActionCommandSelectionManager] 싱글톤 인스턴스 생성 및 DontDestroyOnLoad 설정");
+            }
+            else
+            {
+                Debug.LogWarning("[ActionCommandSelectionManager] DontDestroyOnLoad는 root GameObject에만 적용됩니다. 부모에서 분리하거나 root로 이동하세요.");
+            }
         }
         else
         {

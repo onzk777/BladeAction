@@ -21,11 +21,36 @@ public abstract class BaseInputHandler : MonoBehaviour
 
     protected virtual void Awake()
     {
-        // PlayerInput 컴포넌트 확보
-        var playerInput = GetComponent<PlayerInput>();
+        // PlayerInput 초기화는 Start로 지연 (GameInputManager Awake 대기)
+    }
+    
+    protected virtual void Start()
+    {
+        InitializePlayerInput();
+    }
+    
+    /// <summary>
+    /// PlayerInput 초기화
+    /// </summary>
+    private void InitializePlayerInput()
+    {
+        // PlayerInput 컴포넌트 가져오기 (GameInputManager에서)
+        PlayerInput playerInput = null;
+        
+        if (GameInputManager.Instance != null)
+        {
+            playerInput = GameInputManager.Instance.GetPlayerInput();
+        }
+        
         if (playerInput == null)
         {
-            Debug.LogError("[TimingInputHandler] PlayerInput 컴포넌트를 찾을 수 없습니다.");
+            // Fallback: 같은 GameObject에서 찾기 (하위 호환)
+            playerInput = GetComponent<PlayerInput>();
+        }
+        
+        if (playerInput == null)
+        {
+            Debug.LogError("[TimingInputHandler] PlayerInput 컴포넌트를 찾을 수 없습니다. GameInputManager를 확인하세요.");
             return;
         }
 
@@ -47,7 +72,7 @@ public abstract class BaseInputHandler : MonoBehaviour
             }
             else
             {
-                Debug.Log($"[InputTrace][Awake] handler:{GetType().Name} devices:{string.Join(",", playerInput.devices)} controls:{perfectAction.controls.Count}");
+                Debug.Log($"[InputTrace][Start] handler:{GetType().Name} devices:{string.Join(",", playerInput.devices)} controls:{perfectAction.controls.Count}");
             }
         }
         catch (System.Exception e)

@@ -584,3 +584,4 @@ RecalculateAndCommit 버그 발견: 즉시
 **문서 버전**: 1.0
 
 
+

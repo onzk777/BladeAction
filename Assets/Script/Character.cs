@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using BladeAction.Item;
 using BladeAction.Combat;
@@ -46,9 +47,22 @@ public abstract class Character
     public bool IsDefeated => stats.currentHP <= 0;
     public bool IsInterrupted => stats.currentPoise <= 0;
     
-    // 스타일 데이터로부터 가져온 커맨드 목록
-    public IReadOnlyList<ActionCommandData> AvailableCommands => _availableCommands;
-    private List<ActionCommandData> _availableCommands = new List<ActionCommandData>();
+    // 검술 관리 (인벤토리와 독립)
+    private List<ActionCommandData> acquiredActions = new List<ActionCommandData>();
+    private ActionCommandData[] equippedActions = new ActionCommandData[4];
+    
+    /// <summary>
+    /// 사용 가능한 검술 목록 (장착된 4개)
+    /// </summary>
+    public List<ActionCommandData> AvailableCommands
+    {
+        get
+        {
+            return equippedActions
+                .Where(action => action != null)
+                .ToList();
+        }
+    }
 
     public Character(CharacterData characterData)
     {
@@ -216,25 +230,211 @@ public abstract class Character
     }
 
     public abstract CommandSelection ChooseCommand();
+    
+    #region 검술 관리 시스템
+    
+    /// <summary>
+    /// 검술 획득
+    /// </summary>
+    public bool AcquireAction(ActionCommandData action)
+    {
+        if (action == null)
+            return false;
+        
+        // 중복 확인 (유파 검술과 습득 검술이 겹칠 수 있으므로 중복 허용)
+        if (acquiredActions.Contains(action))
+        {
+            // 이미 보유 중이므로 추가하지 않음 (경고 없음)
+            return true;
+        }
+        
+        acquiredActions.Add(action);
+        Debug.Log($"[Character] {Name}이(가) '{action.commandName}' 검술을 획득했습니다.");
+        return true;
+    }
+    
+    /// <summary>
+    /// 검술 보유 확인
+    /// </summary>
+    public bool HasAction(ActionCommandData action)
+    {
+        return action != null && acquiredActions.Contains(action);
+    }
+    
+    /// <summary>
+    /// 검술 장착 (슬롯 0~3)
+    /// </summary>
+    public bool EquipAction(ActionCommandData action, int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= 4)
+        {
+            Debug.LogWarning($"[Character] 잘못된 슬롯 인덱스: {slotIndex} (0~3만 가능)");
+            return false;
+        }
+        
+        if (action == null)
+        {
+            Debug.LogWarning($"[Character] null 검술은 장착할 수 없습니다.");
+            return false;
+        }
+        
+        // 이미 다른 슬롯에 장착되어 있는지 확인
+        for (int i = 0; i < 4; i++)
+        {
+            if (equippedActions[i] == action)
+            {
+                Debug.LogWarning($"[Character] '{action.commandName}' 검술은 이미 슬롯 {i}에 장착되어 있습니다.");
+                return false;
+            }
+        }
+        
+        // 기존 장착 검술 해제 (있다면)
+        if (equippedActions[slotIndex] != null)
+        {
+            var previousAction = equippedActions[slotIndex];
+            // 해제된 검술을 습득 목록에 다시 추가
+            if (!acquiredActions.Contains(previousAction))
+            {
+                acquiredActions.Add(previousAction);
+            }
+            Debug.Log($"[Character] 슬롯 {slotIndex}의 '{previousAction.commandName}' 검술이 해제되어 습득 목록으로 돌아갑니다.");
+        }
+        
+        // 새 검술 장착
+        equippedActions[slotIndex] = action;
+        
+        // 습득 목록에서 제거
+        acquiredActions.Remove(action);
+        
+        Debug.Log($"[Character] {Name}이(가) '{action.commandName}' 검술을 슬롯 {slotIndex}에 장착했습니다.");
+        return true;
+    }
+    
+    /// <summary>
+    /// 검술 해제
+    /// </summary>
+    public bool UnequipAction(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= 4)
+        {
+            Debug.LogWarning($"[Character] 잘못된 슬롯 인덱스: {slotIndex}");
+            return false;
+        }
+        
+        if (equippedActions[slotIndex] == null)
+        {
+            Debug.LogWarning($"[Character] 슬롯 {slotIndex}이(가) 비어있습니다.");
+            return false;
+        }
+        
+        var unequipped = equippedActions[slotIndex];
+        equippedActions[slotIndex] = null;
+        
+        // 습득 목록에 다시 추가
+        if (!acquiredActions.Contains(unequipped))
+        {
+            acquiredActions.Add(unequipped);
+        }
+        
+        Debug.Log($"[Character] {Name}이(가) '{unequipped.commandName}' 검술을 슬롯 {slotIndex}에서 해제했습니다. 습득 목록으로 돌아갑니다.");
+        return true;
+    }
+    
+    /// <summary>
+    /// 습득 검술 목록 반환
+    /// </summary>
+    public List<ActionCommandData> GetAcquiredActions()
+    {
+        return new List<ActionCommandData>(acquiredActions);
+    }
+    
+    /// <summary>
+    /// 특정 슬롯의 검술 반환
+    /// </summary>
+    public ActionCommandData GetEquippedAction(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= 4)
+            return null;
+        
+        return equippedActions[slotIndex];
+    }
+    
+    /// <summary>
+    /// 장착된 유파의 검술 목록 반환
+    /// </summary>
+    public List<ActionCommandData> GetStyleActions()
+    {
+        var styleItem = Inventory?.GetEquippedItem(BladeAction.Item.EquipmentSlotType.SwordArtStyle);
+        if (styleItem == null)
+            return new List<ActionCommandData>();
+        
+        // swordArtStyleData 직접 참조 또는 Key로 조회
+        var styleData = styleItem.swordArtStyleData;
+        
+        if (styleData == null && !string.IsNullOrEmpty(styleItem.swordArtStyleKey))
+        {
+            // Key로 조회
+            var styleDb = SwordArtStyleDatabase.Instance;
+            if (styleDb != null)
+            {
+                styleData = styleDb.GetStyle(styleItem.swordArtStyleKey);
+            }
+        }
+        
+        if (styleData == null)
+            return new List<ActionCommandData>();
+        
+        return styleData.GetActionCommands();
+    }
+    
+    /// <summary>
+    /// 유파 해제 시 유파 검술 자동 해제
+    /// </summary>
+    public void UnequipAllStyleActions()
+    {
+        var styleActions = GetStyleActions();
+        if (styleActions == null || styleActions.Count == 0)
+            return;
+        
+        int unequippedCount = 0;
+        for (int i = 0; i < 4; i++)
+        {
+            if (equippedActions[i] != null && styleActions.Contains(equippedActions[i]))
+            {
+                var unequipped = equippedActions[i];
+                equippedActions[i] = null;
+                unequippedCount++;
+                Debug.Log($"[Character] 유파 해제로 인한 검술 자동 해제: '{unequipped.commandName}' (슬롯 {i})");
+            }
+        }
+        
+        if (unequippedCount > 0)
+        {
+            Debug.Log($"[Character] 유파 해제로 인해 {unequippedCount}개 검술 자동 해제");
+        }
+    }
+    
+    #endregion
 
+    /// <summary>
+    /// 유파 장착 (하위 호환용 메서드, 실제 장착은 Inventory.EquipItem으로 처리)
+    /// 이벤트만 발행합니다.
+    /// </summary>
     public void EquipSwordArtStyle(SwordArtStyleData styleData)
     {
-        _availableCommands.Clear(); // 기존 커맨드 목록 초기화
-        if (styleData != null)
-        {
-            // 스타일에 설정된 액션 커맨드를 리스트로 복사
-            _availableCommands.AddRange(styleData.GetActionCommands());
-        }
-    
+        EquippedStyle = styleData;
         OnStyleEquipped?.Invoke(styleData);
     }
         
+    /// <summary>
+    /// 유파 해제 (하위 호환용 메서드, 실제 해제는 Inventory.UnequipItem으로 처리)
+    /// 이벤트만 발행합니다.
+    /// </summary>
     public void UnequipStyle()
     {
         var old = EquippedStyle;
         if (old != null)
         {
-            _availableCommands.Clear();
             EquippedStyle = null;
             OnStyleUnequipped?.Invoke(old);
         }

@@ -53,6 +53,10 @@ namespace BladeAction.Item
         [DatabaseKey(typeof(SwordArtStyleDatabase), "styles", "key", "displayName")]
         public string swordArtStyleKey;
         
+        [Header("검술 유파 데이터")]
+        [Tooltip("이 아이템이 유파(SwordArtStyle)인 경우 SwordArtStyleData 직접 참조")]
+        public SwordArtStyleData swordArtStyleData;
+        
         [Header("스탯 (재사용 방식)")]
         [Tooltip("스탯 테이블 사용 여부 (체크하면 스탯 테이블 연결, 체크 해제하면 스탯 없는 아이템)")]
         public bool useStatTable = false;
@@ -119,6 +123,20 @@ namespace BladeAction.Item
             
             return typeDatabase.GetAccessoryType(accessoryTypeKey);
         }
+        
+#if UNITY_EDITOR
+        /// <summary>
+        /// 데이터 검증 (에디터 전용)
+        /// </summary>
+        public void OnValidate()
+        {
+            // maxStack이 0이면 1로 보정 (논리적으로 0일 수 없음)
+            if (maxStack <= 0)
+            {
+                maxStack = 1;
+            }
+        }
+#endif
     }
 }
 

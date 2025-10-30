@@ -5,7 +5,6 @@ using UnityEditor.PackageManager.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-[RequireComponent(typeof(PlayerInput))]
 public class AttackerInputHandler : BaseInputHandler
 {
     protected override void RegisterInputCallbacks() // 입력 콜백 등록

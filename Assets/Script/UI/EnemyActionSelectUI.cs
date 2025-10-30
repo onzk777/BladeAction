@@ -25,15 +25,7 @@ public class EnemyActionSelectUI : MonoBehaviour
             }
         }
         
-        // ActionCommandSelectionManager에 자신을 등록 (Scene 분리 대비)
-        if (ActionCommandSelectionManager.Instance != null)
-        {
-            ActionCommandSelectionManager.Instance.RegisterEnemyActionUI(this);
-        }
-        else
-        {
-            Debug.LogWarning("[EnemyActionSelectUI] ActionCommandSelectionManager가 아직 생성되지 않았습니다. Start에서 재시도합니다.");
-        }
+        // ActionCommandSelectionManager 등록은 Start에서 처리
     }
 
     private void Start()
@@ -89,10 +81,11 @@ public class EnemyActionSelectUI : MonoBehaviour
     private void CreateTestModeButton()
     {
         ActionCommandData commandData = null;
-        if (enemyController.EquippedStyle != null && 
-            ((ICombatController)enemyController).TestCommandIndex < enemyController.EquippedStyle.CommandSet.Count)
+        var availableCommands = enemyController.Character?.AvailableCommands;
+        if (availableCommands != null && availableCommands.Count > 0 &&
+            ((ICombatController)enemyController).TestCommandIndex < availableCommands.Count)
         {
-            commandData = enemyController.EquippedStyle.CommandSet[((ICombatController)enemyController).TestCommandIndex];
+            commandData = availableCommands[((ICombatController)enemyController).TestCommandIndex];
         }
         
         CreateActionButton(0, commandData);
@@ -100,14 +93,14 @@ public class EnemyActionSelectUI : MonoBehaviour
 
     private void CreateNormalModeButtons()
     {
-        if (enemyController.EquippedStyle != null)
+        var availableCommands = enemyController.Character?.AvailableCommands;
+        if (availableCommands != null && availableCommands.Count > 0)
         {
-            var commandSet = enemyController.EquippedStyle.CommandSet;
-            int buttonCount = Mathf.Min(commandSet.Count, 5);
+            int buttonCount = Mathf.Min(availableCommands.Count, 5);
             
             for (int i = 0; i < buttonCount; i++)
             {
-                CreateActionButton(i, commandSet[i]);
+                CreateActionButton(i, availableCommands[i]);
             }
         }
         else

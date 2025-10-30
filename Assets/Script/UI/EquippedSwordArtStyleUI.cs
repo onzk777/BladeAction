@@ -48,10 +48,7 @@ namespace BladeAction.UI
         
         #region Unity 생명주기
         
-        private void Awake()
-        {
-            Clear();
-        }
+        // Awake는 사용하지 않음 - Initialize()에서 Refresh()가 호출됨
         
         #endregion
         
@@ -75,8 +72,13 @@ namespace BladeAction.UI
         /// </summary>
         public void Refresh()
         {
+            if (enableDebugLog)
+                Debug.Log("[EquippedSwordArtStyleUI] Refresh 시작");
+            
             if (inventory == null)
             {
+                if (enableDebugLog)
+                    Debug.LogWarning("[EquippedSwordArtStyleUI] inventory가 null → ShowEmptySlot");
                 Clear();
                 return;
             }
@@ -86,6 +88,8 @@ namespace BladeAction.UI
             
             if (styleSlot == null || styleSlot.IsEmpty())
             {
+                if (enableDebugLog)
+                    Debug.LogWarning($"[EquippedSwordArtStyleUI] 유파 슬롯 없거나 비어있음 (null:{styleSlot == null}, empty:{styleSlot?.IsEmpty()}) → ShowEmptySlot");
                 ShowEmptySlot();
                 return;
             }
@@ -94,18 +98,28 @@ namespace BladeAction.UI
             var styleItemData = styleSlot.GetEquippedItem();
             if (styleItemData == null)
             {
+                if (enableDebugLog)
+                    Debug.LogWarning("[EquippedSwordArtStyleUI] styleItemData가 null → ShowEmptySlot");
                 ShowEmptySlot();
                 return;
             }
+            
+            if (enableDebugLog)
+                Debug.Log($"[EquippedSwordArtStyleUI] 유파 아이템 발견: {styleItemData.itemName}, Key: {styleItemData.swordArtStyleKey}");
             
             // 유파 ScriptableObject 가져오기 (키 기반)
             var db = EnsureStyleDatabase(styleItemData.swordArtStyleKey);
             var swordArtStyle = styleItemData.GetSwordArtStyle(db);
             if (swordArtStyle == null)
             {
+                if (enableDebugLog)
+                    Debug.LogWarning($"[EquippedSwordArtStyleUI] swordArtStyle이 null (Key: {styleItemData.swordArtStyleKey}) → ShowEmptySlot");
                 ShowEmptySlot();
                 return;
             }
+            
+            if (enableDebugLog)
+                Debug.Log($"[EquippedSwordArtStyleUI] 유파 데이터 발견: {swordArtStyle.styleName} → ShowSwordArtStyle 호출");
             
             // 유파 정보 표시
             ShowSwordArtStyle(styleItemData, swordArtStyle);
@@ -127,20 +141,27 @@ namespace BladeAction.UI
             if (styleNameText != null)
             {
                 styleNameText.text = styleData.styleName;
-                styleNameText.enabled = true;
+                if (enableDebugLog)
+                {
+                    Debug.Log($"[EquippedSwordArtStyleUI] 유파 이름 설정: {styleData.styleName}");
+                    Debug.Log($"[EquippedSwordArtStyleUI] styleNameText GameObject: {styleNameText.gameObject.name}, Active: {styleNameText.gameObject.activeInHierarchy}, Text: '{styleNameText.text}'");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[EquippedSwordArtStyleUI] styleNameText가 null입니다! Inspector에서 참조를 연결해주세요.");
             }
             
             // 유파 설명
             if (styleDescriptionText != null)
             {
                 styleDescriptionText.text = styleData.description;
-                styleDescriptionText.enabled = true;
             }
             
             // 빈 슬롯 텍스트 숨김
             if (emptySlotText != null)
             {
-                emptySlotText.enabled = false;
+                emptySlotText.text = "";
             }
             
             // 검술 리스트 표시
@@ -215,6 +236,12 @@ namespace BladeAction.UI
         /// </summary>
         private void ShowEmptySlot()
         {
+            if (enableDebugLog)
+            {
+                Debug.Log("[EquippedSwordArtStyleUI] ShowEmptySlot 호출");
+                Debug.Log($"[EquippedSwordArtStyleUI] 호출 스택:\n{System.Environment.StackTrace}");
+            }
+            
             // 유파 아이콘
             if (styleIcon != null)
             {
@@ -222,30 +249,29 @@ namespace BladeAction.UI
                 styleIcon.enabled = emptyStyleIcon != null;
             }
             
-            // 유파 이름 숨김
+            // 유파 이름 비우기
             if (styleNameText != null)
             {
-                styleNameText.enabled = false;
+                styleNameText.text = "";
             }
             
-            // 유파 설명 숨김
+            // 유파 설명 비우기
             if (styleDescriptionText != null)
             {
-                styleDescriptionText.enabled = false;
+                styleDescriptionText.text = "";
             }
             
             // 빈 슬롯 텍스트 표시
             if (emptySlotText != null)
             {
                 emptySlotText.text = "유파 미장착";
-                emptySlotText.enabled = true;
             }
             
             // 검술 리스트 비움
             ClearCommandList();
             
             if (enableDebugLog)
-                Debug.Log("[EquippedSwordArtStyleUI] 빈 슬롯 표시");
+                Debug.Log("[EquippedSwordArtStyleUI] 빈 슬롯 표시 완료");
         }
         
         /// <summary>

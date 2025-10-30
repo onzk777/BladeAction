@@ -11,6 +11,9 @@ namespace BladeAction.UI
     public class ActionCommandItemUI : MonoBehaviour
     {
         [Header("UI 컴포넌트")]
+        [Tooltip("검술 아이콘 이미지")]
+        [SerializeField] private Image iconImage;
+        
         [Tooltip("검술 이름 텍스트")]
         [SerializeField] private TextMeshProUGUI commandNameText;
         
@@ -19,6 +22,10 @@ namespace BladeAction.UI
         
         [Tooltip("배경 이미지")]
         [SerializeField] private Image backgroundImage;
+        
+        [Header("기본 아이콘 설정")]
+        [Tooltip("빈 슬롯일 때 표시할 아이콘")]
+        [SerializeField] private Sprite emptySlotIcon;
         
         [Header("색상 설정")]
         [Tooltip("기본 배경 색상")]
@@ -40,6 +47,21 @@ namespace BladeAction.UI
             {
                 Clear();
                 return;
+            }
+            
+            // 검술 아이콘 표시
+            if (iconImage != null)
+            {
+                if (data.icon != null)
+                {
+                    iconImage.sprite = data.icon;
+                    iconImage.enabled = true;
+                    iconImage.color = Color.white;
+                }
+                else
+                {
+                    iconImage.enabled = false;
+                }
             }
             
             // 검술 이름 표시
@@ -77,9 +99,23 @@ namespace BladeAction.UI
         {
             commandData = null;
             
+            // 아이콘 비우기
+            if (iconImage != null)
+            {
+                if (emptySlotIcon != null)
+                {
+                    iconImage.sprite = emptySlotIcon;
+                    iconImage.enabled = true;
+                }
+                else
+                {
+                    iconImage.enabled = false;
+                }
+            }
+            
             if (commandNameText != null)
             {
-                commandNameText.text = "";
+                commandNameText.text = "빈 슬롯";
             }
             
             if (commandTagText != null)

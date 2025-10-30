@@ -33,22 +33,37 @@ MonoBehaviour:
     parryPoiseAttackPower: 0
     parryPoiseDamage: 50
     poiseGain: 0
-  baseMaxHP: 0
-  baseATK: 0
-  baseDR: 0
-  baseCritChance: 0
-  baseCritMultiplier: 1
-  baseCrit: 0
-  baseCritRatio: 150
-  baseMaxPoise: 0
-  baseParryPoiseDamage: 0
-  guardDRBonus: 0
-  guardDamageReduction: 0
-  tempDRBonus: 0
+  initialItems:
+  - itemId: 'itm_weapon_test1 '
+    quantity: 20
+  - itemId: 'itm_weapon_test2 '
+    quantity: 20
+  - itemId: 'itm_swordartstyle_imperial '
+    quantity: 1
+  - itemId: 'itm_swordartstyle_street '
+    quantity: 1
+  - itemId: 'itm_armor_test1 '
+    quantity: 1
+  - itemId: 'itm_accessory_test1 '
+    quantity: 1
+  initialEquipment:
+  - slotType: 1
+    itemId: itm_weapon_test2
+  - slotType: 2
+    itemId: 'itm_armor_test1 '
+  - slotType: 3
+    itemId: itm_accessory_test1
+  initialAcquiredActions:
+  - actionKey: street_horizontal
+  - actionKey: imperial_vertical
+  equippedActionSlot1: street_horizontal
+  equippedActionSlot2: street_vertical
+  equippedActionSlot3: street_thrust
+  equippedActionSlot4: 
   npcBehavior:
-    attackPerfectRate: 0
-    parryPerfectRate: 0
-    guardAttemptRate: 0
+    attackPerfectRate: 0.31
+    parryPerfectRate: 0.369
+    guardAttemptRate: 0.548
     parryWhileGuarding: 0
     parryWhileGuardingRate: 0
   behaviorTrees:

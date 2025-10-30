@@ -95,6 +95,13 @@ public class EnemyCharacter : Character
 
     public override CommandSelection ChooseCommand()
     {
+        // 검술 리스트 사전 검증
+        if (AvailableCommands == null || AvailableCommands.Count == 0)
+        {
+            Debug.LogError($"[EnemyCharacter] {Name}에게 장착된 검술이 없습니다! CharacterData의 initialEquipment에서 검술을 장착해주세요.");
+            return new CommandSelection { selectedIndex = 0 };
+        }
+        
         // BT 실행 및 결과 적용 (이미 평가되었으면 스킵)
         if (!btEvaluatedThisTurn)
         {
@@ -296,6 +303,15 @@ public class EnemyCharacter : Character
         {
             // BT 결과가 없으면 랜덤 선택
             return Random.Range(0, AvailableCommands.Count);
+        }
+        
+        // ========================================
+        // 0. 검술 리스트 검증
+        // ========================================
+        if (AvailableCommands == null || AvailableCommands.Count == 0)
+        {
+            Debug.LogError($"[EnemyCharacter] {Name}에게 장착된 검술이 없습니다!");
+            return 0;
         }
         
         // ========================================

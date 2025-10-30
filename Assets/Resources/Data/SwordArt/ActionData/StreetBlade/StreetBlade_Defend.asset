@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4ddf5f3c783bef448b61f6bb43d2c43, type: 3}
+  m_Name: StreetBlade_Defend
+  m_EditorClassIdentifier: 
+  commandType: 3
+  commandName: "\uAE38\uAC70\uB9AC \uBC29\uC5B4\uC220"
+  icon: {fileID: 0}
+  description: "\uC0DD\uC0AC\uC758 \uAC08\uB9BC\uAE38\uC744 \uBA87 \uBC88\uC774\uB098
+    \uB118\uB098\uB4DC\uB294 \uAC70\uB9AC\uC758 \uB0AD\uC778\uB4E4\uC774 \uC790\uC5F0\uC2A4\uB7FD\uAC8C
+    \uC775\uD788\uB294 \uB9C9\uAE30 \uAE30\uC220."
+  animationName: 
+  perfectTimings: []
+  canInterruptTarget: 0
+  canBeInterrupted: 1
+  instantTimingFactor: 1
+  damageRatio: 1
+  normalProjectilePrefab: {fileID: 8093953169184290097, guid: 5c72bd0d761f3fe4fa456204b84709ea, type: 3}
+  perfectProjectilePrefab: {fileID: 8093953169184290097, guid: 30a25ed2a10cc8447b9f9c1286c10f79, type: 3}
+  projectileScale: 1
+  tags:
+  - Defense

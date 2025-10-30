@@ -110,7 +110,16 @@ public class CombatManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this; // CombatManager의 싱글톤 인스턴스 설정
-            DontDestroyOnLoad(gameObject); // CombatManager는 씬 전환 시에도 유지
+            
+            // root GameObject일 때만 DontDestroyOnLoad 적용
+            if (transform.parent == null)
+            {
+                DontDestroyOnLoad(gameObject); // CombatManager는 씬 전환 시에도 유지
+            }
+            else
+            {
+                Debug.LogWarning("[CombatManager] DontDestroyOnLoad는 root GameObject에만 적용됩니다. 부모에서 분리하거나 root로 이동하세요.");
+            }
         }
         else
         {
@@ -430,6 +439,20 @@ public class CombatManager : MonoBehaviour
 
         // 검술 선택 (공격자만 필요, BT는 이미 평가됨!)
         int selectedCommandIndex = controller.GetSelectedCommandIndex();
+        
+        // 유효성 검증 (방어 코드)
+        if (actor.AvailableCommands == null || actor.AvailableCommands.Count == 0)
+        {
+            Debug.LogError($"[CombatManager] {actor.Name}에게 사용 가능한 검술이 없습니다! 턴 진행 중단.");
+            yield break;
+        }
+        
+        if (selectedCommandIndex < 0 || selectedCommandIndex >= actor.AvailableCommands.Count)
+        {
+            Debug.LogError($"[CombatManager] 유효하지 않은 검술 인덱스: {selectedCommandIndex} (범위: 0~{actor.AvailableCommands.Count - 1})");
+            yield break;
+        }
+        
         ActionCommandData command = actor.AvailableCommands[selectedCommandIndex];
         
         // Enemy 턴일 때 UI 업데이트 (선택된 검술 표시)
@@ -1831,6 +1854,12 @@ public class CombatManager : MonoBehaviour
         // UI에 전투 종료 및 승리자 표시
         string resultMessage = "승리!"; // 승리자에게는 항상 승리 메시지
         CombatStatusDisplay.Instance?.ShowBattleEndResult(winnerName, resultMessage);
+        
+        // UI ActionMap 활성화 (GameInputManager 사용)
+        if (GameInputManager.Instance != null)
+        {
+            GameInputManager.Instance.EnableUIActionMap();
+        }
         
         // 전투 종료 이벤트 발생
         OnBattleEnded?.Invoke(battleResult);

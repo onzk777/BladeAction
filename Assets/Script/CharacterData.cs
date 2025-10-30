@@ -31,6 +31,17 @@ public class InitialEquipmentEntry
     public string itemId;
 }
 
+/// <summary>
+/// 초기 습득 검술 항목
+/// </summary>
+[System.Serializable]
+public class InitialActionEntry
+{
+    [Tooltip("검술 키")]
+    [DatabaseKey(typeof(ActionCommandDatabase), "actions", "key")]
+    public string actionKey;
+}
+
 [CreateAssetMenu(fileName = "CharacterData", menuName = "Character/CharacterData", order = 1)]
 public class CharacterData : ScriptableObject
 {
@@ -58,6 +69,26 @@ public class CharacterData : ScriptableObject
     
     [Tooltip("캐릭터 생성 시 장착할 장비 (슬롯별)")]
     public List<InitialEquipmentEntry> initialEquipment = new List<InitialEquipmentEntry>();
+    
+    [Header("초기 검술")]
+    [Tooltip("캐릭터 생성 시 습득한 검술 목록")]
+    public List<InitialActionEntry> initialAcquiredActions = new List<InitialActionEntry>();
+    
+    [Tooltip("캐릭터 생성 시 장착된 검술 슬롯 1 (ActionCommandDatabase의 Key)")]
+    [DatabaseKey(typeof(ActionCommandDatabase), "actions", "key")]
+    public string equippedActionSlot1 = "";
+    
+    [Tooltip("캐릭터 생성 시 장착된 검술 슬롯 2 (ActionCommandDatabase의 Key)")]
+    [DatabaseKey(typeof(ActionCommandDatabase), "actions", "key")]
+    public string equippedActionSlot2 = "";
+    
+    [Tooltip("캐릭터 생성 시 장착된 검술 슬롯 3 (ActionCommandDatabase의 Key)")]
+    [DatabaseKey(typeof(ActionCommandDatabase), "actions", "key")]
+    public string equippedActionSlot3 = "";
+    
+    [Tooltip("캐릭터 생성 시 장착된 검술 슬롯 4 (ActionCommandDatabase의 Key)")]
+    [DatabaseKey(typeof(ActionCommandDatabase), "actions", "key")]
+    public string equippedActionSlot4 = "";
     
     // 편의 프로퍼티들 (baseStats 접근자)
     public float MaxHP => baseStats.maxHP;
@@ -91,7 +122,8 @@ public class CharacterData : ScriptableObject
         
         if (behaviorTrees == null || behaviorTrees.Count == 0)
         {
-            Debug.LogWarning($"[CharacterData] {characterName} - Behavior Tree가 설정되지 않았습니다!");
+            // BT는 선택사항이므로 경고 제거
+            // Debug.LogWarning($"[CharacterData] {characterName} - Behavior Tree가 설정되지 않았습니다!");
         }
         else
         {

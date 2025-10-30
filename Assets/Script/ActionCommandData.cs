@@ -8,6 +8,14 @@ public class ActionCommandData : ScriptableObject
 {
     public ActionCommand commandType;
     public string commandName; // 커맨드 이름
+    
+    [Header("UI 표시")]
+    [Tooltip("검술 아이콘")]
+    public Sprite icon;
+    
+    [Tooltip("검술 설명")]
+    [TextArea(3, 5)]
+    public string description;
 
     [Header("Spine 애니메이션 설정")]
     [Tooltip("이 커맨드에서 재생할 Spine 애니메이션 이름")]

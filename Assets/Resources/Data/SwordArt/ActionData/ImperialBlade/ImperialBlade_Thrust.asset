@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4ddf5f3c783bef448b61f6bb43d2c43, type: 3}
+  m_Name: ImperialBlade_Thrust
+  m_EditorClassIdentifier: 
+  commandType: 2
+  commandName: "\uC81C\uAD6D \uAC80\uC220 - \uCC0C\uB974\uAE30"
+  icon: {fileID: 0}
+  description: "\uCC0C\uB974\uAE30\uC5D0 \uD2B9\uD654\uB41C \uC9C1\uAC80\uC758 \uC7A5\uC810\uC744
+    \uC0B4\uB9B0, \uC628\uBAB8\uC744 \uC2E4\uC5B4 \uB0B4\uC9C0\uB974\uB294 \uAC15\uB825\uD55C
+    \uC77C\uACA9."
+  animationName: 
+  perfectTimings:
+  - start: 1
+    duration: 1
+    damageRatio: 1
+  canInterruptTarget: 0
+  canBeInterrupted: 1
+  instantTimingFactor: 1
+  damageRatio: 1
+  normalProjectilePrefab: {fileID: 8093953169184290097, guid: 5c72bd0d761f3fe4fa456204b84709ea, type: 3}
+  perfectProjectilePrefab: {fileID: 8093953169184290097, guid: 30a25ed2a10cc8447b9f9c1286c10f79, type: 3}
+  projectileScale: 1
+  tags:
+  - PowerAttack

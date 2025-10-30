@@ -32,7 +32,7 @@ namespace BladeAction.Item
         }
         
         /// <summary>
-        /// Resources 폴더에서 ItemDatabase 찾기 (파일명 무관)
+        /// Resources 폴더에서 ItemDatabase 찾기 (강화된 검색)
         /// </summary>
         private static void FindAndCacheInstance()
         {
@@ -40,7 +40,29 @@ namespace BladeAction.Item
             
             try
             {
-                // Resources 폴더에서 모든 ItemDatabase 검색 (파일명 의존성 제거)
+                // 1단계: 일반적인 경로들 우선 시도 (빠른 로드)
+                string[] commonPaths = new string[]
+                {
+                    "Data/Item/ItemTable",
+                    "Data/Item/ItemDatabase",
+                    "Item/ItemTable",
+                    "Item/ItemDatabase",
+                    "ItemTable",
+                    "ItemDatabase"
+                };
+                
+                foreach (var path in commonPaths)
+                {
+                    _cachedInstance = Resources.Load<ItemDatabase>(path);
+                    if (_cachedInstance != null)
+                    {
+                        Debug.Log($"[ItemDatabase] 인스턴스 발견 (경로: {path}): '{_cachedInstance.name}' ({_cachedInstance.items?.Count ?? 0}개 아이템)");
+                        return;
+                    }
+                }
+                
+                // 2단계: 전체 스캔 (Fallback)
+                Debug.Log("[ItemDatabase] 일반 경로에서 찾지 못함. Resources 전체 스캔 시작...");
                 ItemDatabase[] foundDatabases = Resources.LoadAll<ItemDatabase>("");
                 
                 if (foundDatabases != null && foundDatabases.Length > 0)
@@ -48,7 +70,7 @@ namespace BladeAction.Item
                     if (foundDatabases.Length == 1)
                     {
                         _cachedInstance = foundDatabases[0];
-                        Debug.Log($"[ItemDatabase] 인스턴스 발견: '{_cachedInstance.name}' ({_cachedInstance.items?.Count ?? 0}개 아이템)");
+                        Debug.Log($"[ItemDatabase] 인스턴스 발견 (전체 스캔): '{_cachedInstance.name}' ({_cachedInstance.items?.Count ?? 0}개 아이템)");
                     }
                     else
                     {
@@ -59,13 +81,16 @@ namespace BladeAction.Item
                 }
                 else
                 {
-                    Debug.LogError("[ItemDatabase] Resources 폴더에서 ItemDatabase를 찾을 수 없습니다! Create > Item > Item Database로 생성 후 Resources 폴더에 저장하세요.");
-                    return;
+                    Debug.LogError("[ItemDatabase] Resources 폴더에서 ItemDatabase를 찾을 수 없습니다!\n" +
+                        "확인 사항:\n" +
+                        "1. ItemDatabase asset이 Resources 폴더 또는 하위 폴더에 있는지 확인\n" +
+                        "2. asset 파일이 ItemDatabase 타입인지 확인\n" +
+                        "3. Unity 에디터를 재시작해보세요");
                 }
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[ItemDatabase] 인스턴스 검색 중 오류 발생: {ex.Message}");
+                Debug.LogError($"[ItemDatabase] 인스턴스 검색 중 오류 발생: {ex.Message}\n{ex.StackTrace}");
             }
         }
         
@@ -115,13 +140,16 @@ namespace BladeAction.Item
         #region 아이템 조회
         
         /// <summary>
-        /// itemKey로 아이템 검색
+        /// itemKey로 아이템 검색 (공백 제거 후 검색)
         /// </summary>
         public Item GetItem(string itemKey)
         {
             if (string.IsNullOrEmpty(itemKey))
                 return null;
-                
+            
+            // 공백 제거 (입력 실수 방어)
+            itemKey = itemKey.Trim();
+            
             return items.Find(item => item.itemKey == itemKey);
         }
         
@@ -205,6 +233,29 @@ namespace BladeAction.Item
             
             return items.Remove(item);
         }
+        
+        #endregion
+        
+        #region 데이터 검증
+        
+#if UNITY_EDITOR
+        /// <summary>
+        /// 데이터 검증 (에디터 전용)
+        /// </summary>
+        private void OnValidate()
+        {
+            if (items == null) return;
+            
+            // 모든 아이템의 maxStack 검증
+            foreach (var item in items)
+            {
+                if (item != null)
+                {
+                    item.OnValidate();
+                }
+            }
+        }
+#endif
         
         #endregion
     }

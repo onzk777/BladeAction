@@ -91,19 +91,8 @@ public class DebugPanelController : MonoBehaviour
     
     private void OnEnable()
     {
-        Debug.Log("[DebugPanelController] OnEnable 호출됨");
-        
-        // Debug 액션 맵이 아직 초기화되지 않았다면 리턴 (Start에서 초기화됨)
-        if (debugActionMap == null || debugPanelAction == null)
-        {
-            Debug.LogWarning("[DebugPanelController] OnEnable: Debug 액션이 아직 초기화되지 않았습니다 (Start 전에 호출됨)");
-            return;
-        }
-        
-        // Debug 액션 맵은 항상 활성화 상태 유지
-        debugActionMap.Enable();
-        debugPanelAction.Enable();
-        Debug.Log($"[DebugPanelController] Debug 액션 맵 재활성화 완료: map={debugActionMap.enabled}, action={debugPanelAction.enabled}");
+        // OnEnable은 Start 전에 호출되므로 초기화 전 상태일 수 있음
+        // Start()에서 InitializeInput()이 호출되면 자동으로 활성화되므로 여기서는 아무것도 하지 않음
     }
     
     private void OnDisable()

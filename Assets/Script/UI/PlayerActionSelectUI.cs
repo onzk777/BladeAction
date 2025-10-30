@@ -171,7 +171,8 @@ public class PlayerActionSelectUI : MonoBehaviour
                 }
                 else
                 {
-                    Debug.LogWarning($"  - Toggle 컴포넌트를 찾을 수 없습니다!");
+                    // Toggle 컴포넌트가 없는 것은 정상 (Button 방식 사용)
+                    Debug.Log($"  - Toggle 컴포넌트 없음 (Button 방식)");
                 }
                 Debug.Log($"  - gameObject.activeInHierarchy: {button.gameObject.activeInHierarchy}");
                 if (rectTransform != null)
@@ -255,10 +256,11 @@ public class PlayerActionSelectUI : MonoBehaviour
     private void CreateTestModeButton()
     {
         ActionCommandData commandData = null;
-        if (playerController.EquippedStyle != null && 
-            ((ICombatController)playerController).TestCommandIndex < playerController.EquippedStyle.CommandSet.Count)
+        var availableCommands = playerController.Character?.AvailableCommands;
+        if (availableCommands != null && availableCommands.Count > 0 &&
+            ((ICombatController)playerController).TestCommandIndex < availableCommands.Count)
         {
-            commandData = playerController.EquippedStyle.CommandSet[((ICombatController)playerController).TestCommandIndex];
+            commandData = availableCommands[((ICombatController)playerController).TestCommandIndex];
         }
         
         CreateActionButton(0, commandData);
@@ -266,14 +268,14 @@ public class PlayerActionSelectUI : MonoBehaviour
 
     private void CreateNormalModeButtons()
     {
-        if (playerController.EquippedStyle != null)
+        var availableCommands = playerController.Character?.AvailableCommands;
+        if (availableCommands != null && availableCommands.Count > 0)
         {
-            var commandSet = playerController.EquippedStyle.CommandSet;
-            int buttonCount = Mathf.Min(commandSet.Count, maxButtons);
+            int buttonCount = Mathf.Min(availableCommands.Count, maxButtons);
             
             for (int i = 0; i < buttonCount; i++)
             {
-                CreateActionButton(i, commandSet[i]);
+                CreateActionButton(i, availableCommands[i]);
             }
         }
         else

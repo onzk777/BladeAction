@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using Spine.Unity;
 
-[RequireComponent(typeof(PlayerInput))]
 public class PlayerController : MonoBehaviour, ICombatController
 {
     public Character Character => CharacterManager.Instance?.PlayerCharacter;    
@@ -17,13 +16,39 @@ public class PlayerController : MonoBehaviour, ICombatController
 
     [Tooltip("테스트 모드에서 사용할 커맨드 인덱스")]
     [SerializeField] private int testCommandIndex;
-    [SerializeField] private SwordArtStyleData equippedStyle;
-    public SwordArtStyleData EquippedStyle => equippedStyle;
     
     [Header("Spine 애니메이션 연동")]
     // Skeleton Mecanim을 통한 Unity Animator 기반 애니메이션 제어
     [Tooltip("CombatAnimation 오브젝트 (SkeletonMecanim 컴포넌트가 포함된 하위 오브젝트)")]
     [SerializeField] private GameObject combatAnimationObject;
+    
+    /// <summary>
+    /// 인벤토리에서 장착된 유파를 반환합니다 (ICombatController 구현)
+    /// </summary>
+    public SwordArtStyleData EquippedStyle 
+    { 
+        get 
+        {
+            var styleItem = Character?.Inventory?.GetEquippedItem(BladeAction.Item.EquipmentSlotType.SwordArtStyle);
+            if (styleItem == null)
+                return null;
+            
+            // swordArtStyleData 직접 참조 또는 Key로 조회
+            var styleData = styleItem.swordArtStyleData;
+            
+            if (styleData == null && !string.IsNullOrEmpty(styleItem.swordArtStyleKey))
+            {
+                // Key로 조회
+                var styleDb = SwordArtStyleDatabase.Instance;
+                if (styleDb != null)
+                {
+                    styleData = styleDb.GetStyle(styleItem.swordArtStyleKey);
+                }
+            }
+            
+            return styleData;
+        } 
+    }
     
     /// <summary>
     /// CombatAnimation 오브젝트에 접근하기 위한 프로퍼티
@@ -39,7 +64,12 @@ public class PlayerController : MonoBehaviour, ICombatController
     // 현재 턴에 사용할 커맨드를 반환
     public ActionCommandData GetCurrentActionCommand(int commandIndex)
     {
-        return equippedStyle.CommandSet[commandIndex];
+        if (Character?.AvailableCommands == null || commandIndex < 0 || commandIndex >= Character.AvailableCommands.Count)
+        {
+            Debug.LogError($"[PlayerController] 유효하지 않은 커맨드 인덱스: {commandIndex} (사용 가능한 검술 수: {Character?.AvailableCommands?.Count ?? 0})");
+            return null;
+        }
+        return Character.AvailableCommands[commandIndex];
     }
     public int CommandCount => Character?.AvailableCommands.Count ?? 0;
     
@@ -101,7 +131,7 @@ public class PlayerController : MonoBehaviour, ICombatController
 
     void Awake()
     {
-        // CharacterManager 초기화 대기 후 유파 장착
+        // CharacterManager 초기화 대기 후 Spine 애니메이션 설정
         StartCoroutine(WaitForCharacterManagerAndSetup());
     }
 
@@ -119,27 +149,22 @@ public class PlayerController : MonoBehaviour, ICombatController
             yield return null;
         }
 
-        // 유파 장착
-        Character?.EquipSwordArtStyle(equippedStyle);
+        // Inventory가 준비될 때까지 대기
+        while (Character.Inventory == null)
+        {
+            yield return null;
+        }
         
         // Spine 애니메이션 애셋을 Skeleton Mecanim에 연결
         SetupSkeletonMecanim();
     }
     
     /// <summary>
-    /// 장착된 유파의 Spine 애니메이션 애셋을 SkeletonMecanim 컴포넌트에 연결
+    /// 인벤토리에 장착된 유파의 Spine 애니메이션 애셋을 SkeletonMecanim 컴포넌트에 연결
     /// </summary>
     private void SetupSkeletonMecanim()
     {
         Debug.Log("[PlayerController] SetupSkeletonMecanim 시작");
-        
-        if (equippedStyle == null)
-        {
-            Debug.LogError("[PlayerController] 장착된 유파가 없어서 Spine 애니메이션 애셋을 연결할 수 없습니다.");
-            return;
-        }
-        
-        Debug.Log($"[PlayerController] 유파 정보: {equippedStyle.styleName}");
         
         // Inspector에서 연결된 CombatAnimation 오브젝트 확인
         if (combatAnimationObject == null)
@@ -147,8 +172,6 @@ public class PlayerController : MonoBehaviour, ICombatController
             Debug.LogError("[PlayerController] CombatAnimation 오브젝트가 Inspector에서 연결되지 않았습니다. PlayerController의 Combat Animation Object 필드에 연결해주세요.");
             return;
         }
-        
-        Debug.Log($"[PlayerController] CombatAnimation 오브젝트 찾음: {combatAnimationObject.name}");
         
         // SkeletonMecanim 컴포넌트 찾기
         var skeletonMecanim = combatAnimationObject.GetComponent<SkeletonMecanim>();
@@ -158,30 +181,45 @@ public class PlayerController : MonoBehaviour, ICombatController
             return;
         }
         
-        Debug.Log($"[PlayerController] SkeletonMecanim 컴포넌트 찾음: {skeletonMecanim.name}");
-        
-        var spineAsset = equippedStyle.SpineAnimationAsset;
-        if (spineAsset == null)
+        // 인벤토리에서 장착된 유파 가져오기
+        var equippedStyleItem = Character.Inventory?.GetEquippedItem(BladeAction.Item.EquipmentSlotType.SwordArtStyle);
+        if (equippedStyleItem == null)
         {
-            Debug.LogError($"[PlayerController] 유파 '{equippedStyle.styleName}'에 Spine 애니메이션 애셋이 설정되지 않았습니다. SwordArtStyleData에서 SpineAnimationAsset을 설정해주세요.");
+            // 유파 미장착은 정상 상황 (경고 제거)
             return;
         }
         
-        Debug.Log($"[PlayerController] Spine 애셋 찾음: {spineAsset.name}");
+        // swordArtStyleData 직접 참조 또는 Key로 조회
+        var styleData = equippedStyleItem.swordArtStyleData;
+        
+        if (styleData == null && !string.IsNullOrEmpty(equippedStyleItem.swordArtStyleKey))
+        {
+            // Key로 조회
+            var styleDb = SwordArtStyleDatabase.Instance;
+            if (styleDb != null)
+            {
+                styleData = styleDb.GetStyle(equippedStyleItem.swordArtStyleKey);
+            }
+        }
+        
+        if (styleData == null)
+        {
+            Debug.LogError($"[PlayerController] 유파 아이템 '{equippedStyleItem.itemName}'에 SwordArtStyleData를 찾을 수 없습니다. (Key: {equippedStyleItem.swordArtStyleKey})");
+            return;
+        }
+        
+        Debug.Log($"[PlayerController] 유파 정보: {styleData.styleName}");
+        
+        var spineAsset = styleData.SpineAnimationAsset;
+        if (spineAsset == null)
+        {
+            Debug.LogError($"[PlayerController] 유파 '{styleData.styleName}'에 Spine 애니메이션 애셋이 설정되지 않았습니다.");
+            return;
+        }
         
         // SkeletonMecanim에 Spine 애니메이션 애셋 연결
         skeletonMecanim.skeletonDataAsset = spineAsset;
-        Debug.Log($"[PlayerController] Spine 애니메이션 애셋 연결 완료: {spineAsset.name} (유파: {equippedStyle.styleName})");
-        
-        // 연결 후 상태 확인
-        if (skeletonMecanim.skeletonDataAsset != null)
-        {
-            Debug.Log($"[PlayerController] 연결 확인됨: {skeletonMecanim.skeletonDataAsset.name}");
-        }
-        else
-        {
-            Debug.LogError("[PlayerController] 연결 실패: skeletonDataAsset이 null입니다.");
-        }
+        Debug.Log($"[PlayerController] Spine 애니메이션 애셋 연결 완료: {spineAsset.name} (유파: {styleData.styleName})");
     }
 
     void Start()
@@ -223,7 +261,7 @@ public class PlayerController : MonoBehaviour, ICombatController
             // ========================================
             if (useRandomAction)
             {
-                int len = equippedStyle.CommandSet.Count;
+                int len = Character?.AvailableCommands.Count ?? 0;
                 if (len == 0) return testCommandIndex; // 보호 코드
                 
                 int randomIndex = UnityEngine.Random.Range(0, len);
@@ -257,10 +295,10 @@ public class PlayerController : MonoBehaviour, ICombatController
     {
         int idx = GetSelectedCommandIndex();
         
-        // equippedStyle의 CommandSet에서 가져오기
-        if (equippedStyle != null && idx >= 0 && idx < equippedStyle.CommandSet.Count)
+        // Character.AvailableCommands에서 가져오기
+        if (Character?.AvailableCommands != null && idx >= 0 && idx < Character.AvailableCommands.Count)
         {
-            return equippedStyle.CommandSet[idx];
+            return Character.AvailableCommands[idx];
         }
         
         return null;

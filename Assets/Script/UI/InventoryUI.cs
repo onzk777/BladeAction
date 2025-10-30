@@ -34,9 +34,6 @@ namespace BladeAction.UI
         [Tooltip("장신구 슬롯 컨테이너 (가로 배치)")]
         [SerializeField] private Transform accessoryPanel;
         
-        [Tooltip("검술 유파 슬롯 컨테이너")]
-        [SerializeField] private Transform swordArtStylePanel;
-        
         [Header("Prefab 참조")]
         [Tooltip("아이템 슬롯 프리팹")]
         [SerializeField] private GameObject itemSlotPrefab;
@@ -75,6 +72,7 @@ namespace BladeAction.UI
         
         private void Awake()
         {
+            // Canvas는 MainMenuManager에서 활성화됨
             // 컴포넌트 유효성 검증
             ValidateComponents();
         }
@@ -457,42 +455,19 @@ namespace BladeAction.UI
         }
         
         /// <summary>
-        /// 검술 유파 슬롯 생성
+        /// 검술 유파 UI 갱신 (EquippedSwordArtStyleUI 사용)
         /// </summary>
         private void CreateSwordArtStyleSlot()
         {
-            if (swordArtStylePanel == null || equipmentSlotPrefab == null)
-                return;
-            
-            // 기존 검술 유파 슬롯 제거
-            foreach (Transform child in swordArtStylePanel)
+            // EquipmentSlotUI Prefab 대신 EquippedSwordArtStyleUI를 사용
+            // 유파는 특별한 슬롯이므로 전용 UI에 직접 표시
+            if (EquippedSwordArtStyleUI != null)
             {
-                Destroy(child.gameObject);
-            }
-            
-            // 검술 유파 슬롯 찾기
-            var styleSlot = Inventory.equipmentSlots
-                .FirstOrDefault(slot => slot.slotType == EquipmentSlotType.SwordArtStyle);
-            
-            if (styleSlot != null)
-            {
-                GameObject slotObj = Instantiate(equipmentSlotPrefab, swordArtStylePanel);
-                EquipmentSlotUI slotUI = slotObj.GetComponent<EquipmentSlotUI>();
-                
-                if (slotUI != null)
-                {
-                    slotUI.Setup(styleSlot);
-                    slotUI.OnSlotClicked += OnEquipmentSlotClicked;
-                    equipmentSlots.Add(slotUI);
-                }
-                else
-                {
-                    Debug.LogWarning("[InventoryUI] equipmentSlotPrefab에 EquipmentSlotUI 컴포넌트가 없습니다!");
-                }
+                EquippedSwordArtStyleUI.Refresh();
             }
             
             if (enableDebugLog)
-                Debug.Log("[InventoryUI] 검술 유파 슬롯 생성 완료");
+                Debug.Log("[InventoryUI] 검술 유파 UI 갱신 완료");
         }
         
         #endregion
@@ -636,7 +611,15 @@ namespace BladeAction.UI
         private void OnItemAddedEvent(ItemEventData data) => RefreshItemGrid();
         private void OnItemRemovedEvent(ItemEventData data) => RefreshItemGrid();
         private void OnItemEquippedEvent(ItemEventData data) => RefreshAll();
-        private void OnItemUnequippedEvent(ItemEventData data) => RefreshAll();
+        private void OnItemUnequippedEvent(ItemEventData data)
+        {
+            // Unequip만 단독으로 발생하면 갱신 필요하지만,
+            // 아이템 교체 장착 시에는 Unequip → Equip 순서로 발생하므로
+            // Unequip에서 RefreshAll() 호출 시 중간 상태(빈 슬롯)가 보임
+            // Equip 이벤트에서만 RefreshAll() 호출하도록 변경
+            // 단, 장비 해제만 하는 경우를 위해 장비 슬롯만 갱신
+            RefreshEquipmentSlots();
+        }
         private void OnItemQuantityChangedEvent(ItemEventData data) => RefreshItemGrid();
         private void OnInventoryFullEvent(ItemEventData data)
         {
