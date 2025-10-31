@@ -325,8 +325,8 @@ namespace BladeAction.UI
             // 버리기 버튼
             if (dropButton != null)
             {
-                // 잠긴 아이템은 버리기 불가
-                dropButton.interactable = !item.isLocked;
+                // 잠긴 아이템이나 장착 중인 아이템은 버리기 불가
+                dropButton.interactable = !item.isLocked && !item.isEquipped;
             }
         }
         
@@ -414,9 +414,9 @@ namespace BladeAction.UI
         }
         
         /// <summary>
-        /// 아이템 장착
+        /// 아이템 장착 (외부에서 호출 가능)
         /// </summary>
-        private void EquipItem(BladeAction.Item.Item itemData)
+        public void EquipItem(BladeAction.Item.Item itemData)
         {
             // 아이템 타입에 맞는 슬롯 타입 결정
             EquipmentSlotType slotType = GetSlotTypeForItem(itemData.itemType);
@@ -447,9 +447,9 @@ namespace BladeAction.UI
         }
         
         /// <summary>
-        /// 아이템 해제
+        /// 아이템 해제 (외부에서 호출 가능)
         /// </summary>
-        private void UnequipItem(BladeAction.Item.Item itemData)
+        public void UnequipItem(BladeAction.Item.Item itemData)
         {
             if (currentItem == null || !currentItem.isEquipped)
             {

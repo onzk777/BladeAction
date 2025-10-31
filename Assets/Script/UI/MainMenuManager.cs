@@ -34,8 +34,8 @@ namespace BladeAction.UI
         [Tooltip("디버그 로그 출력")]
         [SerializeField] private bool enableDebugLog = true;
         
-        // 현재 활성화된 탭 인덱스
-        private int currentTabIndex = 0;
+        // 현재 활성화된 탭 인덱스 (-1: 초기화되지 않음)
+        private int currentTabIndex = -1;
         
         #region Unity 생명주기
         
@@ -72,6 +72,17 @@ namespace BladeAction.UI
                     Debug.LogWarning($"[MainMenuManager] 탭 '{tab.tabName}'의 tabButton이 null입니다!");
                 }
             }
+            
+            // 초기 상태: 모든 패널 비활성화 (에디터 설정 무시)
+            for (int i = 0; i < menuTabs.Count; i++)
+            {
+                if (menuTabs[i].panelObject != null)
+                {
+                    menuTabs[i].panelObject.SetActive(false);
+                }
+            }
+            
+            Log("모든 패널 초기화 완료 (비활성화)");
         }
         
         private void Start()
@@ -101,7 +112,8 @@ namespace BladeAction.UI
         /// 특정 인덱스의 탭을 활성화하고 나머지는 비활성화
         /// </summary>
         /// <param name="tabIndex">활성화할 탭 인덱스</param>
-        public void ShowTab(int tabIndex)
+        /// <param name="forceRefresh">true면 같은 탭이어도 강제로 리프레시</param>
+        public void ShowTab(int tabIndex, bool forceRefresh = false)
         {
             // 범위 체크
             if (tabIndex < 0 || tabIndex >= menuTabs.Count)
@@ -110,8 +122,8 @@ namespace BladeAction.UI
                 return;
             }
             
-            // 이미 활성화된 탭이면 스킵
-            if (currentTabIndex == tabIndex)
+            // 이미 활성화된 탭이면 스킵 (강제 리프레시가 아닌 경우)
+            if (!forceRefresh && currentTabIndex == tabIndex && gameObject.activeSelf)
             {
                 Log($"'{menuTabs[tabIndex].tabName}' 탭이 이미 활성화되어 있습니다.");
                 return;

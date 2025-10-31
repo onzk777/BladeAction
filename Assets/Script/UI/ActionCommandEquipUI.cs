@@ -584,6 +584,9 @@ namespace BladeAction.UI
             {
                 Log($"[ActionCommandEquipUI] '{action.commandName}' 검술을 슬롯 {targetSlotIndex}에 장착했습니다.");
                 RefreshUI();
+                
+                // 드래그 후 포커스 유지: 장착된 슬롯으로 이동
+                SetFocusToEquippedSlot(targetSlotIndex);
             }
         }
         
@@ -598,6 +601,9 @@ namespace BladeAction.UI
             {
                 Log($"[ActionCommandEquipUI] 슬롯 {slotIndex1} ↔ 슬롯 {slotIndex2} 교체 완료");
                 RefreshUI();
+                
+                // 드래그 후 포커스 유지: 드롭한 슬롯으로 이동
+                SetFocusToEquippedSlot(slotIndex2);
             }
         }
         
@@ -608,10 +614,19 @@ namespace BladeAction.UI
         {
             if (targetCharacter == null) return;
             
+            // 해제하기 전에 액션 정보 저장 (포커스 이동용)
+            var unequippedAction = targetCharacter.GetEquippedAction(slotIndex);
+            
             if (targetCharacter.UnequipAction(slotIndex))
             {
                 Log($"[ActionCommandEquipUI] 슬롯 {slotIndex}의 검술을 해제했습니다.");
                 RefreshUI();
+                
+                // 드래그 후 포커스 유지: 해제된 검술을 그리드에서 찾아 포커스
+                if (unequippedAction != null)
+                {
+                    SetFocusToAction(unequippedAction);
+                }
             }
         }
         

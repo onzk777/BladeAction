@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BladeAction.Item;
 using System.Collections;
+using DG.Tweening;
 
 namespace BladeAction.UI
 {
@@ -30,6 +31,12 @@ namespace BladeAction.UI
         
         [Tooltip("아이템 그리드의 스크롤 영역 (ScrollRect 컴포넌트)")]
         [SerializeField] private ScrollRect itemScrollRect;
+        
+        [Tooltip("그리드 전체 영역 드롭 하이라이트용 Frame Image (선택사항)")]
+        [SerializeField] private Image gridAreaFrameImage;
+        
+        [Tooltip("그리드 영역 드롭존 오브젝트 (GridAreaDropZone 컴포넌트 포함, 드래그 시에만 활성화)")]
+        [SerializeField] private GameObject gridAreaDropZoneObject;
         
         [Header("▣ 장비 슬롯 (착용 중인 장비)")]
         [Tooltip("장비 슬롯들이 동적으로 생성될 부모 Transform (보통 EquipmentSlots)")]
@@ -67,6 +74,14 @@ namespace BladeAction.UI
         
         // 현재 선택된 슬롯
         private ItemSlotUI selectedItemSlot;
+        
+        // 드래그 앤 드롭 하이라이트용
+        private Color originalGridFrameColor;
+        private Sequence gridAreaBlinkSequence;
+        private Dictionary<EquipmentSlotUI, Sequence> equipmentSlotBlinkSequences = new Dictionary<EquipmentSlotUI, Sequence>();
+        private Dictionary<EquipmentSlotUI, Color> equipmentSlotOriginalColors = new Dictionary<EquipmentSlotUI, Color>(); // 원래 색상 저장
+        private Sequence swordArtStyleSlotBlinkSequence; // EquippedSwordArtStyleUI용 별도 시퀀스
+        private Color swordArtStyleSlotOriginalColor; // 유파 슬롯 원래 색상
         
         #region Unity 생명주기
         
@@ -124,6 +139,16 @@ namespace BladeAction.UI
             
             // 지연 초기화 (CharacterManager보다 늦게 실행될 수 있으므로)
             StartCoroutine(DelayedAutoConnect());
+            
+            // 드래그 앤 드롭: Frame Image 초기화
+            if (gridAreaFrameImage != null)
+            {
+                originalGridFrameColor = gridAreaFrameImage.color;
+                gridAreaFrameImage.enabled = false;
+            }
+            
+            // GridAreaDropZone의 Raycast 비활성화 (드래그 시에만 활성화)
+            SetGridDropZoneEnabled(false);
         }
         
         private void OnEnable()
@@ -147,6 +172,9 @@ namespace BladeAction.UI
         
         private void OnDisable()
         {
+            // 드래그 앤 드롭: 정리
+            OnDragEnd();
+            
             // GameObject가 비활성화될 때 정리 작업
             // 아이템 슬롯 선택 상태 초기화
             if (selectedItemSlot != null)
@@ -539,6 +567,17 @@ namespace BladeAction.UI
             if (EquippedSwordArtStyleUI != null)
             {
                 EquippedSwordArtStyleUI.Refresh();
+                
+                // **유파 슬롯을 equipmentSlots 리스트에 추가 (InventoryUI.OnEquipmentSlotClicked 이벤트 연결)**
+                var styleSlotUI = EquippedSwordArtStyleUI.GetEquipmentSlotUI();
+                if (styleSlotUI != null)
+                {
+                    styleSlotUI.OnSlotClicked += OnEquipmentSlotClicked;
+                    equipmentSlots.Add(styleSlotUI);
+                    
+                    if (enableDebugLog)
+                        Debug.Log("[InventoryUI] 유파 슬롯을 equipmentSlots 리스트에 추가 완료");
+                }
             }
             
             if (enableDebugLog)
@@ -1022,20 +1061,10 @@ namespace BladeAction.UI
         /// <param name="equipSlot">포커스를 이동할 장비 슬롯</param>
         public void SetFocusToEquipmentSlot(EquipmentSlot equipSlot)
         {
-            if (equipSlot == null)
+            if (equipSlot == null || equipmentSlots == null || equipmentSlots.Count == 0)
                 return;
             
-            // 유파 슬롯인 경우 특수 처리
-            if (equipSlot.slotType == EquipmentSlotType.SwordArtStyle)
-            {
-                SetFocusToSwordArtStyleSlot(equipSlot);
-                return;
-            }
-            
-            if (equipmentSlots == null || equipmentSlots.Count == 0)
-                return;
-            
-            // 해당 EquipmentSlot에 대응하는 UI 찾기
+            // 해당 EquipmentSlot에 대응하는 UI 찾기 (유파 슬롯 포함)
             var targetSlot = equipmentSlots.FirstOrDefault(slotUI => 
                 slotUI.GetEquipmentSlot() == equipSlot);
             
@@ -1048,22 +1077,15 @@ namespace BladeAction.UI
                     selectedItemSlot = null;
                 }
                 
-                // 기존 장비 슬롯 선택 해제
-                if (selectedEquipmentSlot != null)
+                // 기존 장비 슬롯 선택 해제 (다른 슬롯인 경우만)
+                if (selectedEquipmentSlot != null && selectedEquipmentSlot != targetSlot)
                 {
                     selectedEquipmentSlot.SetSelected(false);
                 }
                 
-                // 새 장비 슬롯 선택
+                // 새 장비 슬롯 선택 (유파 포함, 모든 슬롯 동일 처리)
                 selectedEquipmentSlot = targetSlot;
                 selectedEquipmentSlot.SetSelected(true);
-                
-                // Unity EventSystem으로 선택 (파란색 하이라이트)
-                var selectable = targetSlot.GetComponent<UnityEngine.UI.Selectable>();
-                if (selectable != null)
-                {
-                    UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(targetSlot.gameObject);
-                }
                 
                 // 상세 패널 업데이트 (장착된 아이템 표시)
                 if (!targetSlot.IsEmpty() && itemDetailPanel != null)
@@ -1101,45 +1123,6 @@ namespace BladeAction.UI
         }
         
         /// <summary>
-        /// 유파 슬롯으로 포커스 이동
-        /// </summary>
-        private void SetFocusToSwordArtStyleSlot(EquipmentSlot equipSlot)
-        {
-            if (EquippedSwordArtStyleUI == null || equipSlot.IsEmpty())
-                return;
-            
-            // 기존 아이템/장비 슬롯 선택 해제
-            if (selectedItemSlot != null)
-            {
-                selectedItemSlot.SetSelected(false);
-                selectedItemSlot = null;
-            }
-            
-            if (selectedEquipmentSlot != null)
-            {
-                selectedEquipmentSlot.SetSelected(false);
-                selectedEquipmentSlot = null;
-            }
-            
-            // 유파 슬롯 선택 (EquippedSwordArtStyleUI를 통해)
-            if (EquippedSwordArtStyleUI != null)
-            {
-                EquippedSwordArtStyleUI.SetSelected(true);
-            }
-            
-            // ItemDetailPanel에 유파 아이템 표시
-            if (itemDetailPanel != null)
-            {
-                var tempOwnedItem = new OwnedItem(equipSlot.equippedItemKey, 1);
-                tempOwnedItem.isEquipped = true;
-                itemDetailPanel.ShowItem(tempOwnedItem);
-                
-                if (enableDebugLog)
-                    Debug.Log($"[InventoryUI] 유파 슬롯 포커스: {equipSlot.slotName}");
-            }
-        }
-        
-        /// <summary>
         /// 모든 선택 상태 해제 (외부에서 호출용)
         /// </summary>
         public void ClearAllSelections()
@@ -1156,10 +1139,7 @@ namespace BladeAction.UI
                 selectedEquipmentSlot = null;
             }
             
-            if (EquippedSwordArtStyleUI != null)
-            {
-                EquippedSwordArtStyleUI.ClearSelection();
-            }
+            // 유파 슬롯도 equipmentSlots 리스트에 포함되므로 selectedEquipmentSlot으로 자동 처리됨
         }
         
         /// <summary>
@@ -1256,6 +1236,223 @@ namespace BladeAction.UI
         public OwnedItem GetSelectedItem()
         {
             return selectedItemSlot?.GetOwnedItem();
+        }
+        
+        #endregion
+        
+        #region 드래그 앤 드롭
+        
+        /// <summary>
+        /// 드래그 시작 시 호출 (DraggableSlotUI에서 호출)
+        /// </summary>
+        /// <param name="isDraggingFromEquipped">장착 슬롯에서 드래그 중인지 여부</param>
+        public void OnDragStart(bool isDraggingFromEquipped, ItemType draggedItemType)
+        {
+            if (isDraggingFromEquipped)
+            {
+                // 장착 슬롯 → 그리드: 그리드 하이라이트
+                HighlightGridArea(true);
+            }
+            else
+            {
+                // 그리드 → 장착 슬롯: 해당 타입의 장착 슬롯 하이라이트
+                HighlightEquipmentArea(true, draggedItemType);
+            }
+        }
+        
+        /// <summary>
+        /// 드래그 종료 시 호출 (DraggableSlotUI에서 호출)
+        /// </summary>
+        public void OnDragEnd()
+        {
+            // 모든 하이라이트 종료
+            HighlightGridArea(false);
+            HighlightEquipmentArea(false, ItemType.Weapon); // 타입은 무관 (false이므로)
+        }
+        
+        /// <summary>
+        /// 장착 영역 하이라이트 (드롭 가능 표시)
+        /// </summary>
+        private void HighlightEquipmentArea(bool highlight, ItemType itemType)
+        {
+            if (highlight)
+            {
+                // 드래그 중인 아이템 타입에 해당하는 장착 슬롯들 찾기
+                List<EquipmentSlotUI> targetSlots = new List<EquipmentSlotUI>();
+                
+                foreach (var slot in equipmentSlots)
+                {
+                    if (slot == null || slot.GetEquipmentSlot() == null) continue;
+                    
+                    EquipmentSlotType slotType = slot.GetSlotType();
+                    
+                    // 슬롯 타입이 드래그 중인 아이템 타입과 일치하거나,
+                    // Accessory 슬롯이고 아이템이 Accessory인 경우
+                    if ((slotType == EquipmentSlotType.Weapon && itemType == ItemType.Weapon) ||
+                        (slotType == EquipmentSlotType.Armor && itemType == ItemType.Armor) ||
+                        (slotType == EquipmentSlotType.Accessory && itemType == ItemType.Accessory) ||
+                        (slotType == EquipmentSlotType.SwordArtStyle && itemType == ItemType.SwordArtStyle))
+                    {
+                        targetSlots.Add(slot);
+                    }
+                }
+                
+                // 대상 슬롯들 하이라이트
+                foreach (var slot in targetSlots)
+                {
+                    Image frameImage = slot.GetFrameImage();
+                    if (frameImage == null) continue;
+                    
+                    // 원래 색상 저장 (Dictionary에 보관)
+                    if (!equipmentSlotOriginalColors.ContainsKey(slot))
+                    {
+                        equipmentSlotOriginalColors[slot] = frameImage.color;
+                    }
+                    Color originalColor = equipmentSlotOriginalColors[slot];
+                    
+                    frameImage.enabled = true;
+                    frameImage.transform.SetAsLastSibling(); // 최상위 렌더링
+                    
+                    // 반짝임 애니메이션 (원래 색상 ↔ 초록색)
+                    Color visibleGreen = new Color(0f, 1f, 0f, 0.8f);
+                    
+                    Sequence seq = DOTween.Sequence();
+                    seq.Append(DOTween.To(() => frameImage.color, x => frameImage.color = x, visibleGreen, 0.3f).SetEase(Ease.InOutQuad));
+                    seq.Append(DOTween.To(() => frameImage.color, x => frameImage.color = x, originalColor, 0.3f).SetEase(Ease.InOutQuad));
+                    seq.SetLoops(-1, LoopType.Restart);
+                    
+                    equipmentSlotBlinkSequences[slot] = seq;
+                }
+                
+                // SwordArtStyle 타입인 경우 EquippedSwordArtStyleUI도 하이라이트
+                if (itemType == ItemType.SwordArtStyle && EquippedSwordArtStyleUI != null)
+                {
+                    Image frameImage = EquippedSwordArtStyleUI.GetFrameImage();
+                    if (frameImage != null)
+                    {
+                        // 원래 색상 저장
+                        swordArtStyleSlotOriginalColor = frameImage.color;
+                        
+                        frameImage.enabled = true;
+                        frameImage.transform.SetAsLastSibling();
+                        
+                        // 반짝임 애니메이션 (원래 색상 ↔ 초록색)
+                        Color visibleGreen = new Color(0f, 1f, 0f, 0.8f);
+                        
+                        swordArtStyleSlotBlinkSequence = DOTween.Sequence();
+                        swordArtStyleSlotBlinkSequence.Append(DOTween.To(() => frameImage.color, x => frameImage.color = x, visibleGreen, 0.3f).SetEase(Ease.InOutQuad));
+                        swordArtStyleSlotBlinkSequence.Append(DOTween.To(() => frameImage.color, x => frameImage.color = x, swordArtStyleSlotOriginalColor, 0.3f).SetEase(Ease.InOutQuad));
+                        swordArtStyleSlotBlinkSequence.SetLoops(-1, LoopType.Restart);
+                    }
+                }
+            }
+            else
+            {
+                // 모든 슬롯 하이라이트 종료
+                foreach (var kvp in equipmentSlotBlinkSequences)
+                {
+                    // 애니메이션 중지
+                    if (kvp.Value != null && kvp.Value.IsActive())
+                    {
+                        kvp.Value.Kill();
+                    }
+                    
+                    // 원래 색상 복원
+                    Image frameImage = kvp.Key.GetFrameImage();
+                    if (frameImage != null && equipmentSlotOriginalColors.ContainsKey(kvp.Key))
+                    {
+                        frameImage.color = equipmentSlotOriginalColors[kvp.Key];
+                    }
+                    
+                    // 장착 상태에 따라 enabled 제어
+                    kvp.Key.UpdateEquippedFrame();
+                }
+                
+                equipmentSlotBlinkSequences.Clear();
+                equipmentSlotOriginalColors.Clear();
+                
+                // EquippedSwordArtStyleUI 하이라이트 종료
+                if (swordArtStyleSlotBlinkSequence != null && swordArtStyleSlotBlinkSequence.IsActive())
+                {
+                    swordArtStyleSlotBlinkSequence.Kill();
+                }
+                
+                // 유파 슬롯 색상 복원 및 상태 업데이트
+                if (EquippedSwordArtStyleUI != null)
+                {
+                    Image frameImage = EquippedSwordArtStyleUI.GetFrameImage();
+                    if (frameImage != null)
+                    {
+                        frameImage.color = swordArtStyleSlotOriginalColor;
+                    }
+                    
+                    var styleSlotUI = EquippedSwordArtStyleUI.GetEquipmentSlotUI();
+                    if (styleSlotUI != null)
+                    {
+                        styleSlotUI.UpdateEquippedFrame();
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// GridAreaDropZone의 드롭 받기 활성화/비활성화
+        /// </summary>
+        private void SetGridDropZoneEnabled(bool enabled)
+        {
+            if (gridAreaDropZoneObject == null)
+                return;
+            
+            var dropZone = gridAreaDropZoneObject.GetComponent<GridAreaDropZone>();
+            if (dropZone != null)
+            {
+                dropZone.SetDropEnabled(enabled);
+            }
+        }
+        
+        /// <summary>
+        /// 그리드 영역 하이라이트 (드롭 가능 표시)
+        /// </summary>
+        private void HighlightGridArea(bool highlight)
+        {
+            if (highlight)
+            {
+                // GridAreaDropZone Raycast 활성화 (드롭 받을 수 있도록)
+                SetGridDropZoneEnabled(true);
+                
+                // Frame 활성화 (시각적 표시)
+                if (gridAreaFrameImage != null)
+                {
+                    gridAreaFrameImage.enabled = true;
+                    gridAreaFrameImage.transform.SetAsLastSibling();
+                    
+                    // 반짝임 애니메이션
+                    Color visibleGreen = new Color(0f, 1f, 0f, 0.8f);
+                    
+                    gridAreaBlinkSequence = DOTween.Sequence();
+                    gridAreaBlinkSequence.Append(DOTween.To(() => gridAreaFrameImage.color, x => gridAreaFrameImage.color = x, visibleGreen, 0.3f).SetEase(Ease.InOutQuad));
+                    gridAreaBlinkSequence.Append(DOTween.To(() => gridAreaFrameImage.color, x => gridAreaFrameImage.color = x, originalGridFrameColor, 0.3f).SetEase(Ease.InOutQuad));
+                    gridAreaBlinkSequence.SetLoops(-1, LoopType.Restart);
+                }
+            }
+            else
+            {
+                // GridAreaDropZone Raycast 비활성화
+                SetGridDropZoneEnabled(false);
+                
+                // 반짝임 중지
+                if (gridAreaBlinkSequence != null && gridAreaBlinkSequence.IsActive())
+                {
+                    gridAreaBlinkSequence.Kill();
+                }
+                
+                // Frame 비활성화
+                if (gridAreaFrameImage != null)
+                {
+                    gridAreaFrameImage.color = originalGridFrameColor;
+                    gridAreaFrameImage.enabled = false;
+                }
+            }
         }
         
         #endregion

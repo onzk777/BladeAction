@@ -9,7 +9,7 @@ namespace BladeAction.UI
     /// 장착 슬롯에서 그리드로 드롭 시 장착 해제 처리
     /// 
     /// ※ 중요: 
-    /// 1. 별도 GameObject로 생성 (검술 그리드 전체 영역 크기)
+    /// 1. 별도 GameObject로 생성 (검술/아이템 그리드 전체 영역 크기)
     /// 2. Image 컴포넌트 자동 추가 (투명 배경)
     /// 3. Raycast는 드래그 시에만 활성화 (평소엔 비활성화)
     /// </summary>
@@ -17,15 +17,18 @@ namespace BladeAction.UI
     public class GridAreaDropZone : MonoBehaviour, ISlotDropTarget
     {
         private ActionCommandEquipUI actionEquipUI;
+        private InventoryUI inventoryUI;
         private Image backgroundImage;
         
         private void Awake()
         {
-            // 부모에서 ActionCommandEquipUI 찾기
+            // 부모에서 ActionCommandEquipUI 또는 InventoryUI 찾기
             actionEquipUI = GetComponentInParent<ActionCommandEquipUI>();
-            if (actionEquipUI == null)
+            inventoryUI = GetComponentInParent<InventoryUI>();
+            
+            if (actionEquipUI == null && inventoryUI == null)
             {
-                Debug.LogError($"[GridAreaDropZone] ActionCommandEquipUI를 찾을 수 없습니다: {gameObject.name}");
+                Debug.LogError($"[GridAreaDropZone] ActionCommandEquipUI 또는 InventoryUI를 찾을 수 없습니다: {gameObject.name}");
             }
             
             // Image 컴포넌트 설정
@@ -48,17 +51,31 @@ namespace BladeAction.UI
             if (backgroundImage != null)
             {
                 backgroundImage.raycastTarget = enabled;
-                Debug.Log($"[GridAreaDropZone] Raycast Target = {enabled}");
             }
         }
         
         /// <summary>
-        /// 드롭 가능 여부 확인 (장착 슬롯에서 온 검술만 받음)
+        /// 드롭 가능 여부 확인 (장착 슬롯에서 온 드래그만 받음)
         /// </summary>
-        public bool CanAcceptDrop(object dragData)
+        public bool CanAcceptDrop(object dragData, ISlotDragSource source = null)
         {
-            // ActionCommandData만 받음
-            return dragData is ActionCommandData;
+            // 소스가 없으면 거부
+            if (source == null) return false;
+            
+            // ActionCommandData: 장착 슬롯에서만 받음
+            if (dragData is ActionCommandData)
+            {
+                var sourceSlot = source as ActionCommandSlotUI;
+                return sourceSlot != null && sourceSlot.IsEquippedSlot;
+            }
+            
+            // OwnedItem: 장착 슬롯에서만 받음
+            if (dragData is BladeAction.Item.OwnedItem)
+            {
+                return source is EquipmentSlotUI;
+            }
+            
+            return false;
         }
         
         /// <summary>
@@ -66,7 +83,7 @@ namespace BladeAction.UI
         /// </summary>
         public void OnDropHover(object dragData)
         {
-            // DraggableSlotUI와 ActionCommandEquipUI가 처리
+            // DraggableSlotUI와 부모 UI가 처리
         }
         
         /// <summary>
@@ -74,7 +91,7 @@ namespace BladeAction.UI
         /// </summary>
         public void OnDropExit()
         {
-            // DraggableSlotUI와 ActionCommandEquipUI가 처리
+            // DraggableSlotUI와 부모 UI가 처리
         }
         
         /// <summary>
@@ -82,32 +99,52 @@ namespace BladeAction.UI
         /// </summary>
         public void OnDropReceived(object dragData, ISlotDragSource source)
         {
-            Debug.Log($"[GridAreaDropZone] 드롭 받음: dragData={dragData}, source={source}");
-            
-            if (!(dragData is ActionCommandData droppedAction))
+            // ActionCommandEquipUI 처리
+            if (dragData is ActionCommandData droppedAction && actionEquipUI != null)
             {
-                Debug.LogWarning($"[GridAreaDropZone] ActionCommandData가 아님");
+                var sourceSlot = source as ActionCommandSlotUI;
+                
+                if (sourceSlot != null && sourceSlot.IsEquippedSlot)
+                {
+                    // 드래그 전 선택 해제
+                    sourceSlot.SetSelected(false);
+                    
+                    // 장착 슬롯 → 그리드: 장착 해제
+                    actionEquipUI.OnUnequipAction(sourceSlot.SlotIndex);
+                }
                 return;
             }
             
-            if (actionEquipUI == null)
+            // InventoryUI 처리
+            if (dragData is BladeAction.Item.OwnedItem droppedItem && inventoryUI != null)
             {
-                Debug.LogWarning($"[GridAreaDropZone] actionEquipUI가 null");
+                var sourceSlot = source as EquipmentSlotUI;
+                
+                if (sourceSlot != null && !sourceSlot.IsEmpty())
+                {
+                    var inventory = inventoryUI.GetInventory();
+                    if (inventory != null)
+                    {
+                        // 장착된 슬롯 찾기
+                        var equippedSlot = inventory.FindEquippedSlot(droppedItem.itemKey);
+                        if (equippedSlot != null)
+                        {
+                            // 드래그 전 선택 해제
+                            sourceSlot.SetSelected(false);
+                            
+                            // 직접 인벤토리에 해제 요청
+                            bool success = inventory.UnequipItem(equippedSlot);
+                            
+                            if (success)
+                            {
+                                // UI 갱신은 ItemEvents가 자동 처리
+                                // 포커스를 해제된 아이템으로 이동
+                                inventoryUI.SetFocusToItem(droppedItem.itemKey);
+                            }
+                        }
+                    }
+                }
                 return;
-            }
-            
-            // 드래그 소스가 장착 슬롯인지 확인
-            var sourceSlot = source as ActionCommandSlotUI;
-            
-            if (sourceSlot != null && sourceSlot.IsEquippedSlot)
-            {
-                // 장착 슬롯 → 그리드: 장착 해제
-                Debug.Log($"[GridAreaDropZone] 검술 해제: {droppedAction.commandName} (슬롯 {sourceSlot.SlotIndex})");
-                actionEquipUI.OnUnequipAction(sourceSlot.SlotIndex);
-            }
-            else
-            {
-                Debug.Log($"[GridAreaDropZone] 그리드 슬롯에서 드래그함 - 무시 (IsEquippedSlot={sourceSlot?.IsEquippedSlot})");
             }
         }
     }

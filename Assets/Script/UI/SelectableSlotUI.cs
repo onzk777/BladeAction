@@ -10,10 +10,10 @@ namespace BladeAction.UI
     public class SelectableSlotUI : MonoBehaviour
     {
         [Header("선택 표시")]
-        [Tooltip("선택 시 활성화할 하이라이트 이미지")]
+        [Tooltip("선택 시 활성화할 하이라이트 이미지 (배경 강조)")]
         [SerializeField] private Image highlightImage;
         
-        [Tooltip("선택 시 활성화할 테두리 이미지")]
+        [Tooltip("선택 시 활성화할 테두리 이미지 (선택 상태 표시)")]
         [SerializeField] private Image frameImage;
         
         [Header("클릭 동작")]
@@ -79,7 +79,7 @@ namespace BladeAction.UI
         public bool IsSelected => isSelected;
         
         /// <summary>
-        /// 시각적 표시 업데이트 (하이라이트 + 테두리 on/off)
+        /// 시각적 표시 업데이트 (하이라이트 배경 + 선택 테두리 on/off)
         /// </summary>
         private void UpdateVisuals()
         {

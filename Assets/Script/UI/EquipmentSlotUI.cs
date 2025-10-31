@@ -10,7 +10,7 @@ namespace BladeAction.UI
     /// 장비 슬롯 UI 컴포넌트 (무기, 갑옷, 장신구, 검술 유파)
     /// EquipmentSlot 데이터를 시각적으로 표시하고 클릭 이벤트를 처리합니다.
     /// </summary>
-    public class EquipmentSlotUI : MonoBehaviour, IPointerClickHandler
+    public class EquipmentSlotUI : MonoBehaviour, IPointerClickHandler, ISlotDragSource, ISlotDropTarget
     {
         [Header("UI 컴포넌트 참조")]
         [Tooltip("장착된 아이템 아이콘")]
@@ -22,8 +22,8 @@ namespace BladeAction.UI
         [Tooltip("슬롯 이름 텍스트 (예: '무기', '갑옷')")]
         [SerializeField] private TextMeshProUGUI slotNameText;
         
-        [Tooltip("테두리 이미지")]
-        [SerializeField] private Image frameImage;
+        [Tooltip("장착 상태 테두리 이미지 (아이템 장착 시 표시)")]
+        [SerializeField] private Image frameImage_equipped;
         
         
         [Header("기본 아이콘 설정")]
@@ -37,25 +37,18 @@ namespace BladeAction.UI
         [Tooltip("장신구 슬롯인 경우 텍스트 숨김")]
         [SerializeField] private bool hideTextForAccessory = true;
         
-        [Header("색상 설정")]
-        [Tooltip("기본 테두리 색상 (빈 슬롯)")]
-        [SerializeField] private Color normalFrameColor = new Color(0.5f, 0.5f, 0.5f, 1f); // 회색
-        
-        [Tooltip("장착된 아이템이 있을 때 테두리 색상")]
-        [SerializeField] private Color equippedFrameColor = new Color(1f, 0.843f, 0f, 1f); // 황금색
-        
-        [Tooltip("선택된 슬롯 테두리 색상")]
-        [SerializeField] private Color selectedFrameColor = new Color(0f, 1f, 0f, 1f); // 녹색
-        
-        [Tooltip("비활성화 색상")]
-        [SerializeField] private Color disabledColor = new Color(0.3f, 0.3f, 0.3f, 0.5f);
-        
         [Header("디버그")]
         [Tooltip("클릭 테스트용")]
         [SerializeField] private bool enableClickTest = true;
         
+        // 컬러 상수
+        private static readonly Color DISABLED_COLOR = new Color(0.3f, 0.3f, 0.3f, 0.5f); // 회색 반투명 (비활성화)
+        
         // 슬롯 데이터
         private EquipmentSlot equipmentSlot;
+        
+        // 현재 표시 중인 아이템 (드래그 앤 드롭용)
+        private OwnedItem currentItem;
         
         // 선택 상태
         private bool isSelected = false;
@@ -80,6 +73,19 @@ namespace BladeAction.UI
             
             // 컴포넌트 null 체크
             ValidateComponents();
+            
+            // 초기 상태: 선택 해제
+            isSelected = false;
+            if (selectableSlot != null)
+            {
+                selectableSlot.SetSelected(false);
+            }
+            
+            // 초기 상태: 장착 테두리 숨김
+            if (frameImage_equipped != null)
+            {
+                frameImage_equipped.enabled = false;
+            }
         }
         
         /// <summary>
@@ -107,7 +113,6 @@ namespace BladeAction.UI
         {
             this.equipmentSlot = slot;
             
-            
             if (slot == null)
             {
                 Debug.LogWarning($"[EquipmentSlotUI] null 슬롯이 전달되었습니다: {gameObject.name}");
@@ -120,6 +125,13 @@ namespace BladeAction.UI
             
             // 장신구 텍스트 숨김 플래그 설정
             this.hideTextForAccessory = hideTextForAccessorySlot;
+            
+            // Setup 시 선택 상태 초기화 (UI 리프레시 시 선택 해제)
+            isSelected = false;
+            if (selectableSlot != null)
+            {
+                selectableSlot.SetSelected(false);
+            }
             
             UpdateDisplay();
         }
@@ -171,12 +183,13 @@ namespace BladeAction.UI
         /// </summary>
         private void ShowEmptySlot()
         {
+            currentItem = null; // 드래그 불가능
+            
             // 빈 슬롯 아이콘 표시
             if (iconImage != null)
             {
                 iconImage.sprite = emptySlotIcon;
                 iconImage.enabled = emptySlotIcon != null;
-                iconImage.color = Color.white;
             }
             
             // 아이템 이름 숨김
@@ -194,8 +207,8 @@ namespace BladeAction.UI
                 }
             }
             
-            // 테두리 색상 업데이트
-            UpdateFrameColor();
+            // 장착 테두리 업데이트
+            UpdateEquippedFrame();
         }
         
         /// <summary>
@@ -209,7 +222,19 @@ namespace BladeAction.UI
             {
                 Debug.LogWarning($"[EquipmentSlotUI] 아이템 데이터를 찾을 수 없습니다: {equipmentSlot.equippedItemKey}");
                 ShowEmptySlot();
+                currentItem = null;
                 return;
+            }
+            
+            // OwnedItem 가져오기 (드래그 앤 드롭용)
+            var inventoryUI = GetComponentInParent<InventoryUI>();
+            if (inventoryUI != null && inventoryUI.GetInventory() != null)
+            {
+                currentItem = new OwnedItem(equipmentSlot.equippedItemKey, equipmentSlot.equippedQuantity);
+            }
+            else
+            {
+                currentItem = null;
             }
             
             // 아이템 아이콘 표시
@@ -217,7 +242,6 @@ namespace BladeAction.UI
             {
                 iconImage.sprite = itemData.icon;
                 iconImage.enabled = itemData.icon != null;
-                iconImage.color = Color.white;
             }
             
             // 아이템 이름 표시
@@ -235,8 +259,8 @@ namespace BladeAction.UI
                 }
             }
             
-            // 테두리 색상 업데이트
-            UpdateFrameColor();
+            // 장착 테두리 업데이트
+            UpdateEquippedFrame();
         }
         
         /// <summary>
@@ -246,17 +270,17 @@ namespace BladeAction.UI
         {
             if (iconImage != null)
             {
-                iconImage.color = disabledColor;
+                iconImage.color = DISABLED_COLOR;
             }
             
             if (nameText != null)
             {
-                nameText.color = disabledColor;
+                nameText.color = DISABLED_COLOR;
             }
             
-            if (frameImage != null)
+            if (frameImage_equipped != null)
             {
-                frameImage.color = disabledColor;
+                frameImage_equipped.enabled = false; // 비활성화 시 테두리 숨김
             }
         }
         
@@ -272,7 +296,6 @@ namespace BladeAction.UI
             {
                 iconImage.sprite = emptySlotIcon;
                 iconImage.enabled = emptySlotIcon != null;
-                iconImage.color = Color.white;
             }
             
             // 이름 텍스트 초기화
@@ -290,9 +313,16 @@ namespace BladeAction.UI
             
             // 선택 상태 초기화
             isSelected = false;
+            if (selectableSlot != null)
+            {
+                selectableSlot.SetSelected(false);
+            }
             
-            // 테두리 색상 초기화
-            UpdateFrameColor();
+            // 장착 테두리 초기화 (숨김)
+            if (frameImage_equipped != null)
+            {
+                frameImage_equipped.enabled = false;
+            }
         }
         
         #endregion
@@ -335,52 +365,31 @@ namespace BladeAction.UI
         {
             isSelected = selected;
             
-            // SelectableSlotUI에 위임
+            // SelectableSlotUI에 위임 (선택 테두리는 SelectableSlotUI가 관리)
             if (selectableSlot != null)
             {
                 selectableSlot.SetSelected(selected);
-                
-                // 선택 해제 시 장착 상태 색상 복원
-                if (!selected)
-                {
-                    UpdateFrameColor();
-                }
             }
-            else
-            {
-                // Fallback: 직접 색상 변경
-                UpdateFrameColor();
-            }
+            
+            // 장착 테두리(frameImage_equipped)는 선택 상태와 독립적으로 유지
         }
         
         /// <summary>
-        /// 테두리 색상 업데이트 (EquipmentSlotUI가 완전 관리)
+        /// 장착 테두리 표시 업데이트 (아이템 장착 시에만 표시, 색상은 프리팹 설정 유지)
         /// </summary>
-        private void UpdateFrameColor()
+        public void UpdateEquippedFrame()
         {
-            if (frameImage == null) return;
+            if (frameImage_equipped == null) return;
             
-            // 우선순위: 비활성화 > 선택됨 > 장착됨 > 기본
-            
-            if (equipmentSlot != null && !equipmentSlot.IsAvailable())
+            // 아이템이 장착되어 있을 때만 테두리 표시 (프리팹 색상 유지)
+            if (equipmentSlot != null && !equipmentSlot.IsEmpty() && equipmentSlot.IsAvailable())
             {
-                // 1. 비활성화 상태 (최우선)
-                frameImage.color = disabledColor;
-            }
-            else if (isSelected)
-            {
-                // 2. 선택됨 (녹색)
-                frameImage.color = selectedFrameColor;
-            }
-            else if (equipmentSlot != null && !equipmentSlot.IsEmpty())
-            {
-                // 3. 장착됨 (황금색)
-                frameImage.color = equippedFrameColor;
+                frameImage_equipped.enabled = true;
             }
             else
             {
-                // 4. 기본 (회색)
-                frameImage.color = normalFrameColor;
+                // 빈 슬롯이거나 비활성화된 슬롯은 테두리 숨김
+                frameImage_equipped.enabled = false;
             }
         }
         
@@ -410,6 +419,83 @@ namespace BladeAction.UI
         public EquipmentSlotType GetSlotType()
         {
             return slotType;
+        }
+        
+        /// <summary>
+        /// 장착 테두리 Image 반환 (드래그 앤 드롭 하이라이트용)
+        /// </summary>
+        public Image GetFrameImage()
+        {
+            return frameImage_equipped;
+        }
+        
+        #endregion
+        
+        #region 드래그 앤 드롭 (ISlotDragSource, ISlotDropTarget)
+        
+        public object GetDragData()
+        {
+            return currentItem;
+        }
+        
+        public bool CanStartDrag()
+        {
+            return currentItem != null && !IsEmpty();
+        }
+        
+        public void OnDragComplete(bool success)
+        {
+            // 드래그 완료 후 처리 (필요시)
+        }
+        
+        public bool CanAcceptDrop(object dragData, ISlotDragSource source = null)
+        {
+            if (dragData is OwnedItem item)
+            {
+                var itemData = item.GetItemData();
+                if (itemData == null) return false;
+                
+                // 슬롯 타입과 아이템 타입이 일치하는지 확인
+                return (slotType == EquipmentSlotType.Weapon && itemData.itemType == ItemType.Weapon) ||
+                       (slotType == EquipmentSlotType.Armor && itemData.itemType == ItemType.Armor) ||
+                       (slotType == EquipmentSlotType.Accessory && itemData.itemType == ItemType.Accessory) ||
+                       (slotType == EquipmentSlotType.SwordArtStyle && itemData.itemType == ItemType.SwordArtStyle);
+            }
+            return false;
+        }
+        
+        public void OnDropHover(object dragData)
+        {
+            // 드롭 가능 시 시각적 피드백 (선택 사항)
+        }
+        
+        public void OnDropExit()
+        {
+            // 드롭 가능 시 시각적 피드백 해제 (선택 사항)
+        }
+        
+        public void OnDropReceived(object dragData, ISlotDragSource source)
+        {
+            if (dragData is OwnedItem item)
+            {
+                var inventoryUI = GetComponentInParent<InventoryUI>();
+                if (inventoryUI == null || inventoryUI.GetInventory() == null)
+                    return;
+                
+                var itemData = item.GetItemData();
+                if (itemData == null)
+                    return;
+                
+                // 직접 인벤토리에 장착 요청
+                bool success = inventoryUI.GetInventory().EquipItem(item.itemKey, slotType, out var equippedSlot);
+                
+                if (success && equippedSlot != null)
+                {
+                    // UI 갱신은 ItemEvents가 자동 처리
+                    // 포커스를 장착된 슬롯으로 이동
+                    inventoryUI.SetFocusToEquipmentSlot(equippedSlot);
+                }
+            }
         }
         
         #endregion

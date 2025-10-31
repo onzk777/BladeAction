@@ -10,7 +10,7 @@ namespace BladeAction.UI
     /// 인벤토리 그리드의 개별 아이템 슬롯 UI 컴포넌트
     /// OwnedItem 데이터를 시각적으로 표시하고 클릭 이벤트를 처리합니다.
     /// </summary>
-    public class ItemSlotUI : MonoBehaviour, IPointerClickHandler
+    public class ItemSlotUI : MonoBehaviour, IPointerClickHandler, ISlotDragSource, ISlotDropTarget
     {
         [Header("UI 컴포넌트 참조")]
         [Tooltip("아이템 아이콘 이미지")]
@@ -235,6 +235,46 @@ namespace BladeAction.UI
         public bool IsEmpty()
         {
             return ownedItem == null || ownedItem.IsEmpty();
+        }
+        
+        #endregion
+        
+        #region 드래그 앤 드롭 (ISlotDragSource, ISlotDropTarget)
+        
+        public object GetDragData()
+        {
+            return ownedItem;
+        }
+        
+        public bool CanStartDrag()
+        {
+            return !IsEmpty();
+        }
+        
+        public void OnDragComplete(bool success)
+        {
+            // 드래그 완료 후 처리 (필요시)
+        }
+        
+        public bool CanAcceptDrop(object dragData, ISlotDragSource source = null)
+        {
+            // 그리드 슬롯은 드롭을 받지 않음 (GridAreaDropZone이 처리)
+            return false;
+        }
+        
+        public void OnDropHover(object dragData)
+        {
+            // 사용 안 함
+        }
+        
+        public void OnDropExit()
+        {
+            // 사용 안 함
+        }
+        
+        public void OnDropReceived(object dragData, ISlotDragSource source)
+        {
+            // 사용 안 함 (GridAreaDropZone이 처리)
         }
         
         #endregion

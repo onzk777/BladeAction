@@ -389,15 +389,20 @@ namespace BladeAction.UI
         /// <summary>
         /// 드롭 가능 여부 확인
         /// </summary>
-        public bool CanAcceptDrop(object dragData)
+        public bool CanAcceptDrop(object dragData, ISlotDragSource source = null)
         {
-            // 장착 슬롯만 드롭 받을 수 있음
-            if (!isEquippedSlot) return false;
+            // 그리드 슬롯: 장착 슬롯에서 온 드래그는 거부 (GridAreaDropZone이 장착 해제 처리)
+            if (!isEquippedSlot)
+            {
+                if (source is ActionCommandSlotUI sourceSlot && sourceSlot.IsEquippedSlot)
+                {
+                    return false; // 장착 해제는 GridAreaDropZone으로
+                }
+                return false; // 그리드 슬롯은 기본적으로 드롭 불가
+            }
             
-            // ActionCommandData만 받을 수 있음
-            if (!(dragData is ActionCommandData)) return false;
-            
-            return true;
+            // 장착 슬롯: ActionCommandData만 받을 수 있음
+            return dragData is ActionCommandData;
         }
         
         /// <summary>
@@ -429,10 +434,21 @@ namespace BladeAction.UI
             // 드래그 소스가 장착 슬롯인지 확인
             var sourceSlot = source as ActionCommandSlotUI;
             
-            if (sourceSlot != null && sourceSlot.IsEquippedSlot)
+            if (sourceSlot != null)
             {
-                // 장착 슬롯 ↔ 장착 슬롯: 위치 교체
-                SwapEquippedSlots(sourceSlot.SlotIndex, this.slotIndex);
+                // 드래그 전 소스 슬롯 선택 해제
+                sourceSlot.SetSelected(false);
+                
+                if (sourceSlot.IsEquippedSlot)
+                {
+                    // 장착 슬롯 ↔ 장착 슬롯: 위치 교체
+                    SwapEquippedSlots(sourceSlot.SlotIndex, this.slotIndex);
+                }
+                else
+                {
+                    // 그리드 → 장착 슬롯: 장착 (또는 교체)
+                    parentUI.OnEquipAction(droppedAction, slotIndex);
+                }
             }
             else
             {

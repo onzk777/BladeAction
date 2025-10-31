@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using DG.Tweening;
+using BladeAction.Item;
 
 namespace BladeAction.UI
 {
@@ -46,12 +47,9 @@ namespace BladeAction.UI
         
         public void OnBeginDrag(PointerEventData eventData)
         {
-            Debug.Log($"[DraggableSlotUI] OnBeginDrag 시작 - gameObject={gameObject.name}");
-            
             // 드래그 소스가 없거나 드래그 불가능하면 무시
             if (dragSource == null || !dragSource.CanStartDrag())
             {
-                Debug.LogWarning($"[DraggableSlotUI] 드래그 불가: dragSource={dragSource}, CanStartDrag={dragSource?.CanStartDrag()}");
                 eventData.pointerDrag = null; // 드래그 취소
                 return;
             }
@@ -60,19 +58,15 @@ namespace BladeAction.UI
             object dragData = dragSource.GetDragData();
             if (dragData == null)
             {
-                Debug.LogWarning($"[DraggableSlotUI] 드래그 데이터가 null");
                 eventData.pointerDrag = null; // 드래그 취소
                 return;
             }
-            
-            Debug.Log($"[DraggableSlotUI] 드래그 시작: {dragData}");
             
             // 드래그 복사본 생성
             CreateDragCopy();
             
             if (dragCopy == null)
             {
-                Debug.LogError($"[DraggableSlotUI] 드래그 복사본 생성 실패!");
                 eventData.pointerDrag = null;
                 return;
             }
@@ -120,7 +114,7 @@ namespace BladeAction.UI
             {
                 object dragData = dragSource.GetDragData();
                 
-                if (target.CanAcceptDrop(dragData))
+                if (target.CanAcceptDrop(dragData, dragSource))
                 {
                     // 드롭 처리
                     target.OnDropReceived(dragData, dragSource);
@@ -233,6 +227,9 @@ namespace BladeAction.UI
                 {
                     img.enabled = false;
                 }
+                
+                // **중요: 모든 Image의 raycastTarget을 끔 (드래그 복사본이 마우스 이벤트를 가로채지 않도록)**
+                img.raycastTarget = false;
             }
             
             // 복사본에 원본 데이터 동기화 (빈 슬롯 방지)
@@ -241,33 +238,36 @@ namespace BladeAction.UI
             
             if (originalActionSlot != null && copyActionSlot != null && originalActionSlot.ActionData != null)
             {
-                // 복사본에 원본과 동일한 데이터로 초기화
                 copyActionSlot.Initialize(
                     originalActionSlot.ActionData,
-                    null, // parentUI는 필요 없음 (상호작용 없음)
+                    null,
                     originalActionSlot.SlotIndex,
                     originalActionSlot.IsEquippedSlot,
                     originalActionSlot.IsStyleAction,
                     originalActionSlot.IsEnhancedByStyle
                 );
-                
-                Debug.Log($"[DraggableSlotUI] 복사본 데이터 동기화: {originalActionSlot.ActionData.commandName}");
             }
             
-            // ItemSlotUI, EquipmentSlotUI 등 다른 슬롯 타입도 지원 (향후 확장)
+            // ItemSlotUI 데이터 동기화
             var originalItemSlot = GetComponent<ItemSlotUI>();
             var copyItemSlot = actualCopy.GetComponent<ItemSlotUI>();
             
-            if (originalItemSlot != null && copyItemSlot != null)
+            if (originalItemSlot != null && copyItemSlot != null && originalItemSlot.GetOwnedItem() != null)
             {
-                // ItemSlotUI도 데이터 기반 초기화 가능하도록 (향후)
-                Debug.Log($"[DraggableSlotUI] ItemSlotUI 복사본 생성");
+                copyItemSlot.Setup(originalItemSlot.GetOwnedItem());
+            }
+            
+            // EquipmentSlotUI 데이터 동기화
+            var originalEquipmentSlot = GetComponent<EquipmentSlotUI>();
+            var copyEquipmentSlot = actualCopy.GetComponent<EquipmentSlotUI>();
+            
+            if (originalEquipmentSlot != null && copyEquipmentSlot != null && originalEquipmentSlot.GetEquipmentSlot() != null)
+            {
+                copyEquipmentSlot.Setup(originalEquipmentSlot.GetEquipmentSlot());
             }
             
             // **dragCopy는 Wrapper를 가리킴 (OnDrag에서 이동시킬 대상)**
             dragCopy = wrapperObject;
-            
-            Debug.Log($"[DraggableSlotUI] 드래그 복사본 생성 완료: {wrapperObject.name} (크기: {dragCopyWidth} x {originalHeight})");
         }
         
         
@@ -281,29 +281,28 @@ namespace BladeAction.UI
             var results = new System.Collections.Generic.List<RaycastResult>();
             EventSystem.current.RaycastAll(eventData, results);
             
-            string resultList = "";
-            foreach (var r in results)
-            {
-                resultList += r.gameObject.name + ", ";
-            }
-            Debug.Log($"[DraggableSlotUI] Raycast 결과: {results.Count}개 - [{resultList}]");
+            // 드래그 데이터 가져오기
+            object dragData = dragSource?.GetDragData();
             
-            // 모든 결과를 순회하여 ISlotDropTarget 찾기 (우선순위 적용)
-            ISlotDropTarget firstActionSlot = null;
+            // 모든 결과를 순회하여 ISlotDropTarget 찾기 (우선순위 + CanAcceptDrop 확인)
+            ISlotDropTarget firstValidSlot = null;
             ISlotDropTarget gridAreaDropZone = null;
             
             foreach (var result in results)
             {
-                var dropTarget = result.gameObject.GetComponent<ISlotDropTarget>();
+                // **중요: 자식 오브젝트에서 Raycast를 받을 수 있으므로 부모까지 찾음**
+                var dropTarget = result.gameObject.GetComponentInParent<ISlotDropTarget>();
                 
                 if (dropTarget != null)
                 {
-                    Debug.Log($"  ✓ {result.gameObject.name} → ISlotDropTarget 발견! (타입: {dropTarget.GetType().Name})");
-                    
-                    // ActionCommandSlotUI는 우선순위 1
-                    if (dropTarget is ActionCommandSlotUI && firstActionSlot == null)
+                    // 슬롯은 우선순위 1 (ActionCommandSlotUI, EquipmentSlotUI)
+                    if ((dropTarget is ActionCommandSlotUI || dropTarget is EquipmentSlotUI) && firstValidSlot == null)
                     {
-                        firstActionSlot = dropTarget;
+                        // CanAcceptDrop으로 실제 받을 수 있는지 확인
+                        if (dragData != null && dropTarget.CanAcceptDrop(dragData, dragSource))
+                        {
+                            firstValidSlot = dropTarget;
+                        }
                     }
                     // GridAreaDropZone은 우선순위 2 (백업)
                     else if (dropTarget is GridAreaDropZone && gridAreaDropZone == null)
@@ -311,25 +310,18 @@ namespace BladeAction.UI
                         gridAreaDropZone = dropTarget;
                     }
                 }
-                else
-                {
-                    Debug.Log($"  ✗ {result.gameObject.name} → ISlotDropTarget 없음");
-                }
             }
             
-            // 우선순위: ActionCommandSlotUI > GridAreaDropZone
-            if (firstActionSlot != null)
+            // 우선순위: 실제 받을 수 있는 슬롯 > GridAreaDropZone
+            if (firstValidSlot != null)
             {
-                Debug.Log($"[DraggableSlotUI] 최종 선택: ActionCommandSlotUI");
-                return firstActionSlot;
+                return firstValidSlot;
             }
             else if (gridAreaDropZone != null)
             {
-                Debug.Log($"[DraggableSlotUI] 최종 선택: GridAreaDropZone (영역 드롭)");
                 return gridAreaDropZone;
             }
             
-            Debug.Log($"[DraggableSlotUI] 드롭 대상 없음");
             return null;
         }
         
@@ -351,6 +343,30 @@ namespace BladeAction.UI
                 bool isDraggingFromEquipped = actionSlot != null && actionSlot.IsEquippedSlot;
                 
                 actionEquipUI.OnDragStart(isDraggingFromEquipped);
+                return;
+            }
+            
+            // InventoryUI 찾기
+            var inventoryUI = GetComponentInParent<InventoryUI>();
+            if (inventoryUI != null)
+            {
+                // 드래그 소스가 장착 슬롯인지 확인
+                var equipmentSlot = GetComponent<EquipmentSlotUI>();
+                bool isDraggingFromEquipped = equipmentSlot != null;
+                
+                // 드래그 중인 아이템 타입 확인
+                ItemType itemType = ItemType.Weapon;
+                if (dragData is OwnedItem ownedItem)
+                {
+                    var itemData = ownedItem.GetItemData();
+                    if (itemData != null)
+                    {
+                        itemType = itemData.itemType;
+                    }
+                }
+                
+                inventoryUI.OnDragStart(isDraggingFromEquipped, itemType);
+                return;
             }
         }
         
@@ -363,12 +379,16 @@ namespace BladeAction.UI
             var actionEquipUI = GetComponentInParent<ActionCommandEquipUI>();
             if (actionEquipUI != null)
             {
-                Debug.Log($"[DraggableSlotUI] NotifyDragEnd 호출 → ActionCommandEquipUI.OnDragEnd()");
                 actionEquipUI.OnDragEnd();
+                return;
             }
-            else
+            
+            // InventoryUI 찾기
+            var inventoryUI = GetComponentInParent<InventoryUI>();
+            if (inventoryUI != null)
             {
-                Debug.LogWarning($"[DraggableSlotUI] NotifyDragEnd 실패: ActionCommandEquipUI를 찾을 수 없음");
+                inventoryUI.OnDragEnd();
+                return;
             }
         }
         
@@ -379,7 +399,7 @@ namespace BladeAction.UI
             // 드래그 복사본 정리
             if (dragCopy != null)
             {
-                Destroy(dragCopy);
+                Destroy(dragCopy); 
             }
         }
     }
