@@ -70,6 +70,35 @@ namespace BladeAction.UI
         /// </summary>
         private CharacterInventory Inventory => targetCharacter?.Inventory;
         
+        /// <summary>
+        /// Character 연결 상태 확인 및 자동 재연결
+        /// </summary>
+        /// <returns>Character가 유효하면 true, 아니면 false</returns>
+        private bool EnsureCharacterConnection()
+        {
+            // 이미 연결되어 있으면 OK
+            if (targetCharacter != null && targetCharacter.Inventory != null)
+                return true;
+            
+            // 연결이 끊어졌으면 자동 재연결 시도
+            if (enableDebugLog)
+                Debug.LogWarning("[InventoryUI] Character 연결이 끊어졌습니다. 자동 재연결 시도...");
+            
+            AutoConnectToPlayerInventory();
+            
+            // 재연결 결과 확인
+            if (targetCharacter != null && targetCharacter.Inventory != null)
+            {
+                if (enableDebugLog)
+                    Debug.Log("[InventoryUI] Character 자동 재연결 성공");
+                return true;
+            }
+            
+            // 재연결 실패
+            Debug.LogError("[InventoryUI] Character 연결 실패! UI를 표시할 수 없습니다.");
+            return false;
+        }
+        
         private void Awake()
         {
             // Canvas는 MainMenuManager에서 활성화됨
@@ -88,14 +117,47 @@ namespace BladeAction.UI
                 SubscribeToEvents();
             }
             
-            // 패널 초기 상태 (비활성화)
-            if (panel != null)
-            {
-                panel.SetActive(false);
-            }
-            
             // 지연 초기화 (CharacterManager보다 늦게 실행될 수 있으므로)
             StartCoroutine(DelayedAutoConnect());
+        }
+        
+        private void OnEnable()
+        {
+            // GameObject가 활성화될 때 Character 연결 및 UI 갱신
+            // Character가 아직 연결되지 않았으면 자동 연결 시도
+            if (targetCharacter == null)
+            {
+                AutoConnectToPlayerInventory();
+            }
+            
+            // UI 갱신
+            if (targetCharacter != null && Inventory != null)
+            {
+                RefreshAll();
+                
+                if (enableDebugLog)
+                    Debug.Log("[InventoryUI] InventoryUI 활성화 - UI 갱신");
+            }
+        }
+        
+        private void OnDisable()
+        {
+            // GameObject가 비활성화될 때 정리 작업
+            // 선택 상태 초기화
+            if (selectedItemSlot != null)
+            {
+                selectedItemSlot.SetSelected(false);
+                selectedItemSlot = null;
+            }
+            
+            // 상세 패널 닫기
+            if (itemDetailPanel != null)
+            {
+                itemDetailPanel.HidePanel();
+            }
+            
+            if (enableDebugLog)
+                Debug.Log("[InventoryUI] InventoryUI 비활성화 - 상태 정리");
         }
         
         /// <summary>
@@ -394,7 +456,8 @@ namespace BladeAction.UI
         /// </summary>
         private void RefreshEquipmentSlots()
         {
-            if (Inventory == null)
+            // Character 연결 상태 재확인
+            if (!EnsureCharacterConnection())
                 return;
             
             for (int i = 0; i < equipmentSlots.Count && i < Inventory.equipmentSlots.Count; i++)
@@ -530,7 +593,8 @@ namespace BladeAction.UI
         /// </summary>
         private void RefreshItemGrid()
         {
-            if (Inventory == null)
+            // Character 연결 상태 재확인 (중첩 호출 대비)
+            if (!EnsureCharacterConnection())
                 return;
             
             int currentItemCount = Inventory.items.Count;
@@ -832,6 +896,13 @@ namespace BladeAction.UI
         /// </summary>
         public void RefreshAll()
         {
+            // Character 연결 상태 확인
+            if (!EnsureCharacterConnection())
+            {
+                Debug.LogWarning("[InventoryUI] RefreshAll: Character가 연결되지 않아 UI를 갱신할 수 없습니다.");
+                return;
+            }
+            
             RefreshItemGrid();
             RefreshEquipmentSlots();
             RefreshSwordArtDisplay();
@@ -852,88 +923,6 @@ namespace BladeAction.UI
         /// 패널 활성화 상태 확인
         /// </summary>
         public bool IsPanelActive => panel != null && panel.activeSelf;
-        
-        /// <summary>
-        /// 패널 열기/닫기 토글
-        /// </summary>
-        public void TogglePanel()
-        {
-            Debug.Log("[InventoryUI] TogglePanel 호출됨!");
-            
-            if (panel == null)
-            {
-                Debug.LogError("[InventoryUI] panel이 null입니다!");
-                return;
-            }
-            
-            bool isActive = !panel.activeSelf;
-            panel.SetActive(isActive);
-            
-            if (isActive)
-            {
-                RefreshAll();
-            }
-            
-            Debug.Log($"[InventoryUI] 패널 {(isActive ? "열기" : "닫기")}");
-        }
-        
-        /// <summary>
-        /// 패널 열기
-        /// </summary>
-        public void OpenPanel()
-        {
-            if (panel == null)
-                return;
-            
-            panel.SetActive(true);
-            RefreshAll();
-            
-            if (enableDebugLog)
-                Debug.Log("[InventoryUI] 패널 열기");
-        }
-        
-        /// <summary>
-        /// 패널 닫기
-        /// </summary>
-        public void ClosePanel()
-        {
-            if (panel == null)
-                return;
-            
-            panel.SetActive(false);
-            
-            if (enableDebugLog)
-                Debug.Log("[InventoryUI] 패널 닫기");
-        }
-        
-        /// <summary>
-        /// 패널 열기 (기존 메서드)
-        /// </summary>
-        public void ShowPanel()
-        {
-            if (panel != null)
-            {
-                panel.SetActive(true);
-                RefreshAll();
-                
-                if (enableDebugLog)
-                    Debug.Log("[InventoryUI] 패널 열기");
-            }
-        }
-        
-        /// <summary>
-        /// 패널 닫기
-        /// </summary>
-        public void HidePanel()
-        {
-            if (panel != null)
-            {
-                panel.SetActive(false);
-                
-                if (enableDebugLog)
-                    Debug.Log("[InventoryUI] 패널 닫기");
-            }
-        }
         
         #endregion
         

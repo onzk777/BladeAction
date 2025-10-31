@@ -31,10 +31,12 @@ public class InventoryTestManager : MonoBehaviour
     
     private CharacterInventory testInventory;
     private InventoryUI inventoryUI;
+    private MainMenuManager mainMenuManager;
     
     // Editor에서 접근하기 위한 public 프로퍼티
     public CharacterInventory TestInventory => testInventory;
     public InventoryUI InventoryUI => inventoryUI;
+    public MainMenuManager MainMenuManager => mainMenuManager;
     
     void Start()
     {
@@ -182,9 +184,43 @@ public class InventoryTestManager : MonoBehaviour
     [ContextMenu("인벤토리 토글")]
     public void ToggleInventory()
     {
-        if (inventoryUI != null)
+        if (mainMenuManager != null)
         {
-            inventoryUI.TogglePanel();
+            // MainMenuCanvas가 활성화되어 있으면 닫고, 아니면 열기
+            if (mainMenuManager.gameObject.activeSelf)
+            {
+                mainMenuManager.CloseMainMenu();
+                Debug.Log("✅ 메인 메뉴 닫기");
+            }
+            else
+            {
+                mainMenuManager.OpenMainMenu();
+                Debug.Log("✅ 메인 메뉴 열기 (인벤토리 탭)");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("[InventoryTestManager] MainMenuManager를 찾을 수 없습니다!");
+        }
+    }
+    
+    [ContextMenu("소지품 탭 보기")]
+    public void ShowInventoryTab()
+    {
+        if (mainMenuManager != null)
+        {
+            mainMenuManager.ShowInventoryTab();
+            Debug.Log("✅ 소지품 탭으로 전환");
+        }
+    }
+    
+    [ContextMenu("검술 탭 보기")]
+    public void ShowActionCommandTab()
+    {
+        if (mainMenuManager != null)
+        {
+            mainMenuManager.ShowActionCommandTab();
+            Debug.Log("✅ 검술 탭으로 전환");
         }
     }
     
@@ -273,7 +309,18 @@ public class InventoryTestManager : MonoBehaviour
             testInventory = new CharacterInventory();
             Debug.Log($"✅ 테스트 인벤토리 생성: {testInventory.items.Count}개 아이템");
             
-            // 2. InventoryUI 찾기 및 초기화
+            // 2. MainMenuManager 찾기
+            mainMenuManager = FindFirstObjectByType<MainMenuManager>();
+            if (mainMenuManager == null)
+            {
+                Debug.LogWarning("❌ MainMenuManager를 찾을 수 없습니다!");
+            }
+            else
+            {
+                Debug.Log("✅ MainMenuManager 찾기 완료");
+            }
+            
+            // 3. InventoryUI 찾기 및 초기화
             inventoryUI = FindFirstObjectByType<InventoryUI>();
             if (inventoryUI != null)
             {
@@ -287,7 +334,7 @@ public class InventoryTestManager : MonoBehaviour
                 Debug.LogError("❌ InventoryUI를 찾을 수 없습니다!");
             }
             
-            // 3. 테스트 아이템 추가
+            // 4. 테스트 아이템 추가
             if (addTestItems)
             {
                 AddTestItems();

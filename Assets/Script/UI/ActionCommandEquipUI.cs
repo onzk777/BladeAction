@@ -89,17 +89,51 @@ namespace BladeAction.UI
             if (swordArtActionButton != null)
                 swordArtActionButton.onClick.AddListener(ShowSwordArtActions);
             
-            // 패널 초기 상태 (비활성화)
-            if (panel != null)
-            {
-                panel.SetActive(false);
-            }
-            
             // 지연 초기화 (CharacterManager보다 늦게 실행될 수 있으므로)
             if (autoConnect)
             {
                 StartCoroutine(DelayedAutoConnect());
             }
+        }
+        
+        private void OnEnable()
+        {
+            // GameObject가 활성화될 때 Character 연결 및 UI 갱신
+            // Character가 아직 연결되지 않았으면 자동 연결 시도
+            if (targetCharacter == null && autoConnect)
+            {
+                // CharacterManager 확인 및 연결
+                if (CharacterManager.Instance != null && CharacterManager.Instance.PlayerCharacter != null)
+                {
+                    ConnectToCharacter(CharacterManager.Instance.PlayerCharacter);
+                }
+            }
+            
+            // UI 갱신
+            if (targetCharacter != null)
+            {
+                RefreshUI();
+                Log("ActionCommandEquipUI 활성화 - UI 갱신");
+            }
+        }
+        
+        private void OnDisable()
+        {
+            // GameObject가 비활성화될 때 정리 작업
+            // 선택 상태 초기화
+            if (selectedSlot != null)
+            {
+                selectedSlot.SetSelected(false);
+                selectedSlot = null;
+            }
+            
+            // 상세 패널 닫기
+            if (detailPanel != null)
+            {
+                detailPanel.Hide();
+            }
+            
+            Log("ActionCommandEquipUI 비활성화 - 상태 정리");
         }
         
         private void OnDestroy()
@@ -113,6 +147,42 @@ namespace BladeAction.UI
             
             // Character 이벤트 구독 해제
             UnsubscribeFromCharacterEvents();
+        }
+        
+        #endregion
+        
+        #region 초기화 및 연결 관리
+        
+        /// <summary>
+        /// Character 연결 상태 확인 및 자동 재연결
+        /// </summary>
+        /// <returns>Character가 유효하면 true, 아니면 false</returns>
+        private bool EnsureCharacterConnection()
+        {
+            // 이미 연결되어 있으면 OK
+            if (targetCharacter != null)
+                return true;
+            
+            // 연결이 끊어졌으면 자동 재연결 시도
+            if (enableDebugLog)
+                Debug.LogWarning("[ActionCommandEquipUI] Character 연결이 끊어졌습니다. 자동 재연결 시도...");
+            
+            if (autoConnect && CharacterManager.Instance != null && CharacterManager.Instance.PlayerCharacter != null)
+            {
+                ConnectToCharacter(CharacterManager.Instance.PlayerCharacter);
+            }
+            
+            // 재연결 결과 확인
+            if (targetCharacter != null)
+            {
+                if (enableDebugLog)
+                    Log("Character 자동 재연결 성공");
+                return true;
+            }
+            
+            // 재연결 실패
+            Debug.LogError("[ActionCommandEquipUI] Character 연결 실패! UI를 표시할 수 없습니다.");
+            return false;
         }
         
         #endregion
@@ -297,7 +367,9 @@ namespace BladeAction.UI
         /// </summary>
         private void RefreshActionGrid()
         {
-            if (targetCharacter == null || actionCommandGridContainer == null) return;
+            // Character 연결 상태 재확인
+            if (!EnsureCharacterConnection() || actionCommandGridContainer == null) 
+                return;
             
             // 기존 슬롯 제거
             ClearActionSlots();
@@ -342,7 +414,9 @@ namespace BladeAction.UI
         /// </summary>
         private void RefreshEquippedSlots()
         {
-            if (targetCharacter == null || equippedActionSlotsContainer == null) return;
+            // Character 연결 상태 재확인
+            if (!EnsureCharacterConnection() || equippedActionSlotsContainer == null) 
+                return;
             
             // 기존 슬롯 제거
             ClearEquippedSlots();
@@ -536,51 +610,20 @@ namespace BladeAction.UI
         
         #endregion
         
-        #region UI 토글
-        
-        /// <summary>
-        /// 패널 표시
-        /// </summary>
-        public void Show()
-        {
-            if (panel == null) return;
-            
-            panel.SetActive(true);
-            RefreshUI();
-            
-            Log("검술 장착 UI 열림");
-        }
-        
-        /// <summary>
-        /// 패널 숨김
-        /// </summary>
-        public void Hide()
-        {
-            if (panel == null) return;
-            
-            panel.SetActive(false);
-            
-            Log("검술 장착 UI 닫힘");
-        }
-        
-        /// <summary>
-        /// 패널 토글
-        /// </summary>
-        public void TogglePanel()
-        {
-            if (panel == null) return;
-            
-            if (panel.activeSelf)
-                Hide();
-            else
-                Show();
-        }
+        #region UI 갱신
         
         /// <summary>
         /// 전체 UI 갱신
         /// </summary>
         public void RefreshUI()
         {
+            // Character 연결 상태 확인
+            if (!EnsureCharacterConnection())
+            {
+                Debug.LogWarning("[ActionCommandEquipUI] RefreshUI: Character가 연결되지 않아 UI를 갱신할 수 없습니다.");
+                return;
+            }
+            
             RefreshActionGrid();
             RefreshEquippedSlots();
             
