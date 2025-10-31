@@ -13,6 +13,8 @@ GameObject:
   - component: {fileID: 836789713840880729}
   - component: {fileID: 4047291596114553150}
   - component: {fileID: 7787008228307588750}
+  - component: {fileID: 5195406869051436159}
+  - component: {fileID: -4316403097702726205}
   m_Layer: 5
   m_Name: ActionCommandSlotUI
   m_TagString: Untagged
@@ -119,6 +121,35 @@ MonoBehaviour:
   highlightImage: {fileID: 8729899353032697461}
   frameImage: {fileID: 4404773064118574911}
   enableClickToggle: 1
+--- !u!225 &5195406869051436159
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3355690613877681413}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &-4316403097702726205
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3355690613877681413}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd2a520bb3e2fc54481e9c05c58e4f52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BladeAction.UI.DraggableSlotUI
+  dragAlpha: 0.6
+  sourceAlpha: 0.3
+  frameImage: {fileID: 4404773064118574911}
+  dropHighlightColor: {r: 0, g: 1, b: 0, a: 1}
+  blinkDuration: 0.3
 --- !u!1 &5098393190487373738
 GameObject:
   m_ObjectHideFlags: 0

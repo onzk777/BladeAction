@@ -3,14 +3,15 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
 using System.Collections.Generic;
+using DG.Tweening;
 
 namespace BladeAction.UI
 {
     /// <summary>
     /// 검술 슬롯 UI 컴포넌트
-    /// ActionCommandData를 시각적으로 표시하고 클릭 이벤트를 처리합니다.
+    /// ActionCommandData를 시각적으로 표시하고 클릭/드래그 이벤트를 처리합니다.
     /// </summary>
-    public class ActionCommandSlotUI : MonoBehaviour, IPointerClickHandler
+    public class ActionCommandSlotUI : MonoBehaviour, IPointerClickHandler, ISlotDragSource, ISlotDropTarget
     {
         [Header("UI 컴포넌트 참조")]
         [Tooltip("검술 아이콘 이미지")]
@@ -65,6 +66,8 @@ namespace BladeAction.UI
         public ActionCommandData ActionData => actionData;
         public int SlotIndex => slotIndex;
         public bool IsEquippedSlot => isEquippedSlot;
+        public bool IsStyleAction => isStyleAction;
+        public bool IsEnhancedByStyle => isEnhancedByStyle;
         
         #region 초기화 및 설정
         
@@ -89,6 +92,17 @@ namespace BladeAction.UI
             
             // 카테고리별 배경 색상 초기 적용
             UpdateCategoryColor();
+        }
+        
+        private void OnDestroy()
+        {
+            // DOTween 애니메이션 정리 (Frame 반짝임 등)
+            var draggable = GetComponent<DraggableSlotUI>();
+            if (draggable != null)
+            {
+                // DraggableSlotUI의 OnDestroy에서 처리하지만 안전을 위해 추가
+                DOTween.Kill(gameObject);
+            }
         }
         
         /// <summary>
@@ -338,6 +352,110 @@ namespace BladeAction.UI
         }
         
         #endregion
+        
+        #region 드래그 앤 드롭 인터페이스 (ISlotDragSource)
+        
+        /// <summary>
+        /// 드래그할 데이터 반환
+        /// </summary>
+        public object GetDragData()
+        {
+            return actionData;
+        }
+        
+        /// <summary>
+        /// 드래그 완료 시 호출
+        /// </summary>
+        public void OnDragComplete(bool success)
+        {
+            if (success)
+            {
+                Debug.Log($"[ActionCommandSlotUI] 드래그 성공: {actionData?.commandName}");
+            }
+        }
+        
+        /// <summary>
+        /// 드래그 시작 가능 여부 (빈 슬롯은 드래그 불가)
+        /// </summary>
+        public bool CanStartDrag()
+        {
+            return actionData != null;
+        }
+        
+        #endregion
+        
+        #region 드래그 앤 드롭 인터페이스 (ISlotDropTarget)
+        
+        /// <summary>
+        /// 드롭 가능 여부 확인
+        /// </summary>
+        public bool CanAcceptDrop(object dragData)
+        {
+            // 장착 슬롯만 드롭 받을 수 있음
+            if (!isEquippedSlot) return false;
+            
+            // ActionCommandData만 받을 수 있음
+            if (!(dragData is ActionCommandData)) return false;
+            
+            return true;
+        }
+        
+        /// <summary>
+        /// 드래그가 슬롯 위에 있을 때 (하이라이트)
+        /// </summary>
+        public void OnDropHover(object dragData)
+        {
+            // DraggableSlotUI가 Frame 애니메이션 처리
+        }
+        
+        /// <summary>
+        /// 드래그가 슬롯을 벗어났을 때
+        /// </summary>
+        public void OnDropExit()
+        {
+            // DraggableSlotUI가 Frame 애니메이션 중지
+        }
+        
+        /// <summary>
+        /// 실제 드롭 처리
+        /// </summary>
+        public void OnDropReceived(object dragData, ISlotDragSource source)
+        {
+            if (!(dragData is ActionCommandData droppedAction)) return;
+            if (parentUI == null) return;
+            
+            Debug.Log($"[ActionCommandSlotUI] 드롭 받음: {droppedAction.commandName} → 슬롯 {slotIndex}");
+            
+            // 드래그 소스가 장착 슬롯인지 확인
+            var sourceSlot = source as ActionCommandSlotUI;
+            
+            if (sourceSlot != null && sourceSlot.IsEquippedSlot)
+            {
+                // 장착 슬롯 ↔ 장착 슬롯: 위치 교체
+                SwapEquippedSlots(sourceSlot.SlotIndex, this.slotIndex);
+            }
+            else
+            {
+                // 그리드 → 장착 슬롯: 장착 (또는 교체)
+                parentUI.OnEquipAction(droppedAction, slotIndex);
+            }
+        }
+        
+        /// <summary>
+        /// 장착 슬롯 위치 교체
+        /// </summary>
+        private void SwapEquippedSlots(int fromIndex, int toIndex)
+        {
+            if (parentUI == null) return;
+            
+            Debug.Log($"[ActionCommandSlotUI] 슬롯 교체 요청: {fromIndex} ↔ {toIndex}");
+            
+            // ActionCommandEquipUI의 공개 메서드 호출
+            parentUI.SwapEquippedSlots(fromIndex, toIndex);
+        }
+        
+        #endregion
     }
 }
+
 

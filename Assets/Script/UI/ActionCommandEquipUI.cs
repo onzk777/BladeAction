@@ -68,6 +68,10 @@ namespace BladeAction.UI
         [Tooltip("선택한 검술의 상세 정보를 표시하는 패널 (ActionCommandDetailPanel 컴포넌트)")]
         [SerializeField] private ActionCommandDetailPanel detailPanel;
         
+        [Header("▣ 유파 슬롯 (장착된 유파 표시)")]
+        [Tooltip("착용 중인 검술 유파를 표시하는 슬롯 (EquippedSwordArtStyleUI 컴포넌트)")]
+        [SerializeField] private EquippedSwordArtStyleUI equippedSwordArtStyleUI;
+        
         [Header("▣ 디버그")]
         [Tooltip("Console에 상세 로그를 출력할지 여부")]
         [SerializeField] private bool enableDebugLog = true;
@@ -122,6 +126,12 @@ namespace BladeAction.UI
             {
                 detailPanel.gameObject.SetActive(false);
             }
+            
+            // 유파 슬롯 선택 해제
+            if (equippedSwordArtStyleUI != null)
+            {
+                equippedSwordArtStyleUI.ClearSelection();
+            }
         }
         
         /// <summary>
@@ -168,7 +178,7 @@ namespace BladeAction.UI
         }
         
         /// <summary>
-        /// UI 갱신 (Action Command Grid + Equipped Slots)
+        /// UI 갱신 (Action Command Grid + Equipped Slots + 유파 슬롯)
         /// </summary>
         public void RefreshUI()
         {
@@ -176,6 +186,20 @@ namespace BladeAction.UI
             
             RefreshActionGrid();
             RefreshEquippedSlots();
+            RefreshSwordArtStyleUI();
+        }
+        
+        /// <summary>
+        /// 유파 슬롯 UI 갱신
+        /// </summary>
+        private void RefreshSwordArtStyleUI()
+        {
+            if (equippedSwordArtStyleUI != null && targetCharacter != null)
+            {
+                equippedSwordArtStyleUI.Initialize(targetCharacter.Inventory, null);
+                equippedSwordArtStyleUI.Refresh();
+                Log("[ActionCommandEquipUI] 유파 슬롯 UI 갱신 완료");
+            }
         }
         
         /// <summary>
@@ -526,6 +550,20 @@ namespace BladeAction.UI
         }
         
         /// <summary>
+        /// 장착 슬롯 위치 교체 (드래그 앤 드롭용)
+        /// </summary>
+        public void SwapEquippedSlots(int slotIndex1, int slotIndex2)
+        {
+            if (targetCharacter == null) return;
+            
+            if (targetCharacter.SwapEquippedActions(slotIndex1, slotIndex2))
+            {
+                Log($"[ActionCommandEquipUI] 슬롯 {slotIndex1} ↔ 슬롯 {slotIndex2} 교체 완료");
+                RefreshUI();
+            }
+        }
+        
+        /// <summary>
         /// 검술 장착 해제
         /// </summary>
         public void OnUnequipAction(int slotIndex)
@@ -563,6 +601,12 @@ namespace BladeAction.UI
             {
                 selectedSlot.SetSelected(false);
                 selectedSlot = null;
+            }
+            
+            // 유파 슬롯 선택 해제
+            if (equippedSwordArtStyleUI != null)
+            {
+                equippedSwordArtStyleUI.ClearSelection();
             }
         }
         

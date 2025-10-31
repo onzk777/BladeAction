@@ -323,6 +323,32 @@ public abstract class Character
     }
     
     /// <summary>
+    /// 장착 슬롯 위치 교체
+    /// </summary>
+    public bool SwapEquippedActions(int slotIndex1, int slotIndex2)
+    {
+        if (slotIndex1 < 0 || slotIndex1 >= 4 || slotIndex2 < 0 || slotIndex2 >= 4)
+        {
+            Debug.LogWarning($"[Character] 잘못된 슬롯 인덱스: {slotIndex1}, {slotIndex2}");
+            return false;
+        }
+        
+        if (slotIndex1 == slotIndex2)
+        {
+            Debug.LogWarning($"[Character] 같은 슬롯끼리 교체할 수 없습니다: {slotIndex1}");
+            return false;
+        }
+        
+        // 슬롯 교체
+        var temp = equippedActions[slotIndex1];
+        equippedActions[slotIndex1] = equippedActions[slotIndex2];
+        equippedActions[slotIndex2] = temp;
+        
+        Debug.Log($"[Character] 슬롯 {slotIndex1} ↔ 슬롯 {slotIndex2} 교체 완료");
+        return true;
+    }
+    
+    /// <summary>
     /// 검술 해제
     /// </summary>
     public bool UnequipAction(int slotIndex)
