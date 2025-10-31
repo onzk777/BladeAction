@@ -56,6 +56,7 @@ namespace BladeAction.UI
         private bool isEquippedSlot = false;
         private bool isSelected = false;
         private bool isStyleAction = false;  // 유파 검술인지 여부
+        private bool isEnhancedByStyle = false;  // 습득 검술이 유파로 강화되었는지 여부
         
         // 선택 상태 관리 컴포넌트
         private SelectableSlotUI selectableSlot;
@@ -85,6 +86,9 @@ namespace BladeAction.UI
             // 초기 상태 설정
             SetSelected(false);
             Clear();
+            
+            // 카테고리별 배경 색상 초기 적용
+            UpdateCategoryColor();
         }
         
         /// <summary>
@@ -105,13 +109,14 @@ namespace BladeAction.UI
         /// <summary>
         /// 슬롯 초기화 (그리드용)
         /// </summary>
-        public void Initialize(ActionCommandData data, ActionCommandEquipUI parent, int index = -1, bool isEquipped = false, bool isStyle = false)
+        public void Initialize(ActionCommandData data, ActionCommandEquipUI parent, int index = -1, bool isEquipped = false, bool isStyle = false, bool isEnhanced = false)
         {
             actionData = data;
             parentUI = parent;
             slotIndex = index;
             isEquippedSlot = isEquipped;
             isStyleAction = isStyle;
+            isEnhancedByStyle = isEnhanced;
             
             UpdateDisplay();
         }
@@ -174,13 +179,21 @@ namespace BladeAction.UI
         }
         
         /// <summary>
-        /// 이름 업데이트
+        /// 이름 업데이트 (강화 표시 포함)
         /// </summary>
         private void UpdateName(string text)
         {
             if (commandNameText == null) return;
             
-            commandNameText.text = text;
+            // 유파로 강화된 습득 검술은 별표 표시
+            if (isEnhancedByStyle && !isStyleAction)
+            {
+                commandNameText.text = "★ " + text;
+            }
+            else
+            {
+                commandNameText.text = text;
+            }
         }
         
         /// <summary>
@@ -252,10 +265,35 @@ namespace BladeAction.UI
         {
             if (backgroundImage == null) return;
             
-            // 선택되지 않은 상태일 때만 카테고리별 색상 적용
+            Color categoryColor = isStyle ? styleBackgroundColor : acquiredBackgroundColor;
+            
+            // 카테고리 색상 적용 (선택 상태가 아닐 때)
             if (!isSelected)
             {
-                backgroundImage.color = isStyle ? styleBackgroundColor : acquiredBackgroundColor;
+                backgroundImage.color = categoryColor;
+                
+                // SelectableSlotUI의 Normal 색상도 업데이트
+                if (selectableSlot != null)
+                {
+                    selectableSlot.SetNormalColors(backgroundColor: categoryColor);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 카테고리 색상 강제 업데이트
+        /// </summary>
+        private void UpdateCategoryColor()
+        {
+            if (backgroundImage != null && !isSelected)
+            {
+                Color categoryColor = isStyleAction ? styleBackgroundColor : acquiredBackgroundColor;
+                backgroundImage.color = categoryColor;
+                
+                if (selectableSlot != null)
+                {
+                    selectableSlot.SetNormalColors(backgroundColor: categoryColor);
+                }
             }
         }
         
@@ -273,14 +311,13 @@ namespace BladeAction.UI
             // SelectableSlotUI에 위임
             if (selectableSlot != null)
             {
-                // 카테고리별 배경 색상 설정
+                selectableSlot.SetSelected(selected);
+                
+                // 선택 해제 시 카테고리 색상 복원
                 if (!selected)
                 {
-                    Color normalColor = isStyleAction ? styleBackgroundColor : acquiredBackgroundColor;
-                    selectableSlot.SetNormalColors(backgroundColor: normalColor);
+                    UpdateCategoryColor();
                 }
-                
-                selectableSlot.SetSelected(selected);
             }
         }
         

@@ -1288,10 +1288,10 @@ RectTransform:
   - {fileID: 4141359701544296343}
   m_Father: {fileID: 3954899265943057116}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 440.50327, y: 0}
+  m_SizeDelta: {x: 440.50327, y: 50}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &2750291489409583136
 CanvasRenderer:
@@ -5421,10 +5421,10 @@ RectTransform:
   - {fileID: 3988445374695652990}
   m_Father: {fileID: 3954899265943057116}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 440.50327, y: 50}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &2434694691715453733
 CanvasRenderer:
@@ -8011,8 +8011,9 @@ MonoBehaviour:
   selectedBackgroundColor: {r: 0.3, g: 0.5, b: 0.8, a: 1}
   normalFrameColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   selectedFrameColor: {r: 0, g: 1, b: 0, a: 1}
-  highlightColor: {r: 1, g: 1, b: 0, a: 0.5}
+  highlightColor: {r: 0.5849056, g: 0.5849056, b: 0, a: 0.5}
   displayMode: 3
+  enableClickToggle: 1
 --- !u!1 &5698315916114510176
 GameObject:
   m_ObjectHideFlags: 0
@@ -11097,8 +11098,8 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 5882120292978867176}
-  - {fileID: 8723555497516567761}
   - {fileID: 5852674811955674894}
+  - {fileID: 8723555497516567761}
   - {fileID: 4484102849468275968}
   - {fileID: 1191459116449010131}
   m_Father: {fileID: 258646541611130143}
@@ -11844,7 +11845,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &3954899265943057116
 RectTransform:
   m_ObjectHideFlags: 0
@@ -11861,10 +11862,10 @@ RectTransform:
   - {fileID: 943976076771347420}
   m_Father: {fileID: 6514896327006678379}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 881.00653, y: 50}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &1537599029568322131
 CanvasRenderer:

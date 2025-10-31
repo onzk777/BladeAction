@@ -468,14 +468,22 @@ namespace BladeAction.UI
                 int slotIndex = GetEquippedSlotIndex();
                 if (slotIndex >= 0)
                 {
-                    targetCharacter.UnequipAction(slotIndex);
-                    Log($"검술 해제: {currentAction.commandName} (슬롯 {slotIndex})");
+                        var actionToFocus = currentAction; // 변수 저장 (코루틴에서 사용)
                     
-                    // 포커스를 해제된 검술로 이동
+                    targetCharacter.UnequipAction(slotIndex);
+                    Log($"검술 해제: {actionToFocus.commandName} (슬롯 {slotIndex})");
+                    
+                    // 부모 UI 갱신 먼저 (슬롯 재생성)
                     if (parentUI != null)
                     {
-                        parentUI.SetFocusToAction(currentAction);
+                        parentUI.RefreshUI();
+                        
+                        // UI 재생성 후 포커스 이동 (코루틴)
+                        StartCoroutine(DelayedFocusToAction(parentUI, actionToFocus));
                     }
+                    
+                    // UI 갱신
+                    UpdateDisplay();
                 }
             }
             else
@@ -491,30 +499,61 @@ namespace BladeAction.UI
                     }
                 }
                 
-                if (emptySlot >= 0)
+                // 빈 슬롯이 없으면 4번 슬롯에 자동 장착 (교체)
+                if (emptySlot < 0)
                 {
-                    targetCharacter.EquipAction(currentAction, emptySlot);
-                    Log($"검술 장착: {currentAction.commandName} → 슬롯 {emptySlot}");
+                    emptySlot = 3; // 4번 슬롯
+                    Log($"모든 슬롯이 꽉 참 → 4번 슬롯에 자동 장착 (교체)");
+                }
+                
+                int slotToFocus = emptySlot; // 변수 저장 (코루틴에서 사용)
+                
+                targetCharacter.EquipAction(currentAction, emptySlot);
+                Log($"검술 장착: {currentAction.commandName} → 슬롯 {emptySlot}");
+                
+                // 부모 UI 갱신 먼저 (슬롯 재생성)
+                if (parentUI != null)
+                {
+                    parentUI.RefreshUI();
                     
-                    // 포커스를 장착된 슬롯으로 이동
-                    if (parentUI != null)
-                    {
-                        parentUI.SetFocusToEquippedSlot(emptySlot);
-                    }
+                    // UI 재생성 후 포커스 이동 (코루틴)
+                    StartCoroutine(DelayedFocusToEquippedSlot(parentUI, slotToFocus));
                 }
-                else
-                {
-                    Debug.LogWarning("[ActionCommandDetailPanel] 빈 슬롯이 없습니다!");
-                }
+                
+                // UI 갱신
+                UpdateDisplay();
             }
+        }
+        
+        /// <summary>
+        /// 장착 후 포커스 지연 이동
+        /// </summary>
+        private System.Collections.IEnumerator DelayedFocusToEquippedSlot(ActionCommandEquipUI parentUI, int slotIndex)
+        {
+            // UI 재생성 대기
+            yield return null;
+            yield return new WaitForEndOfFrame();
             
-            // UI 갱신
-            UpdateDisplay();
-            
-            // 부모 UI에 갱신 요청
             if (parentUI != null)
             {
-                parentUI.RefreshUI();
+                parentUI.SetFocusToEquippedSlot(slotIndex);
+                Log($"장착 후 포커스 이동: 슬롯 {slotIndex}");
+            }
+        }
+        
+        /// <summary>
+        /// 해제 후 포커스 지연 이동
+        /// </summary>
+        private System.Collections.IEnumerator DelayedFocusToAction(ActionCommandEquipUI parentUI, ActionCommandData action)
+        {
+            // UI 재생성 대기
+            yield return null;
+            yield return new WaitForEndOfFrame();
+            
+            if (parentUI != null && action != null)
+            {
+                parentUI.SetFocusToAction(action);
+                Log($"해제 후 포커스 이동: {action.commandName}");
             }
         }
         

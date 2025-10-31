@@ -63,13 +63,7 @@ namespace BladeAction.UI
         // 현재 선택된 슬롯
         private ActionCommandSlotUI selectedSlot;
         
-        // 그리드 표시 모드
-        private enum GridDisplayMode
-        {
-            AcquiredActions,  // 습득 검술
-            SwordArtActions   // 유파 검술
-        }
-        private GridDisplayMode currentMode = GridDisplayMode.AcquiredActions;
+        // 그리드 표시 모드 제거 (통합 리스트로 변경)
         
         #region Unity 생명주기
         
@@ -82,13 +76,6 @@ namespace BladeAction.UI
         
         private void Start()
         {
-            // 탭 버튼 이벤트 연결
-            if (acquiredActionButton != null)
-                acquiredActionButton.onClick.AddListener(ShowAcquiredActions);
-            
-            if (swordArtActionButton != null)
-                swordArtActionButton.onClick.AddListener(ShowSwordArtActions);
-            
             // 지연 초기화 (CharacterManager보다 늦게 실행될 수 있으므로)
             if (autoConnect)
             {
@@ -138,13 +125,6 @@ namespace BladeAction.UI
         
         private void OnDestroy()
         {
-            // 탭 버튼 이벤트 해제
-            if (acquiredActionButton != null)
-                acquiredActionButton.onClick.RemoveListener(ShowAcquiredActions);
-            
-            if (swordArtActionButton != null)
-                swordArtActionButton.onClick.RemoveListener(ShowSwordArtActions);
-            
             // Character 이벤트 구독 해제
             UnsubscribeFromCharacterEvents();
         }
@@ -260,15 +240,13 @@ namespace BladeAction.UI
         {
             if (targetCharacter == null) return;
             
-            // 초기 탭 모드 설정 (습득 검술)
-            currentMode = GridDisplayMode.AcquiredActions;
-            UpdateTabButtons();
-            
-            // 검술 그리드 초기화
-            RefreshActionGrid();
+            // 탭 모드 제거 (통합 리스트)
             
             // 장착 슬롯 초기화
             RefreshEquippedSlots();
+            
+            // 검술 그리드 초기화
+            RefreshActionGrid();
             
             // 유파 UI 초기화
             if (styleUI != null && targetCharacter.Inventory != null)
@@ -315,55 +293,10 @@ namespace BladeAction.UI
         
         #endregion
         
-        #region 탭 전환
-        
-        /// <summary>
-        /// 습득 검술 탭으로 전환
-        /// </summary>
-        public void ShowAcquiredActions()
-        {
-            currentMode = GridDisplayMode.AcquiredActions;
-            UpdateTabButtons();
-            RefreshActionGrid();
-            
-            Log("습득 검술 탭으로 전환");
-        }
-        
-        /// <summary>
-        /// 유파 검술 탭으로 전환
-        /// </summary>
-        public void ShowSwordArtActions()
-        {
-            currentMode = GridDisplayMode.SwordArtActions;
-            UpdateTabButtons();
-            RefreshActionGrid();
-            
-            Log("유파 검술 탭으로 전환");
-        }
-        
-        /// <summary>
-        /// 탭 버튼 상태 업데이트
-        /// </summary>
-        private void UpdateTabButtons()
-        {
-            // 선택된 탭은 비활성화, 다른 탭은 활성화
-            if (acquiredActionButton != null)
-            {
-                acquiredActionButton.interactable = (currentMode != GridDisplayMode.AcquiredActions);
-            }
-            
-            if (swordArtActionButton != null)
-            {
-                swordArtActionButton.interactable = (currentMode != GridDisplayMode.SwordArtActions);
-            }
-        }
-        
-        #endregion
-        
         #region UI 갱신
         
         /// <summary>
-        /// 검술 그리드 갱신 (현재 모드에 따라)
+        /// 검술 그리드 갱신 (통합 리스트: 유파 우선 정렬)
         /// </summary>
         private void RefreshActionGrid()
         {
@@ -374,27 +307,37 @@ namespace BladeAction.UI
             // 기존 슬롯 제거
             ClearActionSlots();
             
-            // 현재 모드에 따라 검술 리스트 가져오기
-            List<ActionCommandData> actionsToDisplay = null;
-            bool isStyleMode = false;
+            var acquiredActions = targetCharacter.GetAcquiredActions();
+            var styleActions = targetCharacter.GetStyleActions();
             
-            if (currentMode == GridDisplayMode.AcquiredActions)
+            // 통합 리스트 생성
+            List<ActionCommandData> actionsToDisplay = new List<ActionCommandData>();
+            
+            // 1. 유파 전용 검술 먼저 추가 (습득과 중복 아닌 것만)
+            if (styleActions != null)
             {
-                // 습득한 검술
-                actionsToDisplay = targetCharacter.GetAcquiredActions();
-                isStyleMode = false;
-            }
-            else if (currentMode == GridDisplayMode.SwordArtActions)
-            {
-                // 유파 검술
-                actionsToDisplay = targetCharacter.GetStyleActions();
-                isStyleMode = true;
+                foreach (var styleAction in styleActions)
+                {
+                    bool isDuplicate = acquiredActions != null && 
+                        acquiredActions.Any(a => a.commandName == styleAction.commandName);
+                    
+                    if (!isDuplicate)
+                    {
+                        actionsToDisplay.Add(styleAction);
+                        Log($"유파 전용 검술 추가: {styleAction.commandName}");
+                    }
+                }
             }
             
-            if (actionsToDisplay == null || actionsToDisplay.Count == 0)
+            // 2. 습득 검술 추가 (★ 표시 대상 확인)
+            if (acquiredActions != null)
             {
-                string modeName = currentMode == GridDisplayMode.AcquiredActions ? "습득 검술" : "유파 검술";
-                Log($"{modeName}이 없습니다.");
+                actionsToDisplay.AddRange(acquiredActions);
+            }
+            
+            if (actionsToDisplay.Count == 0)
+            {
+                Log($"표시할 검술이 없습니다.");
                 return;
             }
             
@@ -403,10 +346,18 @@ namespace BladeAction.UI
             {
                 if (action == null) continue;
                 
-                CreateActionSlot(action, isStyleMode);
+                // 유파 전용 검술인지 확인
+                bool isStyleOnly = styleActions != null && styleActions.Contains(action) &&
+                    (acquiredActions == null || !acquiredActions.Any(a => a.commandName == action.commandName));
+                
+                // 습득 검술이 유파로 강화되었는지 확인
+                bool isEnhancedByStyle = acquiredActions != null && acquiredActions.Contains(action) &&
+                    styleActions != null && styleActions.Any(s => s.commandName == action.commandName);
+                
+                CreateActionSlot(action, isStyleOnly, isEnhancedByStyle);
             }
             
-            Log($"검술 그리드 갱신 완료: {actionSlots.Count}개 ({currentMode})");
+            Log($"검술 그리드 갱신 완료: {actionSlots.Count}개 (통합 리스트)");
         }
         
         /// <summary>
@@ -438,7 +389,7 @@ namespace BladeAction.UI
         /// <summary>
         /// 검술 슬롯 생성 (그리드용)
         /// </summary>
-        private void CreateActionSlot(ActionCommandData action, bool isStyleAction = false)
+        private void CreateActionSlot(ActionCommandData action, bool isStyleAction = false, bool isEnhancedByStyle = false)
         {
             if (actionCommandSlotPrefab == null || actionCommandGridContainer == null) return;
             
@@ -447,7 +398,7 @@ namespace BladeAction.UI
             
             if (slot != null)
             {
-                slot.Initialize(action, this, -1, false, isStyleAction);
+                slot.Initialize(action, this, -1, false, isStyleAction, isEnhanced: isEnhancedByStyle);
                 actionSlots.Add(slot);
             }
             else
@@ -469,10 +420,22 @@ namespace BladeAction.UI
             
             if (slot != null)
             {
-                // 유파 검술인지 확인
+                // 중복 검술은 습득 우선
                 bool isStyleAction = IsActionFromStyle(action);
                 
-                slot.Initialize(action, this, slotIndex, true, isStyleAction);
+                // 장착 슬롯에서도 강화 표시 (★ 표시)
+                bool isEnhancedByStyle = false;
+                if (action != null)
+                {
+                    var acquiredActions = targetCharacter.GetAcquiredActions();
+                    var styleActions = targetCharacter.GetStyleActions();
+                    
+                    // 습득 검술이 유파로 강화되었는지 확인
+                    isEnhancedByStyle = acquiredActions != null && acquiredActions.Contains(action) &&
+                        styleActions != null && styleActions.Any(s => s.commandName == action.commandName);
+                }
+                
+                slot.Initialize(action, this, slotIndex, true, isStyleAction, isEnhanced: isEnhancedByStyle);
                 equippedSlots.Add(slot);
             }
             else
@@ -484,6 +447,7 @@ namespace BladeAction.UI
         
         /// <summary>
         /// 검술이 유파 검술인지 확인
+        /// 중요: 습득 검술과 중복되는 경우 false 반환 (습득 우선)
         /// </summary>
         private bool IsActionFromStyle(ActionCommandData action)
         {
@@ -491,7 +455,25 @@ namespace BladeAction.UI
                 return false;
             
             var styleActions = targetCharacter.GetStyleActions();
-            return styleActions != null && styleActions.Contains(action);
+            var acquiredActions = targetCharacter.GetAcquiredActions();
+            
+            // 유파 검술에 있는지 확인
+            bool isInStyle = styleActions != null && styleActions.Contains(action);
+            if (!isInStyle)
+                return false;
+            
+            // 습득 검술에도 있는지 확인 (중복 체크)
+            bool isInAcquired = acquiredActions != null && 
+                acquiredActions.Any(a => a.commandName == action.commandName);
+            
+            // 중복이면 습득 우선 (false 반환)
+            if (isInAcquired)
+            {
+                Log($"'{action.commandName}'은 습득/유파 중복 → 습득 취급");
+                return false;
+            }
+            
+            return true; // 유파 전용 검술
         }
         
         /// <summary>
@@ -587,11 +569,18 @@ namespace BladeAction.UI
                         break;
                     }
                 }
+                
+                // 모든 슬롯이 꽉 찼으면 4번 슬롯에 자동 장착 (교체)
+                if (slotIndex < 0)
+                {
+                    slotIndex = 3; // 4번 슬롯 (인덱스 3)
+                    Log($"모든 슬롯이 꽉 참 → 4번 슬롯에 자동 장착 (교체)");
+                }
             }
             
             if (slotIndex < 0 || slotIndex >= 4)
             {
-                Debug.LogWarning("[ActionCommandEquipUI] 빈 슬롯이 없습니다!");
+                Debug.LogWarning("[ActionCommandEquipUI] 잘못된 슬롯 인덱스입니다!");
                 return;
             }
             
@@ -664,6 +653,7 @@ namespace BladeAction.UI
         
         /// <summary>
         /// 현재 그리드에서 검술 슬롯 찾기
+        /// 중복 검술 대응: commandName으로 비교
         /// </summary>
         private ActionCommandSlotUI FindActionSlotInCurrentGrid(ActionCommandData action)
         {
@@ -672,9 +662,13 @@ namespace BladeAction.UI
             
             foreach (var slot in actionSlots)
             {
-                if (slot != null && slot.ActionData == action)
+                if (slot != null && slot.ActionData != null)
                 {
-                    return slot;
+                    // 같은 검술인지 확인 (인스턴스가 다를 수 있으므로 commandName으로 비교)
+                    if (slot.ActionData.commandName == action.commandName)
+                    {
+                        return slot;
+                    }
                 }
             }
             
@@ -732,28 +726,7 @@ namespace BladeAction.UI
             // 현재 그리드에서 검술 찾기
             ActionCommandSlotUI targetSlot = FindActionSlotInCurrentGrid(action);
             
-            // 현재 그리드에 없으면 탭 전환 시도
-            if (targetSlot == null)
-            {
-                // 유파 검술인지 확인
-                bool isStyleAction = IsActionFromStyle(action);
-                
-                if (isStyleAction && currentMode != GridDisplayMode.SwordArtActions)
-                {
-                    // 유파 검술 탭으로 전환
-                    ShowSwordArtActions();
-                    Log($"유파 검술을 찾기 위해 유파 탭으로 전환");
-                }
-                else if (!isStyleAction && currentMode != GridDisplayMode.AcquiredActions)
-                {
-                    // 습득 검술 탭으로 전환
-                    ShowAcquiredActions();
-                    Log($"습득 검술을 찾기 위해 습득 탭으로 전환");
-                }
-                
-                // 탭 전환 후 다시 찾기
-                targetSlot = FindActionSlotInCurrentGrid(action);
-            }
+            // 탭 전환 로직 제거 (통합 리스트)
             
             if (targetSlot != null)
             {
@@ -790,13 +763,23 @@ namespace BladeAction.UI
             }
         }
         
+        // DelayedFocusAfterTabSwitch 제거 (통합 리스트에서는 탭 전환 없음)
+        
         /// <summary>
         /// 검술 슬롯으로 자동 스크롤 (뷰포트 밖일 때만)
         /// </summary>
         private System.Collections.IEnumerator ScrollToActionIfOutOfViewDelayed(ActionCommandSlotUI targetSlot)
         {
+            // null 체크 (탭 전환 시 슬롯이 파괴될 수 있음)
             if (actionScrollRect == null || targetSlot == null)
                 yield break;
+            
+            // GameObject가 파괴되었는지 확인
+            if (targetSlot.gameObject == null)
+            {
+                Log("스크롤 대상 슬롯이 파괴되어 스크롤 취소");
+                yield break;
+            }
             
             var content = actionScrollRect.content;
             var viewport = actionScrollRect.viewport != null ? actionScrollRect.viewport : (RectTransform)actionScrollRect.transform;
@@ -808,6 +791,13 @@ namespace BladeAction.UI
             // 레이아웃 업데이트 대기
             yield return new WaitForEndOfFrame();
             Canvas.ForceUpdateCanvases();
+            
+            // 파괴 여부 재확인
+            if (targetSlot == null || targetSlot.gameObject == null)
+            {
+                Log("스크롤 중 슬롯이 파괴됨");
+                yield break;
+            }
             
             // 뷰포트 및 타겟 위치 계산 (InventoryUI와 동일한 로직)
             Vector3[] viewWC = new Vector3[4];
