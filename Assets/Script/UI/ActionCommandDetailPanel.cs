@@ -81,6 +81,14 @@ namespace BladeAction.UI
         
         private void Awake()
         {
+            // CanvasGroup 설정: 드래그 이벤트가 패널을 통과하도록
+            var canvasGroup = GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+            {
+                canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            }
+            canvasGroup.blocksRaycasts = false; // 드래그 이벤트 통과 허용
+            
             // 초기 상태 설정
             Clear();
         }

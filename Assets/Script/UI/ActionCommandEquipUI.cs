@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 using System.Collections.Generic;
 using System.Linq;
 using System.Collections;
+using DG.Tweening;
 
 namespace BladeAction.UI
 {
@@ -60,9 +61,18 @@ namespace BladeAction.UI
         [Tooltip("검술 그리드의 스크롤 영역 (ScrollRect 컴포넌트)")]
         [SerializeField] private ScrollRect actionScrollRect;
         
+        [Tooltip("그리드 전체 영역 드롭 하이라이트용 Frame Image (선택사항)")]
+        [SerializeField] private Image gridAreaFrameImage;
+        
+        [Tooltip("그리드 영역 드롭존 오브젝트 (GridAreaDropZone 컴포넌트 포함, 드래그 시에만 활성화)")]
+        [SerializeField] private GameObject gridAreaDropZoneObject;
+        
         [Header("▣ 장착 슬롯 (전투에서 사용할 검술 4개)")]
         [Tooltip("장착 슬롯들이 동적으로 생성될 부모 Transform (보통 EquippedSlotsContainer)")]
         [SerializeField] private Transform equippedActionSlotsContainer;
+        
+        [Tooltip("장착 슬롯 영역 드롭 하이라이트용 Frame Image (EquippedActionAreaFrameImage)")]
+        [SerializeField] private Image equippedAreaFrameImage;
         
         [Header("▣ 상세 정보 패널")]
         [Tooltip("선택한 검술의 상세 정보를 표시하는 패널 (ActionCommandDetailPanel 컴포넌트)")]
@@ -81,6 +91,31 @@ namespace BladeAction.UI
         private ActionCommandSlotUI selectedSlot;
         
         private Character targetCharacter;
+        
+        // 드롭 영역 하이라이트 관리
+        private DG.Tweening.Sequence gridAreaBlinkSequence;
+        private DG.Tweening.Sequence equippedAreaBlinkSequence;
+        private Color originalGridFrameColor;
+        private Color originalEquippedFrameColor;
+        
+        private void Start()
+        {
+            // 초기 상태: Frame Image들 비활성화 (평소에는 보이지 않음)
+            if (equippedAreaFrameImage != null)
+            {
+                originalEquippedFrameColor = equippedAreaFrameImage.color;
+                equippedAreaFrameImage.enabled = false;
+            }
+            
+            if (gridAreaFrameImage != null)
+            {
+                originalGridFrameColor = gridAreaFrameImage.color;
+                gridAreaFrameImage.enabled = false;
+            }
+            
+            // GridAreaDropZone의 Raycast 비활성화 (드래그 시에만 활성화)
+            SetGridDropZoneEnabled(false);
+        }
         
         /// <summary>
         /// Character 연결
@@ -132,6 +167,9 @@ namespace BladeAction.UI
             {
                 equippedSwordArtStyleUI.ClearSelection();
             }
+            
+            // 드래그 하이라이트 정리
+            OnDragEnd();
         }
         
         /// <summary>
@@ -732,6 +770,161 @@ namespace BladeAction.UI
             actionScrollRect.verticalNormalizedPosition = 1f - normalizedPosition;
         }
         
+        #region 드래그 앤 드롭 하이라이트
+        
+        /// <summary>
+        /// 드래그 시작 시 드롭 가능 영역 하이라이트
+        /// </summary>
+        public void OnDragStart(bool isDraggingFromEquipped)
+        {
+            if (isDraggingFromEquipped)
+            {
+                // 장착 슬롯에서 드래그 → 검술 목록 그리드 전체 영역 하이라이트
+                HighlightGridArea(true);
+            }
+            else
+            {
+                // 검술 목록 그리드에서 드래그 → 장착 슬롯 영역 전체 하이라이트
+                HighlightEquippedArea(true);
+            }
+        }
+        
+        /// <summary>
+        /// 드래그 종료 시 하이라이트 종료
+        /// </summary>
+        public void OnDragEnd()
+        {
+            Log("[OnDragEnd] 호출됨 - 하이라이트 종료 시작");
+            HighlightGridArea(false);
+            HighlightEquippedArea(false);
+            Log("[OnDragEnd] 완료");
+        }
+        
+        /// <summary>
+        /// 장착 슬롯 영역 전체 하이라이트
+        /// </summary>
+        private void HighlightEquippedArea(bool highlight)
+        {
+            if (equippedAreaFrameImage == null) return;
+            
+            if (highlight)
+            {
+                // Frame 활성화
+                equippedAreaFrameImage.enabled = true;
+                
+                // Hierarchy 맨 아래로 이동 (가장 위에 렌더링)
+                equippedAreaFrameImage.transform.SetAsLastSibling();
+                
+                // 반짝임 시작 (흰색 → 초록 → 흰색)
+                Color visibleGreen = new Color(0f, 1f, 0f, 0.8f); // 불투명 초록
+                
+                equippedAreaBlinkSequence = DOTween.Sequence();
+                equippedAreaBlinkSequence.Append(
+                    DOTween.To(() => equippedAreaFrameImage.color, x => equippedAreaFrameImage.color = x, visibleGreen, 0.3f)
+                        .SetEase(Ease.InOutQuad)
+                );
+                equippedAreaBlinkSequence.Append(
+                    DOTween.To(() => equippedAreaFrameImage.color, x => equippedAreaFrameImage.color = x, originalEquippedFrameColor, 0.3f)
+                        .SetEase(Ease.InOutQuad)
+                );
+                equippedAreaBlinkSequence.SetLoops(-1, LoopType.Restart);
+            }
+            else
+            {
+                // 반짝임 중지
+                if (equippedAreaBlinkSequence != null)
+                {
+                    equippedAreaBlinkSequence.Kill(true);
+                    equippedAreaBlinkSequence = null;
+                }
+                
+                // Frame 비활성화
+                if (equippedAreaFrameImage != null)
+                {
+                    equippedAreaFrameImage.color = originalEquippedFrameColor;
+                    equippedAreaFrameImage.enabled = false;
+                }
+            }
+        }
+        
+        /// <summary>
+        /// GridAreaDropZone의 드롭 받기 활성화/비활성화
+        /// </summary>
+        private void SetGridDropZoneEnabled(bool enabled)
+        {
+            if (gridAreaDropZoneObject == null)
+            {
+                Debug.LogError("[ActionCommandEquipUI] gridAreaDropZoneObject가 null입니다! Inspector에서 연결하세요.");
+                return;
+            }
+            
+            var dropZone = gridAreaDropZoneObject.GetComponent<GridAreaDropZone>();
+            if (dropZone == null)
+            {
+                Debug.LogError($"[ActionCommandEquipUI] {gridAreaDropZoneObject.name}에 GridAreaDropZone 컴포넌트가 없습니다!");
+                return;
+            }
+            
+            dropZone.SetDropEnabled(enabled);
+            Debug.Log($"[ActionCommandEquipUI] SetGridDropZoneEnabled({enabled}) 호출 완료");
+        }
+        
+        /// <summary>
+        /// 그리드 영역 전체 하이라이트 + 드롭존 활성화
+        /// </summary>
+        private void HighlightGridArea(bool highlight)
+        {
+            if (highlight)
+            {
+                // GridAreaDropZone Raycast 활성화 (드롭 받을 수 있도록)
+                SetGridDropZoneEnabled(true);
+                
+                // Frame 활성화 (시각적 표시)
+                if (gridAreaFrameImage != null)
+                {
+                    gridAreaFrameImage.enabled = true;
+                    
+                    // Hierarchy 맨 아래로 이동 (가장 위에 렌더링)
+                    gridAreaFrameImage.transform.SetAsLastSibling();
+                    
+                    // 반짝임 시작 (흰색 → 초록 → 흰색)
+                    Color visibleGreen = new Color(0f, 1f, 0f, 0.8f); // 불투명 초록
+                    
+                    gridAreaBlinkSequence = DOTween.Sequence();
+                    gridAreaBlinkSequence.Append(
+                        DOTween.To(() => gridAreaFrameImage.color, x => gridAreaFrameImage.color = x, visibleGreen, 0.3f)
+                            .SetEase(Ease.InOutQuad)
+                    );
+                    gridAreaBlinkSequence.Append(
+                        DOTween.To(() => gridAreaFrameImage.color, x => gridAreaFrameImage.color = x, originalGridFrameColor, 0.3f)
+                            .SetEase(Ease.InOutQuad)
+                    );
+                    gridAreaBlinkSequence.SetLoops(-1, LoopType.Restart);
+                }
+            }
+            else
+            {
+                // GridAreaDropZone Raycast 비활성화
+                SetGridDropZoneEnabled(false);
+                
+                // 반짝임 중지
+                if (gridAreaBlinkSequence != null)
+                {
+                    gridAreaBlinkSequence.Kill(true);
+                    gridAreaBlinkSequence = null;
+                }
+                
+                // Frame 비활성화
+                if (gridAreaFrameImage != null)
+                {
+                    gridAreaFrameImage.color = originalGridFrameColor;
+                    gridAreaFrameImage.enabled = false;
+                }
+            }
+        }
+        
+        #endregion
+        
         private void Log(string message)
         {
             if (enableDebugLog)
@@ -741,3 +934,4 @@ namespace BladeAction.UI
         }
     }
 }
+

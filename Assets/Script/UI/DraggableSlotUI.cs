@@ -10,7 +10,7 @@ namespace BladeAction.UI
     /// ActionCommandSlotUI, ItemSlotUI, EquipmentSlotUI 등에서 공통 사용
     /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
-    public class DraggableSlotUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler, IPointerEnterHandler, IPointerExitHandler
+    public class DraggableSlotUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler
     {
         [Header("▣ 드래그 설정")]
         [Tooltip("드래그 중 생성될 복사본의 투명도 (0~1)")]
@@ -19,15 +19,8 @@ namespace BladeAction.UI
         [Tooltip("드래그 중 원본 슬롯의 투명도 (0~1)")]
         [SerializeField] private float sourceAlpha = 0.3f;
         
-        [Header("▣ 드롭 피드백")]
-        [Tooltip("드롭 가능 시 강조할 Frame Image")]
-        [SerializeField] private Image frameImage;
-        
-        [Tooltip("드롭 가능 시 Frame 색상")]
-        [SerializeField] private Color dropHighlightColor = Color.green;
-        
-        [Tooltip("반짝임 애니메이션 시간 (초)")]
-        [SerializeField] private float blinkDuration = 0.3f;
+        [Tooltip("드래그 복사본의 고정 가로 크기")]
+        [SerializeField] private float dragCopyWidth = 280f;
         
         // 컴포넌트 참조
         private CanvasGroup canvasGroup;
@@ -39,10 +32,6 @@ namespace BladeAction.UI
         private ISlotDragSource dragSource;
         private ISlotDropTarget dropTarget;
         
-        // 원본 색상 저장
-        private Color originalFrameColor;
-        private Tweener blinkTween;
-        
         private void Awake()
         {
             canvasGroup = GetComponent<CanvasGroup>();
@@ -51,22 +40,18 @@ namespace BladeAction.UI
             // 인터페이스 컴포넌트 찾기
             dragSource = GetComponent<ISlotDragSource>();
             dropTarget = GetComponent<ISlotDropTarget>();
-            
-            // Frame 원본 색상 저장
-            if (frameImage != null)
-            {
-                originalFrameColor = frameImage.color;
-            }
         }
         
         #region 드래그 이벤트
         
         public void OnBeginDrag(PointerEventData eventData)
         {
+            Debug.Log($"[DraggableSlotUI] OnBeginDrag 시작 - gameObject={gameObject.name}");
+            
             // 드래그 소스가 없거나 드래그 불가능하면 무시
             if (dragSource == null || !dragSource.CanStartDrag())
             {
-                Debug.Log($"[DraggableSlotUI] 드래그 불가: dragSource={dragSource}, CanStartDrag={dragSource?.CanStartDrag()}");
+                Debug.LogWarning($"[DraggableSlotUI] 드래그 불가: dragSource={dragSource}, CanStartDrag={dragSource?.CanStartDrag()}");
                 eventData.pointerDrag = null; // 드래그 취소
                 return;
             }
@@ -75,7 +60,7 @@ namespace BladeAction.UI
             object dragData = dragSource.GetDragData();
             if (dragData == null)
             {
-                Debug.Log($"[DraggableSlotUI] 드래그 데이터가 null");
+                Debug.LogWarning($"[DraggableSlotUI] 드래그 데이터가 null");
                 eventData.pointerDrag = null; // 드래그 취소
                 return;
             }
@@ -85,11 +70,21 @@ namespace BladeAction.UI
             // 드래그 복사본 생성
             CreateDragCopy();
             
+            if (dragCopy == null)
+            {
+                Debug.LogError($"[DraggableSlotUI] 드래그 복사본 생성 실패!");
+                eventData.pointerDrag = null;
+                return;
+            }
+            
             // 원본 슬롯 반투명 처리
             if (canvasGroup != null)
             {
                 canvasGroup.alpha = sourceAlpha;
             }
+            
+            // 드롭 가능 영역 하이라이트 시작
+            NotifyDragStart(dragData);
         }
         
         public void OnDrag(PointerEventData eventData)
@@ -116,8 +111,10 @@ namespace BladeAction.UI
                 canvasGroup.alpha = 1f;
             }
             
-            // 드롭 대상 찾기
+            // **중요: 드롭 대상을 먼저 찾고 처리 (비활성화 전에)**
             ISlotDropTarget target = FindDropTarget(eventData);
+            
+            bool dropSuccess = false;
             
             if (target != null && dragSource != null)
             {
@@ -128,12 +125,15 @@ namespace BladeAction.UI
                     // 드롭 처리
                     target.OnDropReceived(dragData, dragSource);
                     dragSource.OnDragComplete(true);
-                    return;
+                    dropSuccess = true;
                 }
             }
             
+            // **드롭 처리 완료 후 하이라이트 종료 및 드롭존 비활성화**
+            NotifyDragEnd();
+            
             // 드롭 실패
-            if (dragSource != null)
+            if (!dropSuccess && dragSource != null)
             {
                 dragSource.OnDragComplete(false);
             }
@@ -149,35 +149,6 @@ namespace BladeAction.UI
             // (혹시 필요하면 추가 검증 가능)
         }
         
-        public void OnPointerEnter(PointerEventData eventData)
-        {
-            // 드래그 중인 오브젝트가 있고, 이 슬롯이 드롭 대상이면 하이라이트
-            if (eventData.pointerDrag != null && dropTarget != null)
-            {
-                var dragSource = eventData.pointerDrag.GetComponent<ISlotDragSource>();
-                if (dragSource != null)
-                {
-                    object dragData = dragSource.GetDragData();
-                    
-                    if (dropTarget.CanAcceptDrop(dragData))
-                    {
-                        dropTarget.OnDropHover(dragData);
-                        StartBlinkAnimation();
-                    }
-                }
-            }
-        }
-        
-        public void OnPointerExit(PointerEventData eventData)
-        {
-            // 드래그 중이고 드롭 대상이면 하이라이트 종료
-            if (eventData.pointerDrag != null && dropTarget != null)
-            {
-                dropTarget.OnDropExit();
-                StopBlinkAnimation();
-            }
-        }
-        
         #endregion
         
         #region 드래그 복사본 생성
@@ -187,75 +158,116 @@ namespace BladeAction.UI
             // Canvas 찾기 (드래그 중인 복사본은 최상위 Canvas에 표시)
             dragCanvas = GetComponentInParent<Canvas>().rootCanvas;
             
-            // 복사본 생성
-            dragCopy = Instantiate(gameObject, dragCanvas.transform);
+            // **1단계: 원본 크기 측정**
+            float originalHeight = rectTransform.rect.height;
+            
+            // **2단계: Wrapper 오브젝트 생성 (크기 제한 역할)**
+            GameObject wrapperObject = new GameObject("DragCopyWrapper");
+            wrapperObject.transform.SetParent(dragCanvas.transform, false);
+            
+            RectTransform wrapperRect = wrapperObject.AddComponent<RectTransform>();
+            wrapperRect.anchorMin = new Vector2(0.5f, 0.5f); // 중앙 고정
+            wrapperRect.anchorMax = new Vector2(0.5f, 0.5f);
+            wrapperRect.pivot = new Vector2(0.5f, 0.5f);
+            wrapperRect.sizeDelta = new Vector2(dragCopyWidth, originalHeight); // 가로는 고정, 세로는 원본
+            
+            // **중요: Wrapper에 Canvas 추가 (부모 Layout Group 영향 차단)**
+            Canvas wrapperCanvas = wrapperObject.AddComponent<Canvas>();
+            wrapperCanvas.overrideSorting = true; // 독립적인 렌더링 순서
+            wrapperCanvas.sortingOrder = 1000; // 최상위 표시
+            
+            // **Layout Element 추가 (부모 Layout Group이 크기 조정하지 못하도록)**
+            UnityEngine.UI.LayoutElement layoutElement = wrapperObject.AddComponent<UnityEngine.UI.LayoutElement>();
+            layoutElement.ignoreLayout = true; // 부모 레이아웃 무시
+            
+            // **RectMask2D 추가 (자식 오브젝트가 Wrapper 밖으로 튀어나가지 않도록)**
+            UnityEngine.UI.RectMask2D rectMask = wrapperObject.AddComponent<UnityEngine.UI.RectMask2D>();
+            
+            // **3단계: Wrapper 하위로 원본 복제**
+            dragCopy = Instantiate(gameObject, wrapperObject.transform);
             dragCopy.name = "DragCopy_" + gameObject.name;
             
-            // 복사본 설정
+            // Wrapper의 자식이므로 전체 크기에 맞춤 (stretch)
             RectTransform copyRect = dragCopy.GetComponent<RectTransform>();
             if (copyRect != null)
             {
-                copyRect.sizeDelta = rectTransform.sizeDelta;
+                copyRect.anchorMin = Vector2.zero;
+                copyRect.anchorMax = Vector2.one;
+                copyRect.offsetMin = Vector2.zero;
+                copyRect.offsetMax = Vector2.zero;
             }
             
+            // **4단계: 복제본(자식)에 투명도 및 상호작용 설정**
+            GameObject actualCopy = dragCopy; // 실제 복제된 슬롯 (Wrapper의 자식)
+            
             // 복사본 투명도 설정
-            CanvasGroup copyCanvasGroup = dragCopy.GetComponent<CanvasGroup>();
+            CanvasGroup copyCanvasGroup = actualCopy.GetComponent<CanvasGroup>();
             if (copyCanvasGroup == null)
             {
-                copyCanvasGroup = dragCopy.AddComponent<CanvasGroup>();
+                copyCanvasGroup = actualCopy.AddComponent<CanvasGroup>();
             }
             
             copyCanvasGroup.alpha = dragAlpha;
             copyCanvasGroup.blocksRaycasts = false; // 마우스 이벤트 차단 해제
             copyCanvasGroup.interactable = false; // 상호작용 차단
             
-            // **1단계: 불필요한 컴포넌트 먼저 제거 (Initialize 전)**
-            var copyDraggable = dragCopy.GetComponent<DraggableSlotUI>();
+            // 불필요한 컴포넌트 제거 (상호작용 방지)
+            var copyDraggable = actualCopy.GetComponent<DraggableSlotUI>();
             if (copyDraggable != null)
             {
                 Destroy(copyDraggable);
             }
             
-            var copySelectable = dragCopy.GetComponent<SelectableSlotUI>();
+            var copySelectable = actualCopy.GetComponent<SelectableSlotUI>();
             if (copySelectable != null)
             {
                 Destroy(copySelectable);
             }
             
-            // 복사본의 모든 하이라이트 이미지 비활성화 (선택 표시 제거)
-            var highlightImages = dragCopy.GetComponentsInChildren<Image>();
+            // 하이라이트 이미지 비활성화 (선택 표시 제거)
+            var highlightImages = actualCopy.GetComponentsInChildren<Image>(true);
             foreach (var img in highlightImages)
             {
-                if (img.name.Contains("Highlight") || img.name.Contains("highlight"))
+                if (img.name.Contains("Highlight") || img.name.Contains("highlight") || 
+                    img.name.Contains("Frame") || img.name.Contains("frame"))
                 {
                     img.enabled = false;
                 }
             }
             
-            // **2단계: 복사본에 원본 데이터 완전 동기화 (컴포넌트 제거 후)**
+            // 복사본에 원본 데이터 동기화 (빈 슬롯 방지)
             var originalActionSlot = GetComponent<ActionCommandSlotUI>();
-            var copyActionSlot = dragCopy.GetComponent<ActionCommandSlotUI>();
+            var copyActionSlot = actualCopy.GetComponent<ActionCommandSlotUI>();
             
             if (originalActionSlot != null && copyActionSlot != null && originalActionSlot.ActionData != null)
             {
-                // 복사본에 원본과 동일한 데이터로 재초기화
+                // 복사본에 원본과 동일한 데이터로 초기화
                 copyActionSlot.Initialize(
                     originalActionSlot.ActionData,
                     null, // parentUI는 필요 없음 (상호작용 없음)
                     originalActionSlot.SlotIndex,
                     originalActionSlot.IsEquippedSlot,
-                    originalActionSlot.IsStyleAction,      // 원본의 isStyle 복사
-                    originalActionSlot.IsEnhancedByStyle   // 원본의 isEnhanced 복사
+                    originalActionSlot.IsStyleAction,
+                    originalActionSlot.IsEnhancedByStyle
                 );
                 
-                Debug.Log($"[DraggableSlotUI] 복사본 데이터 동기화 완료: {originalActionSlot.ActionData.commandName} (Style={originalActionSlot.IsStyleAction}, Enhanced={originalActionSlot.IsEnhancedByStyle})");
-            }
-            else
-            {
-                Debug.LogWarning($"[DraggableSlotUI] 복사본 동기화 실패 - original={originalActionSlot != null}, copy={copyActionSlot != null}, data={originalActionSlot?.ActionData != null}");
+                Debug.Log($"[DraggableSlotUI] 복사본 데이터 동기화: {originalActionSlot.ActionData.commandName}");
             }
             
-            Debug.Log($"[DraggableSlotUI] 드래그 복사본 생성 완료: {dragCopy.name}");
+            // ItemSlotUI, EquipmentSlotUI 등 다른 슬롯 타입도 지원 (향후 확장)
+            var originalItemSlot = GetComponent<ItemSlotUI>();
+            var copyItemSlot = actualCopy.GetComponent<ItemSlotUI>();
+            
+            if (originalItemSlot != null && copyItemSlot != null)
+            {
+                // ItemSlotUI도 데이터 기반 초기화 가능하도록 (향후)
+                Debug.Log($"[DraggableSlotUI] ItemSlotUI 복사본 생성");
+            }
+            
+            // **dragCopy는 Wrapper를 가리킴 (OnDrag에서 이동시킬 대상)**
+            dragCopy = wrapperObject;
+            
+            Debug.Log($"[DraggableSlotUI] 드래그 복사본 생성 완료: {wrapperObject.name} (크기: {dragCopyWidth} x {originalHeight})");
         }
         
         
@@ -269,85 +281,102 @@ namespace BladeAction.UI
             var results = new System.Collections.Generic.List<RaycastResult>();
             EventSystem.current.RaycastAll(eventData, results);
             
-            // 첫 번째 유효한 드롭 대상 찾기
+            string resultList = "";
+            foreach (var r in results)
+            {
+                resultList += r.gameObject.name + ", ";
+            }
+            Debug.Log($"[DraggableSlotUI] Raycast 결과: {results.Count}개 - [{resultList}]");
+            
+            // 모든 결과를 순회하여 ISlotDropTarget 찾기 (우선순위 적용)
+            ISlotDropTarget firstActionSlot = null;
+            ISlotDropTarget gridAreaDropZone = null;
+            
             foreach (var result in results)
             {
                 var dropTarget = result.gameObject.GetComponent<ISlotDropTarget>();
+                
                 if (dropTarget != null)
                 {
-                    return dropTarget;
+                    Debug.Log($"  ✓ {result.gameObject.name} → ISlotDropTarget 발견! (타입: {dropTarget.GetType().Name})");
+                    
+                    // ActionCommandSlotUI는 우선순위 1
+                    if (dropTarget is ActionCommandSlotUI && firstActionSlot == null)
+                    {
+                        firstActionSlot = dropTarget;
+                    }
+                    // GridAreaDropZone은 우선순위 2 (백업)
+                    else if (dropTarget is GridAreaDropZone && gridAreaDropZone == null)
+                    {
+                        gridAreaDropZone = dropTarget;
+                    }
+                }
+                else
+                {
+                    Debug.Log($"  ✗ {result.gameObject.name} → ISlotDropTarget 없음");
                 }
             }
             
+            // 우선순위: ActionCommandSlotUI > GridAreaDropZone
+            if (firstActionSlot != null)
+            {
+                Debug.Log($"[DraggableSlotUI] 최종 선택: ActionCommandSlotUI");
+                return firstActionSlot;
+            }
+            else if (gridAreaDropZone != null)
+            {
+                Debug.Log($"[DraggableSlotUI] 최종 선택: GridAreaDropZone (영역 드롭)");
+                return gridAreaDropZone;
+            }
+            
+            Debug.Log($"[DraggableSlotUI] 드롭 대상 없음");
             return null;
         }
         
         #endregion
         
-        #region 반짝임 애니메이션 (DOTween)
+        #region 드롭 영역 하이라이트 알림
         
         /// <summary>
-        /// Frame 반짝임 애니메이션 시작
+        /// 드래그 시작 시 부모 UI에 알림 (드롭 가능 영역 하이라이트)
         /// </summary>
-        private void StartBlinkAnimation()
+        private void NotifyDragStart(object dragData)
         {
-            if (frameImage == null) return;
-            
-            // 기존 애니메이션 중지
-            StopBlinkAnimation();
-            
-            // DOTween 반짝임: Color + Scale 펄스
-            Sequence blinkSequence = DOTween.Sequence();
-            
-            // Color 반짝임 (흰색 → 초록색 → 흰색)
-            blinkSequence.Append(
-                DOTween.To(() => frameImage.color, x => frameImage.color = x, dropHighlightColor, blinkDuration)
-                    .SetEase(Ease.InOutQuad)
-            );
-            blinkSequence.Append(
-                DOTween.To(() => frameImage.color, x => frameImage.color = x, originalFrameColor, blinkDuration)
-                    .SetEase(Ease.InOutQuad)
-            );
-            
-            // 무한 반복
-            blinkSequence.SetLoops(-1, LoopType.Restart);
-            
-            // Scale 펄스 (1.0 → 1.05 → 1.0)
-            if (frameImage.transform is RectTransform frameRect)
+            // ActionCommandEquipUI 찾기
+            var actionEquipUI = GetComponentInParent<ActionCommandEquipUI>();
+            if (actionEquipUI != null)
             {
-                frameRect.DOScale(1.05f, blinkDuration)
-                    .SetEase(Ease.InOutQuad)
-                    .SetLoops(-1, LoopType.Yoyo);
+                // 드래그 소스가 장착 슬롯인지 확인
+                var actionSlot = GetComponent<ActionCommandSlotUI>();
+                bool isDraggingFromEquipped = actionSlot != null && actionSlot.IsEquippedSlot;
+                
+                actionEquipUI.OnDragStart(isDraggingFromEquipped);
             }
         }
         
         /// <summary>
-        /// Frame 반짝임 애니메이션 중지
+        /// 드래그 종료 시 부모 UI에 알림 (하이라이트 종료)
         /// </summary>
-        private void StopBlinkAnimation()
+        private void NotifyDragEnd()
         {
-            if (frameImage == null) return;
-            
-            // DOTween 애니메이션 중지 (안전하게)
-            frameImage.DOKill(true); // complete = true로 최종 상태로 이동 후 중지
-            
-            if (frameImage.transform is RectTransform frameRect)
+            // ActionCommandEquipUI 찾기
+            var actionEquipUI = GetComponentInParent<ActionCommandEquipUI>();
+            if (actionEquipUI != null)
             {
-                frameRect.DOKill(true);
-                frameRect.localScale = Vector3.one; // 스케일 복원
+                Debug.Log($"[DraggableSlotUI] NotifyDragEnd 호출 → ActionCommandEquipUI.OnDragEnd()");
+                actionEquipUI.OnDragEnd();
             }
-            
-            // 색상 복원
-            frameImage.color = originalFrameColor;
+            else
+            {
+                Debug.LogWarning($"[DraggableSlotUI] NotifyDragEnd 실패: ActionCommandEquipUI를 찾을 수 없음");
+            }
         }
         
         #endregion
         
         private void OnDestroy()
         {
-            // DOTween 정리
-            StopBlinkAnimation();
-            
+            // 드래그 복사본 정리
             if (dragCopy != null)
             {
                 Destroy(dragCopy);
@@ -355,4 +384,5 @@ namespace BladeAction.UI
         }
     }
 }
+
 

@@ -102,7 +102,7 @@ MonoBehaviour:
   tagTextPrefab: {fileID: 715864843117331776, guid: 4eedaf4d39c9bdc47b4bc526274874b7, type: 3}
   tagContainer: {fileID: 4729656930290973402}
   backgroundImage: {fileID: 5872700038828932576}
-  highlightImage: {fileID: 0}
+  highlightImage: {fileID: 8729899353032697461}
   emptySlotIcon: {fileID: 0}
   acquiredBackgroundColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
   styleBackgroundColor: {r: 0.2, g: 0.3, b: 0.4, a: 1}
@@ -147,9 +147,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BladeAction.UI.DraggableSlotUI
   dragAlpha: 0.6
   sourceAlpha: 0.3
-  frameImage: {fileID: 4404773064118574911}
-  dropHighlightColor: {r: 0, g: 1, b: 0, a: 1}
-  blinkDuration: 0.3
+  dragCopyWidth: 400
 --- !u!1 &5098393190487373738
 GameObject:
   m_ObjectHideFlags: 0
