@@ -38,8 +38,14 @@ namespace BladeAction.UI
         [SerializeField] private bool hideTextForAccessory = true;
         
         [Header("색상 설정")]
+        [Tooltip("기본 테두리 색상 (빈 슬롯)")]
+        [SerializeField] private Color normalFrameColor = new Color(0.5f, 0.5f, 0.5f, 1f); // 회색
+        
         [Tooltip("장착된 아이템이 있을 때 테두리 색상")]
         [SerializeField] private Color equippedFrameColor = new Color(1f, 0.843f, 0f, 1f); // 황금색
+        
+        [Tooltip("선택된 슬롯 테두리 색상")]
+        [SerializeField] private Color selectedFrameColor = new Color(0f, 1f, 0f, 1f); // 녹색
         
         [Tooltip("비활성화 색상")]
         [SerializeField] private Color disabledColor = new Color(0.3f, 0.3f, 0.3f, 0.5f);
@@ -69,13 +75,8 @@ namespace BladeAction.UI
             if (selectableSlot == null)
             {
                 selectableSlot = gameObject.AddComponent<SelectableSlotUI>();
-                // FrameColor 모드 사용 (EquipmentSlotUI는 frameImage만 사용)
-                selectableSlot.SetDisplayMode(SelectionDisplayMode.FrameColor);
                 Debug.Log($"[EquipmentSlotUI] SelectableSlotUI 컴포넌트 자동 추가: {gameObject.name}");
             }
-            
-            // SelectableSlotUI가 자체 색상 설정을 사용
-            // EquipmentSlotUI는 장착 상태 색상(equippedFrameColor)만 별도 관리
             
             // 컴포넌트 null 체크
             ValidateComponents();
@@ -353,38 +354,34 @@ namespace BladeAction.UI
         }
         
         /// <summary>
-        /// 테두리 색상 업데이트 (장착 상태 우선, 선택 상태는 SelectableSlotUI가 처리)
+        /// 테두리 색상 업데이트 (EquipmentSlotUI가 완전 관리)
         /// </summary>
         private void UpdateFrameColor()
         {
             if (frameImage == null) return;
             
-            // 장착 상태와 비활성화 상태는 EquipmentSlotUI가 직접 관리
-            // 선택 상태는 SelectableSlotUI가 처리하므로 여기서는 장착/비활성화만 처리
+            // 우선순위: 비활성화 > 선택됨 > 장착됨 > 기본
             
             if (equipmentSlot != null && !equipmentSlot.IsAvailable())
             {
-                // 비활성화 상태 (최우선)
+                // 1. 비활성화 상태 (최우선)
                 frameImage.color = disabledColor;
-                return;
             }
-            
-            // 선택 상태는 SelectableSlotUI가 이미 처리했으므로 스킵
-            // 단, 선택되지 않았을 때만 장착/기본 색상 적용
-            if (!isSelected)
+            else if (isSelected)
             {
-                if (equipmentSlot != null && !equipmentSlot.IsEmpty())
-                {
-                    // 장착됨
-                    frameImage.color = equippedFrameColor;
-                }
-                else
-                {
-                    // 기본 (빈 슬롯) - SelectableSlotUI의 normalFrameColor 사용
-                    // 직접 설정하지 않으면 SelectableSlotUI가 이미 설정한 색상 유지
-                }
+                // 2. 선택됨 (녹색)
+                frameImage.color = selectedFrameColor;
             }
-            // 선택됨 상태는 SelectableSlotUI가 이미 색상 변경했음
+            else if (equipmentSlot != null && !equipmentSlot.IsEmpty())
+            {
+                // 3. 장착됨 (황금색)
+                frameImage.color = equippedFrameColor;
+            }
+            else
+            {
+                // 4. 기본 (회색)
+                frameImage.color = normalFrameColor;
+            }
         }
         
         #endregion

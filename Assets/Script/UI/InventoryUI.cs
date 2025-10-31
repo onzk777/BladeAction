@@ -14,35 +14,35 @@ namespace BladeAction.UI
     /// </summary>
     public class InventoryUI : MonoBehaviour
     {
-        [Header("Character 참조 (런타임 전용)")]
-        [Tooltip("표시할 Character - 이 Character의 Inventory를 표시합니다")]
+        // Character 참조 (런타임에 자동 연결됨, Inspector 설정 불필요)
         private Character targetCharacter;
         
-        [Header("UI 컨테이너 참조")]
-        [Tooltip("메인 패널 GameObject")]
+        [Header("▣ 메인 패널 (사용 안 함)")]
+        [Tooltip("※ 더 이상 사용하지 않음 - MainMenuManager가 관리")]
         [SerializeField] private GameObject panel;
         
-        [Tooltip("아이템 그리드 컨테이너 (ItemSlotUI들이 생성될 부모)")]
+        [Header("▣ 아이템 그리드 (소지품 목록)")]
+        [Tooltip("아이템 슬롯들이 동적으로 생성될 부모 Transform (보통 Content)")]
         [SerializeField] private Transform itemGridContainer;
         
-        [Tooltip("아이템 그리드가 들어있는 ScrollRect")]
-        [SerializeField] private ScrollRect itemScrollRect;
-        
-        [Tooltip("장비 슬롯 컨테이너 (EquipmentSlotUI들이 생성될 부모)")]
-        [SerializeField] private Transform equipmentSlotContainer;
-        
-        [Tooltip("장신구 슬롯 컨테이너 (가로 배치)")]
-        [SerializeField] private Transform accessoryPanel;
-        
-        [Header("Prefab 참조")]
-        [Tooltip("아이템 슬롯 프리팹")]
+        [Tooltip("아이템 그리드 프리팹 (ItemSlot.prefab)")]
         [SerializeField] private GameObject itemSlotPrefab;
         
-        [Tooltip("장비 슬롯 프리팹")]
+        [Tooltip("아이템 그리드의 스크롤 영역 (ScrollRect 컴포넌트)")]
+        [SerializeField] private ScrollRect itemScrollRect;
+        
+        [Header("▣ 장비 슬롯 (착용 중인 장비)")]
+        [Tooltip("장비 슬롯들이 동적으로 생성될 부모 Transform (보통 EquipmentSlots)")]
+        [SerializeField] private Transform equipmentSlotContainer;
+        
+        [Tooltip("장비 슬롯 프리팹 (EquipmentSlot.prefab)")]
         [SerializeField] private GameObject equipmentSlotPrefab;
         
-        [Header("패널 참조")]
-        [Tooltip("아이템 상세 정보 패널")]
+        [Tooltip("장신구 슬롯 영역 (가로 배치, AccessoryPanel)")]
+        [SerializeField] private Transform accessoryPanel;
+        
+        [Header("▣ 상세 정보 패널")]
+        [Tooltip("선택한 아이템의 상세 정보를 표시하는 패널 (ItemDetailPanel 컴포넌트)")]
         [SerializeField] private ItemDetailPanel itemDetailPanel;
         
         /// <summary>
@@ -50,15 +50,15 @@ namespace BladeAction.UI
         /// </summary>
         public ItemDetailPanel ItemDetailPanel => itemDetailPanel;
         
-        [Tooltip("검술 유파 표시 패널")]
+        [Tooltip("착용 중인 검술 유파를 표시하는 슬롯 (EquippedSwordArtStyleUI 컴포넌트)")]
         [SerializeField] private EquippedSwordArtStyleUI EquippedSwordArtStyleUI;
         
-        [Header("UI 설정")]
-        [Tooltip("자동으로 ItemEvents 구독")]
+        [Header("▣ 설정")]
+        [Tooltip("아이템 변경 이벤트를 자동으로 구독할지 여부 (보통 true)")]
         [SerializeField] private bool autoSubscribeEvents = true;
         
-        [Header("디버그")]
-        [Tooltip("디버그 로그 출력")]
+        [Header("▣ 디버그")]
+        [Tooltip("Console에 상세 로그를 출력할지 여부")]
         [SerializeField] private bool enableDebugLog = true;
         
         // UI 슬롯 리스트

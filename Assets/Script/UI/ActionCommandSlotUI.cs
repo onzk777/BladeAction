@@ -143,7 +143,23 @@ namespace BladeAction.UI
             {
                 // 검술 데이터가 있는 경우
                 UpdateIcon(actionData.icon);
-                UpdateCategory(isStyleAction ? "유파 검술" : "습득 검술");
+                
+                // 카테고리 표시 (DisplayActionInfo 규칙 적용)
+                string categoryText;
+                if (isEnhancedByStyle)
+                {
+                    categoryText = "강화"; // 강화된 검술
+                }
+                else if (isStyleAction)
+                {
+                    categoryText = "유파"; // 유파 전용
+                }
+                else
+                {
+                    categoryText = "습득"; // 습득 검술
+                }
+                
+                UpdateCategory(categoryText);
                 UpdateName(actionData.commandName);
                 UpdateTags(actionData.tags);
                 UpdateBackgroundColor(isStyleAction);
@@ -185,10 +201,11 @@ namespace BladeAction.UI
         {
             if (commandNameText == null) return;
             
-            // 유파로 강화된 습득 검술은 별표 표시
-            if (isEnhancedByStyle && !isStyleAction)
+            // 유파로 강화된 검술은 별표 표시
+            if (isEnhancedByStyle)
             {
                 commandNameText.text = "★ " + text;
+                Debug.Log($"[ActionCommandSlotUI] 별표 표시: ★ {text} (isEnhanced={isEnhancedByStyle}, isStyle={isStyleAction})");
             }
             else
             {
@@ -266,18 +283,7 @@ namespace BladeAction.UI
             if (backgroundImage == null) return;
             
             Color categoryColor = isStyle ? styleBackgroundColor : acquiredBackgroundColor;
-            
-            // 카테고리 색상 적용 (선택 상태가 아닐 때)
-            if (!isSelected)
-            {
-                backgroundImage.color = categoryColor;
-                
-                // SelectableSlotUI의 Normal 색상도 업데이트
-                if (selectableSlot != null)
-                {
-                    selectableSlot.SetNormalColors(backgroundColor: categoryColor);
-                }
-            }
+            backgroundImage.color = categoryColor;
         }
         
         /// <summary>
@@ -285,15 +291,10 @@ namespace BladeAction.UI
         /// </summary>
         private void UpdateCategoryColor()
         {
-            if (backgroundImage != null && !isSelected)
+            if (backgroundImage != null)
             {
                 Color categoryColor = isStyleAction ? styleBackgroundColor : acquiredBackgroundColor;
                 backgroundImage.color = categoryColor;
-                
-                if (selectableSlot != null)
-                {
-                    selectableSlot.SetNormalColors(backgroundColor: categoryColor);
-                }
             }
         }
         

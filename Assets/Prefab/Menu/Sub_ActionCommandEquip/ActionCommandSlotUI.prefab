@@ -104,8 +104,6 @@ MonoBehaviour:
   emptySlotIcon: {fileID: 0}
   acquiredBackgroundColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
   styleBackgroundColor: {r: 0.2, g: 0.3, b: 0.4, a: 1}
-  selectedBackgroundColor: {r: 0.3, g: 0.5, b: 0.8, a: 1}
-  highlightColor: {r: 1, g: 1, b: 0, a: 0.5}
 --- !u!114 &7787008228307588750
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -119,14 +117,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BladeAction.UI.SelectableSlotUI
   highlightImage: {fileID: 8729899353032697461}
-  backgroundImage: {fileID: 5872700038828932576}
   frameImage: {fileID: 4404773064118574911}
-  normalBackgroundColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
-  selectedBackgroundColor: {r: 0.3, g: 0.5, b: 0.8, a: 1}
-  normalFrameColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  selectedFrameColor: {r: 0, g: 1, b: 0, a: 1}
-  highlightColor: {r: 1, g: 1, b: 0, a: 0.5}
-  displayMode: 3
+  enableClickToggle: 1
 --- !u!1 &5098393190487373738
 GameObject:
   m_ObjectHideFlags: 0
@@ -473,12 +465,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 32
+  m_fontSize: 26.35
   m_fontSizeBase: 32
   m_fontWeight: 400
-  m_enableAutoSizing: 0
+  m_enableAutoSizing: 1
   m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMax: 32
   m_fontStyle: 0
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
@@ -768,7 +760,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.41617426, g: 0.9528302, b: 0.32809716, a: 1}
+  m_Color: {r: 0.14117648, g: 0.20784314, b: 0.49411765, a: 0.3529412}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -864,15 +856,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.8679245, g: 0.8679245, b: 0.8679245, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
+  m_Sprite: {fileID: 21300000, guid: 850e02d5f2b1a0c4495c2b47f4c6e9b5, type: 3}
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4

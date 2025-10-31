@@ -146,6 +146,18 @@ public class ActionCommandDatabase : ScriptableObject
     }
     
     /// <summary>
+    /// ActionCommandData로 Key 역조회
+    /// </summary>
+    public string GetKey(ActionCommandData data)
+    {
+        if (data == null || actions == null)
+            return null;
+        
+        var entry = actions.Find(e => e != null && e.data == data);
+        return entry?.key;
+    }
+    
+    /// <summary>
     /// 모든 키 목록 반환
     /// </summary>
     public List<string> GetAllKeys()

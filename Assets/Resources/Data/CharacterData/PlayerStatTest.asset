@@ -33,6 +33,8 @@ MonoBehaviour:
     parryPoiseAttackPower: 0
     parryPoiseDamage: 50
     poiseGain: 0
+  initialAccessorySlots: 3
+  maxAccessorySlots: 5
   initialItems:
   - itemId: 'itm_weapon_test1 '
     quantity: 20
@@ -71,9 +73,6 @@ MonoBehaviour:
   - actionKey: imperial_ult
   - actionKey: street_defend
   - actionKey: street_ult
-  - actionKey: street_horizontal
-  - actionKey: street_vertical
-  - actionKey: street_vertical
   equippedActionSlot1: imperial_vertical
   equippedActionSlot2: imperial_horizontal
   equippedActionSlot3: 

@@ -314,21 +314,11 @@ public abstract class Character
         if (equippedActions[slotIndex] != null)
         {
             var previousAction = equippedActions[slotIndex];
-            // 해제된 검술을 습득 목록에 다시 추가
-            if (!acquiredActions.Contains(previousAction))
-            {
-                acquiredActions.Add(previousAction);
-            }
-            Debug.Log($"[Character] 슬롯 {slotIndex}의 '{previousAction.commandName}' 검술이 해제되어 습득 목록으로 돌아갑니다.");
+            Debug.Log($"[Character] 슬롯 {slotIndex}의 '{previousAction.commandName}' 검술이 교체됩니다.");
         }
         
         // 새 검술 장착
         equippedActions[slotIndex] = action;
-        
-        // 습득 목록에서 제거
-        acquiredActions.Remove(action);
-        
-        Debug.Log($"[Character] {Name}이(가) '{action.commandName}' 검술을 슬롯 {slotIndex}에 장착했습니다.");
         return true;
     }
     
@@ -352,13 +342,7 @@ public abstract class Character
         var unequipped = equippedActions[slotIndex];
         equippedActions[slotIndex] = null;
         
-        // 습득 목록에 다시 추가
-        if (!acquiredActions.Contains(unequipped))
-        {
-            acquiredActions.Add(unequipped);
-        }
-        
-        Debug.Log($"[Character] {Name}이(가) '{unequipped.commandName}' 검술을 슬롯 {slotIndex}에서 해제했습니다. 습득 목록으로 돌아갑니다.");
+        Debug.Log($"[Character] {Name}이(가) '{unequipped.commandName}' 검술을 슬롯 {slotIndex}에서 해제했습니다.");
         return true;
     }
     
@@ -379,6 +363,29 @@ public abstract class Character
             return null;
         
         return equippedActions[slotIndex];
+    }
+    
+    /// <summary>
+    /// 모든 장착된 검술의 Key 반환 (null 제외)
+    /// </summary>
+    public HashSet<string> GetEquippedActionKeys()
+    {
+        var database = ActionCommandDatabase.Instance;
+        if (database == null) return new HashSet<string>();
+        
+        var keys = new HashSet<string>();
+        foreach (var action in equippedActions)
+        {
+            if (action != null)
+            {
+                string key = database.GetKey(action);
+                if (!string.IsNullOrEmpty(key))
+                {
+                    keys.Add(key);
+                }
+            }
+        }
+        return keys;
     }
     
     /// <summary>

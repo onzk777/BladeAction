@@ -398,48 +398,98 @@ namespace BladeAction.UI
         /// </summary>
         private void UpdateButtons()
         {
-            if (currentAction == null || targetCharacter == null) return;
+            if (currentAction == null || targetCharacter == null)
+            {
+                Log("UpdateButtons: currentAction 또는 targetCharacter가 null");
+                return;
+            }
             
             // 장착/해제 버튼
             if (equipButton != null && equipButtonText != null)
             {
                 bool isEquipped = IsActionEquipped();
                 
+                Log($"UpdateButtons: '{currentAction.commandName}' 장착 여부={isEquipped}");
+                
                 equipButton.interactable = true;
                 equipButtonText.text = isEquipped ? "해제" : "장착";
+            }
+            else
+            {
+                Log("UpdateButtons: equipButton 또는 equipButtonText가 null");
             }
         }
         
         /// <summary>
-        /// 현재 검술이 장착되어 있는지 확인
+        /// 현재 검술이 장착되어 있는지 확인 (Key로 비교)
         /// </summary>
         private bool IsActionEquipped()
         {
-            if (currentAction == null || targetCharacter == null) return false;
+            if (currentAction == null || targetCharacter == null)
+            {
+                Log("IsActionEquipped: currentAction 또는 targetCharacter가 null");
+                return false;
+            }
+            
+            var database = ActionCommandDatabase.Instance;
+            if (database == null)
+            {
+                Log("IsActionEquipped: ActionCommandDatabase.Instance가 null");
+                return false;
+            }
+            
+            string currentKey = database.GetKey(currentAction);
+            if (string.IsNullOrEmpty(currentKey))
+            {
+                Log($"IsActionEquipped: '{currentAction.name}' 검술의 Key를 찾을 수 없음");
+                return false;
+            }
+            
+            Log($"IsActionEquipped: 현재 검술 Key='{currentKey}' 확인 중...");
             
             for (int i = 0; i < 4; i++)
             {
-                if (targetCharacter.GetEquippedAction(i) == currentAction)
+                var equipped = targetCharacter.GetEquippedAction(i);
+                if (equipped != null)
                 {
-                    return true;
+                    string equippedKey = database.GetKey(equipped);
+                    Log($"  슬롯 {i}: '{equipped.name}' Key='{equippedKey}'");
+                    
+                    if (!string.IsNullOrEmpty(equippedKey) && equippedKey == currentKey)
+                    {
+                        Log($"  → 일치! 슬롯 {i}에 장착됨");
+                        return true;
+                    }
                 }
             }
             
+            Log("  → 장착되지 않음");
             return false;
         }
         
         /// <summary>
-        /// 현재 검술이 장착된 슬롯 인덱스 찾기
+        /// 현재 검술이 장착된 슬롯 인덱스 찾기 (Key로 비교)
         /// </summary>
         private int GetEquippedSlotIndex()
         {
             if (currentAction == null || targetCharacter == null) return -1;
             
+            var database = ActionCommandDatabase.Instance;
+            if (database == null) return -1;
+            
+            string currentKey = database.GetKey(currentAction);
+            if (string.IsNullOrEmpty(currentKey)) return -1;
+            
             for (int i = 0; i < 4; i++)
             {
-                if (targetCharacter.GetEquippedAction(i) == currentAction)
+                var equipped = targetCharacter.GetEquippedAction(i);
+                if (equipped != null)
                 {
-                    return i;
+                    string equippedKey = database.GetKey(equipped);
+                    if (!string.IsNullOrEmpty(equippedKey) && equippedKey == currentKey)
+                    {
+                        return i;
+                    }
                 }
             }
             
@@ -468,7 +518,7 @@ namespace BladeAction.UI
                 int slotIndex = GetEquippedSlotIndex();
                 if (slotIndex >= 0)
                 {
-                        var actionToFocus = currentAction; // 변수 저장 (코루틴에서 사용)
+                    var actionToFocus = currentAction; // 변수 저장 (코루틴에서 사용)
                     
                     targetCharacter.UnequipAction(slotIndex);
                     Log($"검술 해제: {actionToFocus.commandName} (슬롯 {slotIndex})");
@@ -482,8 +532,8 @@ namespace BladeAction.UI
                         StartCoroutine(DelayedFocusToAction(parentUI, actionToFocus));
                     }
                     
-                    // UI 갱신
-                    UpdateDisplay();
+                    // 버튼 상태 업데이트 (지연)
+                    StartCoroutine(DelayedUpdateButtons());
                 }
             }
             else
@@ -520,9 +570,21 @@ namespace BladeAction.UI
                     StartCoroutine(DelayedFocusToEquippedSlot(parentUI, slotToFocus));
                 }
                 
-                // UI 갱신
-                UpdateDisplay();
+                // 버튼 상태 업데이트 (지연)
+                StartCoroutine(DelayedUpdateButtons());
             }
+        }
+        
+        /// <summary>
+        /// 버튼 상태 업데이트 지연 (UI 갱신 대기)
+        /// </summary>
+        private System.Collections.IEnumerator DelayedUpdateButtons()
+        {
+            // UI 재생성 대기
+            yield return null;
+            
+            // 버튼 상태 업데이트
+            UpdateButtons();
         }
         
         /// <summary>
