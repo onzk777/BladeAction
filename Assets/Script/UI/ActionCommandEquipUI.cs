@@ -525,11 +525,30 @@ namespace BladeAction.UI
         #region 슬롯 상호작용
         
         /// <summary>
-        /// 슬롯 선택 처리
+        /// 슬롯 선택 처리 (토글 모드)
         /// </summary>
         public void OnSlotSelected(ActionCommandSlotUI slot)
         {
             if (slot == null) return;
+            
+            // 같은 슬롯 재클릭 시 토글 처리
+            bool alreadySelected = (selectedSlot == slot);
+            
+            if (alreadySelected)
+            {
+                // 선택 해제
+                selectedSlot.SetSelected(false);
+                selectedSlot = null;
+                
+                // 상세 패널 숨기기
+                if (detailPanel != null)
+                {
+                    detailPanel.Hide();
+                }
+                
+                Log($"검술 선택 해제 (토글)");
+                return;
+            }
             
             // 이전 선택 해제
             if (selectedSlot != null)
@@ -547,7 +566,7 @@ namespace BladeAction.UI
                 detailPanel.Show(slot.ActionData, targetCharacter);
             }
             
-            Log($"검술 선택: {slot.ActionData?.name}");
+            Log($"검술 선택: {slot.ActionData?.commandName}");
         }
         
         /// <summary>

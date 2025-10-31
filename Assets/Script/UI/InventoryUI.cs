@@ -45,6 +45,11 @@ namespace BladeAction.UI
         [Tooltip("아이템 상세 정보 패널")]
         [SerializeField] private ItemDetailPanel itemDetailPanel;
         
+        /// <summary>
+        /// ItemDetailPanel 접근자 (외부 UI 연동용)
+        /// </summary>
+        public ItemDetailPanel ItemDetailPanel => itemDetailPanel;
+        
         [Tooltip("검술 유파 표시 패널")]
         [SerializeField] private EquippedSwordArtStyleUI EquippedSwordArtStyleUI;
         
@@ -383,7 +388,7 @@ namespace BladeAction.UI
             // SwordArtDisplayUI 초기화
             if (EquippedSwordArtStyleUI != null)
             {
-                EquippedSwordArtStyleUI.Initialize(Inventory);
+                EquippedSwordArtStyleUI.Initialize(Inventory, this);
             }
             
             // UI 생성
@@ -690,6 +695,12 @@ namespace BladeAction.UI
             // Equip 이벤트에서만 RefreshAll() 호출하도록 변경
             // 단, 장비 해제만 하는 경우를 위해 장비 슬롯만 갱신
             RefreshEquipmentSlots();
+            
+            // 유파 슬롯 해제 시 유파 UI도 갱신
+            if (data.slotType == EquipmentSlotType.SwordArtStyle)
+            {
+                RefreshSwordArtDisplay();
+            }
         }
         private void OnItemQuantityChangedEvent(ItemEventData data) => RefreshItemGrid();
         private void OnInventoryFullEvent(ItemEventData data)
@@ -714,9 +725,25 @@ namespace BladeAction.UI
                 return;
             }
             
-            // 같은 슬롯을 다시 클릭하면 선택 해제
-            if (selectedItemSlot == clickedSlot)
+            // 기존 장비 슬롯 선택 해제
+            if (selectedEquipmentSlot != null)
             {
+                selectedEquipmentSlot.SetSelected(false);
+                selectedEquipmentSlot = null;
+            }
+            
+            // 유파 슬롯 선택 해제
+            if (EquippedSwordArtStyleUI != null)
+            {
+                EquippedSwordArtStyleUI.ClearSelection();
+            }
+            
+            // 같은 슬롯 재클릭 시 토글 처리
+            bool alreadySelected = (selectedItemSlot == clickedSlot);
+            
+            if (alreadySelected)
+            {
+                // 선택 해제
                 selectedItemSlot.SetSelected(false);
                 selectedItemSlot = null;
                 
@@ -727,7 +754,7 @@ namespace BladeAction.UI
                 }
                 
                 if (enableDebugLog)
-                    Debug.Log("[InventoryUI] 아이템 선택 해제");
+                    Debug.Log("[InventoryUI] 아이템 선택 해제 (토글)");
                 return;
             }
             
@@ -735,13 +762,6 @@ namespace BladeAction.UI
             if (selectedItemSlot != null)
             {
                 selectedItemSlot.SetSelected(false);
-            }
-            
-            // 기존 장비 슬롯 선택 해제
-            if (selectedEquipmentSlot != null)
-            {
-                selectedEquipmentSlot.SetSelected(false);
-                selectedEquipmentSlot = null;
             }
             
             // 새로운 슬롯 선택
@@ -893,6 +913,32 @@ namespace BladeAction.UI
                 selectedItemSlot = null;
             }
             
+            // 유파 슬롯 선택 해제
+            if (EquippedSwordArtStyleUI != null)
+            {
+                EquippedSwordArtStyleUI.ClearSelection();
+            }
+            
+            // 같은 슬롯 재클릭 시 토글 처리
+            bool alreadySelected = (selectedEquipmentSlot == clickedSlot);
+            
+            if (alreadySelected)
+            {
+                // 선택 해제
+                selectedEquipmentSlot.SetSelected(false);
+                selectedEquipmentSlot = null;
+                
+                // 상세 정보 패널 숨기기
+                if (itemDetailPanel != null)
+                {
+                    itemDetailPanel.HidePanel();
+                }
+                
+                if (enableDebugLog)
+                    Debug.Log("[InventoryUI] 장비 슬롯 선택 해제 (토글)");
+                return;
+            }
+            
             // 기존 장비 슬롯 선택 해제
             if (selectedEquipmentSlot != null)
             {
@@ -976,7 +1022,17 @@ namespace BladeAction.UI
         /// <param name="equipSlot">포커스를 이동할 장비 슬롯</param>
         public void SetFocusToEquipmentSlot(EquipmentSlot equipSlot)
         {
-            if (equipmentSlots == null || equipmentSlots.Count == 0 || equipSlot == null)
+            if (equipSlot == null)
+                return;
+            
+            // 유파 슬롯인 경우 특수 처리
+            if (equipSlot.slotType == EquipmentSlotType.SwordArtStyle)
+            {
+                SetFocusToSwordArtStyleSlot(equipSlot);
+                return;
+            }
+            
+            if (equipmentSlots == null || equipmentSlots.Count == 0)
                 return;
             
             // 해당 EquipmentSlot에 대응하는 UI 찾기
@@ -1041,6 +1097,68 @@ namespace BladeAction.UI
             if (equipSlot != null)
             {
                 SetFocusToEquipmentSlot(equipSlot);
+            }
+        }
+        
+        /// <summary>
+        /// 유파 슬롯으로 포커스 이동
+        /// </summary>
+        private void SetFocusToSwordArtStyleSlot(EquipmentSlot equipSlot)
+        {
+            if (EquippedSwordArtStyleUI == null || equipSlot.IsEmpty())
+                return;
+            
+            // 기존 아이템/장비 슬롯 선택 해제
+            if (selectedItemSlot != null)
+            {
+                selectedItemSlot.SetSelected(false);
+                selectedItemSlot = null;
+            }
+            
+            if (selectedEquipmentSlot != null)
+            {
+                selectedEquipmentSlot.SetSelected(false);
+                selectedEquipmentSlot = null;
+            }
+            
+            // 유파 슬롯 선택 (EquippedSwordArtStyleUI를 통해)
+            if (EquippedSwordArtStyleUI != null)
+            {
+                EquippedSwordArtStyleUI.SetSelected(true);
+            }
+            
+            // ItemDetailPanel에 유파 아이템 표시
+            if (itemDetailPanel != null)
+            {
+                var tempOwnedItem = new OwnedItem(equipSlot.equippedItemKey, 1);
+                tempOwnedItem.isEquipped = true;
+                itemDetailPanel.ShowItem(tempOwnedItem);
+                
+                if (enableDebugLog)
+                    Debug.Log($"[InventoryUI] 유파 슬롯 포커스: {equipSlot.slotName}");
+            }
+        }
+        
+        /// <summary>
+        /// 모든 선택 상태 해제 (외부에서 호출용)
+        /// </summary>
+        public void ClearAllSelections()
+        {
+            if (selectedItemSlot != null)
+            {
+                selectedItemSlot.SetSelected(false);
+                selectedItemSlot = null;
+            }
+            
+            if (selectedEquipmentSlot != null)
+            {
+                selectedEquipmentSlot.SetSelected(false);
+                selectedEquipmentSlot = null;
+            }
+            
+            if (EquippedSwordArtStyleUI != null)
+            {
+                EquippedSwordArtStyleUI.ClearSelection();
             }
         }
         

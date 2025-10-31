@@ -476,6 +476,16 @@ namespace BladeAction.UI
                 // UI 갱신 (ItemEvents에서 자동으로 갱신됨)
                 ShowItem(currentItem); // 버튼 텍스트 업데이트
                 
+                // 유파 슬롯 해제인 경우 유파 UI 선택 해제
+                if (equippedSlot.slotType == EquipmentSlotType.SwordArtStyle && inventoryUI != null)
+                {
+                    var styleUI = inventoryUI.GetComponentInChildren<EquippedSwordArtStyleUI>();
+                    if (styleUI != null)
+                    {
+                        styleUI.ClearSelection();
+                    }
+                }
+                
                 // 포커스를 해제된 아이템으로 이동
                 if (inventoryUI != null)
                 {

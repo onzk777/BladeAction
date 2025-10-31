@@ -50,6 +50,10 @@ namespace BladeAction.UI
         [Tooltip("선택 상태를 어떻게 표시할지")]
         [SerializeField] private SelectionDisplayMode displayMode = SelectionDisplayMode.All;
         
+        [Header("클릭 동작 모드")]
+        [Tooltip("클릭 시 토글 동작 여부")]
+        [SerializeField] private bool enableClickToggle = true;
+        
         // 선택 상태
         private bool isSelected = false;
         
@@ -72,6 +76,35 @@ namespace BladeAction.UI
         {
             isSelected = selected;
             UpdateVisuals();
+        }
+        
+        /// <summary>
+        /// 클릭 시 호출 (토글 동작 지원)
+        /// </summary>
+        /// <param name="currentlySelected">현재 이 슬롯이 선택되어 있는지</param>
+        /// <returns>새로운 선택 상태 (true: 선택됨, false: 선택 해제됨)</returns>
+        public bool HandleClick(bool currentlySelected)
+        {
+            if (enableClickToggle && currentlySelected)
+            {
+                // 토글 모드: 이미 선택되어 있으면 해제
+                SetSelected(false);
+                return false;
+            }
+            else
+            {
+                // 비토글 모드 또는 선택되지 않은 상태: 선택
+                SetSelected(true);
+                return true;
+            }
+        }
+        
+        /// <summary>
+        /// 토글 모드 설정
+        /// </summary>
+        public void SetToggleMode(bool enableToggle)
+        {
+            enableClickToggle = enableToggle;
         }
         
         /// <summary>

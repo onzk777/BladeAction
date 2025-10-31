@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 using System.Collections.Generic;
 using BladeAction.Item;
@@ -9,11 +10,14 @@ namespace BladeAction.UI
     /// <summary>
     /// 장착된 검술 유파와 사용 가능한 검술 목록을 표시하는 UI
     /// </summary>
-    public class EquippedSwordArtStyleUI : MonoBehaviour
+    public class EquippedSwordArtStyleUI : MonoBehaviour, IPointerClickHandler
     {
         [Header("인벤토리 참조")]
         [Tooltip("인벤토리 참조 (런타임에 설정)")]
         [SerializeField] private CharacterInventory inventory;
+        
+        [Tooltip("InventoryUI 참조 (ItemDetailPanel 연동용)")]
+        private InventoryUI inventoryUI;
         
         [Header("UI 컴포넌트 - 유파 정보")]
         [Tooltip("유파 아이콘")]
@@ -46,9 +50,23 @@ namespace BladeAction.UI
         // UI 아이템 리스트
         private List<ActionCommandItemUI> commandItems = new List<ActionCommandItemUI>();
         
+        // 선택 상태 관리
+        private SelectableSlotUI selectableSlot;
+        private bool isSelected = false;
+        
         #region Unity 생명주기
         
-        // Awake는 사용하지 않음 - Initialize()에서 Refresh()가 호출됨
+        private void Awake()
+        {
+            // SelectableSlotUI 컴포넌트 가져오기 또는 추가
+            selectableSlot = GetComponent<SelectableSlotUI>();
+            if (selectableSlot == null)
+            {
+                selectableSlot = gameObject.AddComponent<SelectableSlotUI>();
+                // FrameColor나 BackgroundColor 모드 사용 가능 (Inspector에서 설정)
+                Debug.Log($"[EquippedSwordArtStyleUI] SelectableSlotUI 컴포넌트 자동 추가");
+            }
+        }
         
         #endregion
         
@@ -57,9 +75,10 @@ namespace BladeAction.UI
         /// <summary>
         /// 인벤토리 참조 설정
         /// </summary>
-        public void Initialize(CharacterInventory inventory)
+        public void Initialize(CharacterInventory inventory, InventoryUI inventoryUI = null)
         {
             this.inventory = inventory;
+            this.inventoryUI = inventoryUI;
             Refresh();
         }
         
@@ -305,6 +324,98 @@ namespace BladeAction.UI
         {
             Refresh();
             Debug.Log("[EquippedSwordArtStyleUI] 강제 갱신 완료");
+        }
+        
+        #endregion
+        
+        #region 클릭 이벤트 처리
+        
+        /// <summary>
+        /// 클릭 이벤트 처리 (유파 아이템 상세 정보 표시)
+        /// </summary>
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (inventory == null)
+            {
+                Debug.LogWarning("[EquippedSwordArtStyleUI] Inventory가 null입니다!");
+                return;
+            }
+            
+            // 유파 슬롯 찾기
+            var styleSlot = inventory.equipmentSlots.Find(s => s.slotType == EquipmentSlotType.SwordArtStyle);
+            if (styleSlot == null || styleSlot.IsEmpty())
+            {
+                if (enableDebugLog)
+                    Debug.Log("[EquippedSwordArtStyleUI] 빈 유파 슬롯 클릭 - 아무 동작 없음");
+                return;
+            }
+            
+            // 같은 슬롯 재클릭 시 토글 처리
+            bool alreadySelected = isSelected;
+            
+            if (alreadySelected)
+            {
+                // 선택 해제
+                SetSelected(false);
+                
+                // 상세 정보 패널 숨기기
+                if (inventoryUI != null && inventoryUI.ItemDetailPanel != null)
+                {
+                    inventoryUI.ItemDetailPanel.gameObject.SetActive(false);
+                }
+                
+                if (enableDebugLog)
+                    Debug.Log("[EquippedSwordArtStyleUI] 유파 슬롯 선택 해제 (토글)");
+                return;
+            }
+            
+            // 기존 선택 해제
+            if (inventoryUI != null)
+            {
+                inventoryUI.ClearAllSelections();
+            }
+            
+            // 선택 상태 설정
+            SetSelected(true);
+            
+            // InventoryUI와 ItemDetailPanel 연동
+            if (inventoryUI != null && inventoryUI.ItemDetailPanel != null)
+            {
+                // 장착된 유파 아이템을 ItemDetailPanel에 표시
+                var tempOwnedItem = new OwnedItem(styleSlot.equippedItemKey, 1);
+                tempOwnedItem.isEquipped = true;
+                
+                inventoryUI.ItemDetailPanel.ShowItem(tempOwnedItem);
+                
+                if (enableDebugLog)
+                    Debug.Log($"[EquippedSwordArtStyleUI] 유파 슬롯 클릭: {styleSlot.equippedItemKey}");
+            }
+            else
+            {
+                if (enableDebugLog)
+                    Debug.LogWarning("[EquippedSwordArtStyleUI] InventoryUI 또는 ItemDetailPanel이 연결되지 않았습니다");
+            }
+        }
+        
+        /// <summary>
+        /// 선택 상태 설정
+        /// </summary>
+        public void SetSelected(bool selected)
+        {
+            isSelected = selected;
+            
+            if (selectableSlot != null)
+            {
+                selectableSlot.SetSelected(selected);
+            }
+        }
+        
+        /// <summary>
+        /// 선택 해제 (외부에서 호출용)
+        /// </summary>
+        public void ClearSelection()
+        {
+            SetSelected(false);
         }
         
         #endregion
