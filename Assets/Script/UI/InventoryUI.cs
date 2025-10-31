@@ -143,11 +143,18 @@ namespace BladeAction.UI
         private void OnDisable()
         {
             // GameObject가 비활성화될 때 정리 작업
-            // 선택 상태 초기화
+            // 아이템 슬롯 선택 상태 초기화
             if (selectedItemSlot != null)
             {
                 selectedItemSlot.SetSelected(false);
                 selectedItemSlot = null;
+            }
+            
+            // 장비 슬롯 선택 상태 초기화
+            if (selectedEquipmentSlot != null)
+            {
+                selectedEquipmentSlot.SetSelected(false);
+                selectedEquipmentSlot = null;
             }
             
             // 상세 패널 닫기
@@ -367,10 +374,10 @@ namespace BladeAction.UI
             if (enableDebugLog)
                 Debug.Log($"[InventoryUI] UI 초기화: {Inventory.inventoryName}");
             
-            // ItemDetailPanel 초기화
+            // ItemDetailPanel 초기화 (InventoryUI 참조 전달)
             if (itemDetailPanel != null)
             {
-                itemDetailPanel.Initialize(Inventory);
+                itemDetailPanel.Initialize(Inventory, this);
             }
             
             // SwordArtDisplayUI 초기화
@@ -724,10 +731,17 @@ namespace BladeAction.UI
                 return;
             }
             
-            // 이전 선택 해제
+            // 기존 아이템 슬롯 선택 해제
             if (selectedItemSlot != null)
             {
                 selectedItemSlot.SetSelected(false);
+            }
+            
+            // 기존 장비 슬롯 선택 해제
+            if (selectedEquipmentSlot != null)
+            {
+                selectedEquipmentSlot.SetSelected(false);
+                selectedEquipmentSlot = null;
             }
             
             // 새로운 슬롯 선택
@@ -864,7 +878,32 @@ namespace BladeAction.UI
                 return;
             }
             
-            // 장착된 아이템이 있으면 해당 아이템의 상세 정보 표시
+            // 빈 슬롯은 선택하지 않음
+            if (equipSlot.IsEmpty())
+            {
+                if (enableDebugLog)
+                    Debug.Log("[InventoryUI] 빈 장비 슬롯은 선택할 수 없습니다.");
+                return;
+            }
+            
+            // 기존 아이템 슬롯 선택 해제
+            if (selectedItemSlot != null)
+            {
+                selectedItemSlot.SetSelected(false);
+                selectedItemSlot = null;
+            }
+            
+            // 기존 장비 슬롯 선택 해제
+            if (selectedEquipmentSlot != null)
+            {
+                selectedEquipmentSlot.SetSelected(false);
+            }
+            
+            // 새 장비 슬롯 선택
+            selectedEquipmentSlot = clickedSlot;
+            selectedEquipmentSlot.SetSelected(true);
+            
+            // 장착된 아이템의 상세 정보 표시
             if (!equipSlot.IsEmpty())
             {
                 // 장착된 아이템의 데이터를 직접 가져오기
@@ -923,6 +962,163 @@ namespace BladeAction.UI
         /// 패널 활성화 상태 확인
         /// </summary>
         public bool IsPanelActive => panel != null && panel.activeSelf;
+        
+        #endregion
+        
+        #region 포커스 관리
+        
+        // 현재 선택된 장비 슬롯
+        private EquipmentSlotUI selectedEquipmentSlot;
+        
+        /// <summary>
+        /// 특정 장비 슬롯으로 포커스 이동 (EquipmentSlot 인스턴스 기반)
+        /// </summary>
+        /// <param name="equipSlot">포커스를 이동할 장비 슬롯</param>
+        public void SetFocusToEquipmentSlot(EquipmentSlot equipSlot)
+        {
+            if (equipmentSlots == null || equipmentSlots.Count == 0 || equipSlot == null)
+                return;
+            
+            // 해당 EquipmentSlot에 대응하는 UI 찾기
+            var targetSlot = equipmentSlots.FirstOrDefault(slotUI => 
+                slotUI.GetEquipmentSlot() == equipSlot);
+            
+            if (targetSlot != null)
+            {
+                // 기존 아이템 선택 해제
+                if (selectedItemSlot != null)
+                {
+                    selectedItemSlot.SetSelected(false);
+                    selectedItemSlot = null;
+                }
+                
+                // 기존 장비 슬롯 선택 해제
+                if (selectedEquipmentSlot != null)
+                {
+                    selectedEquipmentSlot.SetSelected(false);
+                }
+                
+                // 새 장비 슬롯 선택
+                selectedEquipmentSlot = targetSlot;
+                selectedEquipmentSlot.SetSelected(true);
+                
+                // Unity EventSystem으로 선택 (파란색 하이라이트)
+                var selectable = targetSlot.GetComponent<UnityEngine.UI.Selectable>();
+                if (selectable != null)
+                {
+                    UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(targetSlot.gameObject);
+                }
+                
+                // 상세 패널 업데이트 (장착된 아이템 표시)
+                if (!targetSlot.IsEmpty() && itemDetailPanel != null)
+                {
+                    var tempOwnedItem = new OwnedItem(equipSlot.equippedItemKey, 1);
+                    tempOwnedItem.isEquipped = true;
+                    itemDetailPanel.ShowItem(tempOwnedItem);
+                }
+                
+                if (enableDebugLog)
+                    Debug.Log($"[InventoryUI] 포커스 이동: {equipSlot.slotName} 슬롯");
+            }
+            else
+            {
+                if (enableDebugLog)
+                    Debug.LogWarning($"[InventoryUI] 슬롯 UI를 찾을 수 없음: {equipSlot.slotName}");
+            }
+        }
+        
+        /// <summary>
+        /// 특정 장비 슬롯 타입으로 포커스 이동 (하위 호환용)
+        /// 주의: 장신구처럼 같은 타입이 여러 개 있으면 첫 번째만 선택됨
+        /// </summary>
+        public void SetFocusToEquipmentSlot(EquipmentSlotType slotType)
+        {
+            if (Inventory == null || Inventory.equipmentSlots == null)
+                return;
+            
+            // CharacterInventory의 EquipmentSlot 찾기
+            var equipSlot = Inventory.equipmentSlots.FirstOrDefault(s => s.slotType == slotType);
+            if (equipSlot != null)
+            {
+                SetFocusToEquipmentSlot(equipSlot);
+            }
+        }
+        
+        /// <summary>
+        /// 특정 아이템으로 포커스 이동 및 스크롤
+        /// </summary>
+        /// <param name="itemKey">포커스를 이동할 아이템 키</param>
+        public void SetFocusToItem(string itemKey)
+        {
+            if (itemSlots == null || itemSlots.Count == 0 || string.IsNullOrEmpty(itemKey))
+                return;
+            
+            // 해당 아이템 슬롯 찾기 (장착되지 않은 아이템만)
+            ItemSlotUI targetSlot = null;
+            foreach (var slot in itemSlots)
+            {
+                if (slot != null && !slot.IsEmpty())
+                {
+                    var ownedItem = slot.GetOwnedItem();
+                    if (ownedItem != null && ownedItem.itemKey == itemKey && !ownedItem.isEquipped)
+                    {
+                        targetSlot = slot;
+                        break;
+                    }
+                }
+            }
+            
+            if (targetSlot != null)
+            {
+                // 기존 아이템 선택 해제
+                if (selectedItemSlot != null)
+                {
+                    selectedItemSlot.SetSelected(false);
+                }
+                
+                // 기존 장비 슬롯 선택 해제
+                if (selectedEquipmentSlot != null)
+                {
+                    selectedEquipmentSlot.SetSelected(false);
+                    selectedEquipmentSlot = null;
+                }
+                
+                // 새 아이템 선택
+                selectedItemSlot = targetSlot;
+                selectedItemSlot.SetSelected(true);
+                
+                // Unity EventSystem으로 선택 (파란색 하이라이트)
+                var selectable = targetSlot.GetComponent<UnityEngine.UI.Selectable>();
+                if (selectable != null)
+                {
+                    UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(targetSlot.gameObject);
+                }
+                
+                // 상세 패널 업데이트
+                if (itemDetailPanel != null)
+                {
+                    var item = selectedItemSlot.GetOwnedItem();
+                    itemDetailPanel.ShowItem(item);
+                }
+                
+                // 자동 스크롤
+                if (scrollRoutine != null)
+                {
+                    StopCoroutine(scrollRoutine);
+                    scrollRoutine = null;
+                }
+                scrollRoutine = StartCoroutine(ScrollToItemIfOutOfViewDelayed(selectedItemSlot));
+                
+                if (enableDebugLog)
+                    Debug.Log($"[InventoryUI] 포커스 이동: {itemKey} (파란색 하이라이트)");
+            }
+            else
+            {
+                // 아이템을 찾을 수 없으면 (모두 장착되었거나 없음)
+                if (enableDebugLog)
+                    Debug.LogWarning($"[InventoryUI] 아이템 '{itemKey}'를 찾을 수 없습니다 (장착되었거나 제거됨)");
+            }
+        }
         
         #endregion
         

@@ -459,6 +459,9 @@ namespace BladeAction.UI
             
             bool isEquipped = IsActionEquipped();
             
+            // 부모 UI 찾기 (포커스 이동용)
+            var parentUI = GetComponentInParent<ActionCommandEquipUI>();
+            
             if (isEquipped)
             {
                 // 해제
@@ -467,6 +470,12 @@ namespace BladeAction.UI
                 {
                     targetCharacter.UnequipAction(slotIndex);
                     Log($"검술 해제: {currentAction.commandName} (슬롯 {slotIndex})");
+                    
+                    // 포커스를 해제된 검술로 이동
+                    if (parentUI != null)
+                    {
+                        parentUI.SetFocusToAction(currentAction);
+                    }
                 }
             }
             else
@@ -486,6 +495,12 @@ namespace BladeAction.UI
                 {
                     targetCharacter.EquipAction(currentAction, emptySlot);
                     Log($"검술 장착: {currentAction.commandName} → 슬롯 {emptySlot}");
+                    
+                    // 포커스를 장착된 슬롯으로 이동
+                    if (parentUI != null)
+                    {
+                        parentUI.SetFocusToEquippedSlot(emptySlot);
+                    }
                 }
                 else
                 {
@@ -496,8 +511,7 @@ namespace BladeAction.UI
             // UI 갱신
             UpdateDisplay();
             
-            // 부모 UI에 갱신 요청 (이벤트 또는 직접 호출)
-            var parentUI = GetComponentInParent<ActionCommandEquipUI>();
+            // 부모 UI에 갱신 요청
             if (parentUI != null)
             {
                 parentUI.RefreshUI();

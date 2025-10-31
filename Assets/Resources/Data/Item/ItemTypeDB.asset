@@ -46,8 +46,26 @@ MonoBehaviour:
     typeIcon: {fileID: 0}
     description: "\uC190\uAC00\uB77D\uC5D0 \uB07C\uC6B8 \uC218 \uC788\uB294 \uC7A5\uC2E0\uAD6C."
     category: 0
+    maxEquipCount: 2
+    requiredLevel: 0
+  - typeName: "\uBAA9\uAC78\uC774"
+    typeKey: Necklace
+    typeIcon: {fileID: 0}
+    description: "\uBAA9\uAC78\uC774"
+    category: 1
     maxEquipCount: 1
     requiredLevel: 0
-  swordArtStyles:
-  - {fileID: 11400000, guid: 1b844bdf3947de140b680e74e35a23ae, type: 2}
-  - {fileID: 11400000, guid: 0b9381922b6f4064c9fa76ce99959125, type: 2}
+  - typeName: "\uD314\uCC0C"
+    typeKey: Bracelet
+    typeIcon: {fileID: 0}
+    description: "\uD314\uCC0C"
+    category: 2
+    maxEquipCount: 1
+    requiredLevel: 0
+  - typeName: "\uD2B9\uC218 \uC7A5\uBE44"
+    typeKey: Special
+    typeIcon: {fileID: 0}
+    description: "\uD2B9\uC218 \uC7A5\uBE44"
+    category: 3
+    maxEquipCount: 1
+    requiredLevel: 0

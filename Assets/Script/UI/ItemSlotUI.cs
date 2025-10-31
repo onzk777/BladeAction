@@ -29,19 +29,12 @@ namespace BladeAction.UI
         [Tooltip("빈 슬롯일 때 표시할 아이콘 (null이면 비활성화)")]
         [SerializeField] private Sprite emptySlotIcon;
         
-        [Header("색상 설정")]
-        [Tooltip("선택되지 않은 배경 색상")]
-        [SerializeField] private Color normalBackgroundColor = new Color(0.2f, 0.2f, 0.2f, 1f);
-        
-        [Tooltip("선택된 배경 색상")]
-        [SerializeField] private Color selectedBackgroundColor = new Color(0.3f, 0.5f, 0.8f, 1f);
-        
-        [Tooltip("하이라이트 색상")]
-        [SerializeField] private Color highlightColor = new Color(1f, 1f, 0f, 0.5f);
-        
         // 슬롯 데이터
         private OwnedItem ownedItem;
         private bool isSelected = false;
+        
+        // 선택 상태 관리 컴포넌트
+        private SelectableSlotUI selectableSlot;
         
         // 클릭 이벤트 콜백
         public System.Action<ItemSlotUI> OnSlotClicked;
@@ -50,6 +43,16 @@ namespace BladeAction.UI
         
         private void Awake()
         {
+            // SelectableSlotUI 컴포넌트 가져오기 또는 추가
+            selectableSlot = GetComponent<SelectableSlotUI>();
+            if (selectableSlot == null)
+            {
+                selectableSlot = gameObject.AddComponent<SelectableSlotUI>();
+                Debug.Log($"[ItemSlotUI] SelectableSlotUI 컴포넌트 자동 추가: {gameObject.name}");
+            }
+            
+            // SelectableSlotUI가 자체 색상 설정을 사용
+            
             // 컴포넌트 null 체크
             ValidateComponents();
             
@@ -182,20 +185,10 @@ namespace BladeAction.UI
         {
             isSelected = selected;
             
-            // 배경 색상 변경
-            if (backgroundImage != null)
+            // SelectableSlotUI에 위임
+            if (selectableSlot != null)
             {
-                backgroundImage.color = selected ? selectedBackgroundColor : normalBackgroundColor;
-            }
-            
-            // 하이라이트 표시
-            if (highlightImage != null)
-            {
-                highlightImage.enabled = selected;
-                if (selected)
-                {
-                    highlightImage.color = highlightColor;
-                }
+                selectableSlot.SetSelected(selected);
             }
         }
         

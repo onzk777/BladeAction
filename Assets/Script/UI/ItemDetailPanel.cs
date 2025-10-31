@@ -16,6 +16,9 @@ namespace BladeAction.UI
         [Tooltip("인벤토리 참조 (런타임에 설정)")]
         [SerializeField] private CharacterInventory inventory;
         
+        // InventoryUI 참조 (포커스 관리용)
+        private InventoryUI inventoryUI;
+        
         [Header("UI 컴포넌트 - 기본 정보")]
         [Tooltip("선택된 아이템 아이콘")]
         [SerializeField] private Image itemIcon;
@@ -125,9 +128,10 @@ namespace BladeAction.UI
         /// <summary>
         /// 인벤토리 참조 설정
         /// </summary>
-        public void Initialize(CharacterInventory inventory)
+        public void Initialize(CharacterInventory inventory, InventoryUI inventoryUI = null)
         {
             this.inventory = inventory;
+            this.inventoryUI = inventoryUI;
             Clear();
         }
         
@@ -184,6 +188,13 @@ namespace BladeAction.UI
             if (toggleButtonText != null)
             {
                 toggleButtonText.gameObject.SetActive(canShowStats);
+            }
+            
+            // 스탯 정보가 없으면 강제로 설명 표시
+            if (!canShowStats)
+            {
+                showDescription = true;
+                UpdateToggleDisplay();
             }
         }
         
@@ -417,7 +428,7 @@ namespace BladeAction.UI
             }
             
             // 인벤토리에 장착 요청
-            bool success = inventory.EquipItem(currentItem.itemKey, slotType);
+            bool success = inventory.EquipItem(currentItem.itemKey, slotType, out var equippedSlot);
             
             if (enableDebugLog)
                 Debug.Log($"[ItemDetailPanel] 아이템 장착: {currentItem.itemKey} → {slotType} ({success})");
@@ -426,6 +437,12 @@ namespace BladeAction.UI
             {
                 // UI 갱신 (ItemEvents에서 자동으로 갱신됨)
                 ShowItem(currentItem); // 버튼 텍스트 업데이트
+                
+                // 포커스를 실제 장착된 슬롯으로 이동
+                if (inventoryUI != null && equippedSlot != null)
+                {
+                    inventoryUI.SetFocusToEquipmentSlot(equippedSlot);
+                }
             }
         }
         
@@ -434,25 +451,36 @@ namespace BladeAction.UI
         /// </summary>
         private void UnequipItem(BladeAction.Item.Item itemData)
         {
-            // 아이템 타입에 맞는 슬롯 타입 결정
-            EquipmentSlotType slotType = GetSlotTypeForItem(itemData.itemType);
-            
-            if (slotType == EquipmentSlotType.None)
+            if (currentItem == null || !currentItem.isEquipped)
             {
-                Debug.LogWarning($"[ItemDetailPanel] 해제할 수 없는 아이템 타입: {itemData.itemType}");
+                Debug.LogWarning($"[ItemDetailPanel] 장착되지 않은 아이템을 해제하려고 시도함");
                 return;
             }
             
-            // 인벤토리에 해제 요청
-            bool success = inventory.UnequipItem(slotType);
+            // 현재 아이템이 장착된 슬롯 찾기
+            var equippedSlot = inventory.FindEquippedSlot(currentItem.itemKey);
+            if (equippedSlot == null)
+            {
+                Debug.LogWarning($"[ItemDetailPanel] 아이템 '{currentItem.itemKey}'가 장착된 슬롯을 찾을 수 없습니다");
+                return;
+            }
+            
+            // 인벤토리에 해제 요청 (슬롯 인스턴스 전달)
+            bool success = inventory.UnequipItem(equippedSlot);
             
             if (enableDebugLog)
-                Debug.Log($"[ItemDetailPanel] 아이템 해제: {currentItem.itemKey} ({success})");
+                Debug.Log($"[ItemDetailPanel] 아이템 해제: {currentItem.itemKey} from {equippedSlot.slotName} ({success})");
             
             if (success)
             {
                 // UI 갱신 (ItemEvents에서 자동으로 갱신됨)
                 ShowItem(currentItem); // 버튼 텍스트 업데이트
+                
+                // 포커스를 해제된 아이템으로 이동
+                if (inventoryUI != null)
+                {
+                    inventoryUI.SetFocusToItem(currentItem.itemKey);
+                }
             }
         }
         

@@ -63,6 +63,15 @@ public class CharacterData : ScriptableObject
         guardDRBonus = 5
     };
     
+    [Header("장신구 슬롯 설정")]
+    [Tooltip("초기 장신구 슬롯 개수 (게임 시작 시)")]
+    [Range(1, 10)]
+    public int initialAccessorySlots = 3;
+    
+    [Tooltip("최대 장신구 슬롯 개수 (성장 한계)")]
+    [Range(1, 10)]
+    public int maxAccessorySlots = 5;
+    
     [Header("초기 인벤토리")]
     [Tooltip("캐릭터 생성 시 보유할 아이템 목록")]
     public List<InitialItemEntry> initialItems = new List<InitialItemEntry>();

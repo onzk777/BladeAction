@@ -51,6 +51,20 @@ public abstract class Character
     private List<ActionCommandData> acquiredActions = new List<ActionCommandData>();
     private ActionCommandData[] equippedActions = new ActionCommandData[4];
     
+    // 장신구 슬롯 관리
+    private int currentAccessorySlots = 3;
+    private int maxAccessorySlots = 5;
+    
+    /// <summary>
+    /// 현재 장신구 슬롯 개수
+    /// </summary>
+    public int CurrentAccessorySlots => currentAccessorySlots;
+    
+    /// <summary>
+    /// 최대 장신구 슬롯 개수
+    /// </summary>
+    public int MaxAccessorySlots => maxAccessorySlots;
+    
     /// <summary>
     /// 사용 가능한 검술 목록 (장착된 4개)
     /// </summary>
@@ -67,6 +81,14 @@ public abstract class Character
     public Character(CharacterData characterData)
     {
         CharacterData = characterData;
+        
+        // 장신구 슬롯 설정 초기화
+        if (characterData != null)
+        {
+            currentAccessorySlots = characterData.initialAccessorySlots;
+            maxAccessorySlots = characterData.maxAccessorySlots;
+        }
+        
         InitializeRuntimeStats();
     }
     
@@ -411,6 +433,55 @@ public abstract class Character
         if (unequippedCount > 0)
         {
             Debug.Log($"[Character] 유파 해제로 인해 {unequippedCount}개 검술 자동 해제");
+        }
+    }
+    
+    #endregion
+    
+    #region 장신구 슬롯 관리
+    
+    /// <summary>
+    /// 장신구 슬롯 추가 (성장/아이템 효과)
+    /// </summary>
+    /// <returns>슬롯 추가 성공 여부</returns>
+    public bool AddAccessorySlot()
+    {
+        if (currentAccessorySlots >= maxAccessorySlots)
+        {
+            Debug.LogWarning($"[Character] {Name}의 장신구 슬롯이 최대치입니다: {currentAccessorySlots}/{maxAccessorySlots}");
+            return false;
+        }
+        
+        currentAccessorySlots++;
+        
+        // Inventory에도 슬롯 추가
+        if (Inventory != null)
+        {
+            Inventory.AddAccessorySlot();
+            Debug.Log($"[Character] {Name}의 장신구 슬롯 추가: {currentAccessorySlots - 1} → {currentAccessorySlots}");
+        }
+        
+        return true;
+    }
+    
+    /// <summary>
+    /// 장신구 슬롯 설정 (디버그/치트용)
+    /// </summary>
+    public void SetAccessorySlots(int count)
+    {
+        count = Mathf.Clamp(count, 1, maxAccessorySlots);
+        
+        if (count == currentAccessorySlots)
+            return;
+        
+        int oldCount = currentAccessorySlots;
+        currentAccessorySlots = count;
+        
+        // Inventory 재초기화 필요
+        if (Inventory != null)
+        {
+            Inventory.ReinitializeEquipmentSlots(currentAccessorySlots);
+            Debug.Log($"[Character] {Name}의 장신구 슬롯 설정: {oldCount} → {currentAccessorySlots}");
         }
     }
     

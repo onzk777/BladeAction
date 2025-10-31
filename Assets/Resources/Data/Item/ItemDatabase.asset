@@ -108,3 +108,78 @@ MonoBehaviour:
     swordArtStyleData: {fileID: 0}
     useStatTable: 0
     statTableKey: Test_Armor_Metal
+  - itemKey: itm_accessory_test1
+    itemName: "\uB3CC\uBC18\uC9C0"
+    description: "\uB3CC\uB85C \uB9CC\uB4E0 \uC2F8\uAD6C\uB824 \uBC18\uC9C0"
+    itemType: 3
+    requiredLevel: 0
+    maxStack: 1
+    icon: {fileID: 10915, guid: 0000000000000000f000000000000000, type: 0}
+    appearance: {fileID: 0}
+    weaponTypeKey: 
+    armorTypeKey: 
+    accessoryTypeKey: Ring
+    swordArtStyleKey: 
+    swordArtStyleData: {fileID: 0}
+    useStatTable: 0
+    statTableKey: Test_Armor_Metal
+  - itemKey: itm_accessory_test2
+    itemName: "\uC1E0 \uBAA9\uAC78\uC774"
+    description: "\uC1E0\uC0AC\uC2AC\uB85C \uB9CC\uB4E0 \uC2F8\uAD6C\uB824 \uBAA9\uAC78\uC774"
+    itemType: 3
+    requiredLevel: 0
+    maxStack: 1
+    icon: {fileID: 10915, guid: 0000000000000000f000000000000000, type: 0}
+    appearance: {fileID: 0}
+    weaponTypeKey: 
+    armorTypeKey: 
+    accessoryTypeKey: Ring
+    swordArtStyleKey: 
+    swordArtStyleData: {fileID: 0}
+    useStatTable: 0
+    statTableKey: Test_Armor_Metal
+  - itemKey: itm_accessory_test3
+    itemName: "\uAD6C\uB9AC \uD314\uCC0C"
+    description: "\uAD6C\uB9AC \uC7AC\uC9C8\uC758 \uC2F8\uAD6C\uB824 \uD314\uCC0C"
+    itemType: 3
+    requiredLevel: 0
+    maxStack: 1
+    icon: {fileID: 10915, guid: 0000000000000000f000000000000000, type: 0}
+    appearance: {fileID: 0}
+    weaponTypeKey: 
+    armorTypeKey: 
+    accessoryTypeKey: Bracelet
+    swordArtStyleKey: 
+    swordArtStyleData: {fileID: 0}
+    useStatTable: 0
+    statTableKey: Test_Armor_Metal
+  - itemKey: itm_accessory_test4
+    itemName: "\uC1E0\uBC18\uC9C0"
+    description: "\uC5F0\uCCA0\uB85C \uB9CC\uB4E0 \uC2F8\uAD6C\uB824 \uBC18\uC9C0"
+    itemType: 3
+    requiredLevel: 0
+    maxStack: 1
+    icon: {fileID: 10915, guid: 0000000000000000f000000000000000, type: 0}
+    appearance: {fileID: 0}
+    weaponTypeKey: 
+    armorTypeKey: 
+    accessoryTypeKey: Ring
+    swordArtStyleKey: 
+    swordArtStyleData: {fileID: 0}
+    useStatTable: 0
+    statTableKey: Test_Armor_Metal
+  - itemKey: itm_accessory_test5
+    itemName: "\uC6A9\uC0AC\uC758 \uC99D\uD45C"
+    description: "\uB108\uB294 \uC6A9\uC0AC\uB2E4"
+    itemType: 3
+    requiredLevel: 0
+    maxStack: 1
+    icon: {fileID: 10915, guid: 0000000000000000f000000000000000, type: 0}
+    appearance: {fileID: 0}
+    weaponTypeKey: 
+    armorTypeKey: 
+    accessoryTypeKey: Special
+    swordArtStyleKey: 
+    swordArtStyleData: {fileID: 0}
+    useStatTable: 0
+    statTableKey: Test_Armor_Metal

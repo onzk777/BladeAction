@@ -582,6 +582,9 @@ namespace BladeAction.UI
             // UI 갱신
             RefreshEquippedSlots();
             
+            // 포커스를 장착된 슬롯으로 이동
+            SetFocusToEquippedSlot(slotIndex);
+            
             Log($"검술 장착: {action.commandName} → 슬롯 {slotIndex}");
         }
         
@@ -604,6 +607,9 @@ namespace BladeAction.UI
             
             // UI 갱신
             RefreshEquippedSlots();
+            
+            // 포커스를 해제된 검술로 이동
+            SetFocusToAction(action);
             
             Log($"검술 해제: {action.commandName} (슬롯 {slotIndex})");
         }
@@ -631,6 +637,217 @@ namespace BladeAction.UI
             {
                 styleUI.Initialize(targetCharacter.Inventory);
             }
+        }
+        
+        #endregion
+        
+        #region 포커스 관리
+        
+        /// <summary>
+        /// 현재 그리드에서 검술 슬롯 찾기
+        /// </summary>
+        private ActionCommandSlotUI FindActionSlotInCurrentGrid(ActionCommandData action)
+        {
+            if (action == null || actionSlots == null || actionSlots.Count == 0)
+                return null;
+            
+            foreach (var slot in actionSlots)
+            {
+                if (slot != null && slot.ActionData == action)
+                {
+                    return slot;
+                }
+            }
+            
+            return null;
+        }
+        
+        /// <summary>
+        /// 특정 장착 슬롯으로 포커스 이동
+        /// </summary>
+        /// <param name="slotIndex">포커스를 이동할 슬롯 인덱스 (0~3)</param>
+        public void SetFocusToEquippedSlot(int slotIndex)
+        {
+            if (slotIndex < 0 || slotIndex >= equippedSlots.Count)
+                return;
+            
+            var targetSlot = equippedSlots[slotIndex];
+            if (targetSlot == null)
+                return;
+            
+            // 기존 선택 해제
+            if (selectedSlot != null)
+            {
+                selectedSlot.SetSelected(false);
+            }
+            
+            // 새 슬롯 선택
+            selectedSlot = targetSlot;
+            selectedSlot.SetSelected(true);
+            
+            // Unity EventSystem으로 선택 (파란색 하이라이트)
+            var selectable = targetSlot.GetComponent<UnityEngine.UI.Selectable>();
+            if (selectable != null)
+            {
+                UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(targetSlot.gameObject);
+            }
+            
+            // 상세 패널 업데이트
+            if (detailPanel != null && targetSlot.ActionData != null)
+            {
+                detailPanel.Show(targetSlot.ActionData, targetCharacter);
+            }
+            
+            Log($"포커스 이동: 장착 슬롯 {slotIndex} (파란색 하이라이트)");
+        }
+        
+        /// <summary>
+        /// 특정 검술로 포커스 이동 및 스크롤 (탭 자동 전환 지원)
+        /// </summary>
+        /// <param name="action">포커스를 이동할 검술</param>
+        public void SetFocusToAction(ActionCommandData action)
+        {
+            if (action == null)
+                return;
+            
+            // 현재 그리드에서 검술 찾기
+            ActionCommandSlotUI targetSlot = FindActionSlotInCurrentGrid(action);
+            
+            // 현재 그리드에 없으면 탭 전환 시도
+            if (targetSlot == null)
+            {
+                // 유파 검술인지 확인
+                bool isStyleAction = IsActionFromStyle(action);
+                
+                if (isStyleAction && currentMode != GridDisplayMode.SwordArtActions)
+                {
+                    // 유파 검술 탭으로 전환
+                    ShowSwordArtActions();
+                    Log($"유파 검술을 찾기 위해 유파 탭으로 전환");
+                }
+                else if (!isStyleAction && currentMode != GridDisplayMode.AcquiredActions)
+                {
+                    // 습득 검술 탭으로 전환
+                    ShowAcquiredActions();
+                    Log($"습득 검술을 찾기 위해 습득 탭으로 전환");
+                }
+                
+                // 탭 전환 후 다시 찾기
+                targetSlot = FindActionSlotInCurrentGrid(action);
+            }
+            
+            if (targetSlot != null)
+            {
+                // 기존 선택 해제
+                if (selectedSlot != null)
+                {
+                    selectedSlot.SetSelected(false);
+                }
+                
+                // 새 슬롯 선택
+                selectedSlot = targetSlot;
+                selectedSlot.SetSelected(true);
+                
+                // Unity EventSystem으로 선택 (파란색 하이라이트)
+                var selectable = targetSlot.GetComponent<UnityEngine.UI.Selectable>();
+                if (selectable != null)
+                {
+                    UnityEngine.EventSystems.EventSystem.current?.SetSelectedGameObject(targetSlot.gameObject);
+                }
+                
+                // 상세 패널 업데이트
+                if (detailPanel != null)
+                {
+                    detailPanel.Show(action, targetCharacter);
+                }
+                
+                // 자동 스크롤 (InventoryUI와 유사한 로직)
+                if (actionScrollRect != null)
+                {
+                    StartCoroutine(ScrollToActionIfOutOfViewDelayed(targetSlot));
+                }
+                
+                Log($"포커스 이동: {action.commandName} (파란색 하이라이트)");
+            }
+        }
+        
+        /// <summary>
+        /// 검술 슬롯으로 자동 스크롤 (뷰포트 밖일 때만)
+        /// </summary>
+        private System.Collections.IEnumerator ScrollToActionIfOutOfViewDelayed(ActionCommandSlotUI targetSlot)
+        {
+            if (actionScrollRect == null || targetSlot == null)
+                yield break;
+            
+            var content = actionScrollRect.content;
+            var viewport = actionScrollRect.viewport != null ? actionScrollRect.viewport : (RectTransform)actionScrollRect.transform;
+            var target = targetSlot.GetComponent<RectTransform>();
+            
+            if (content == null || viewport == null || target == null)
+                yield break;
+            
+            // 레이아웃 업데이트 대기
+            yield return new WaitForEndOfFrame();
+            Canvas.ForceUpdateCanvases();
+            
+            // 뷰포트 및 타겟 위치 계산 (InventoryUI와 동일한 로직)
+            Vector3[] viewWC = new Vector3[4];
+            Vector3[] targetWC = new Vector3[4];
+            viewport.GetWorldCorners(viewWC);
+            target.GetWorldCorners(targetWC);
+            
+            Vector2 viewTopLocal, viewBottomLocal;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                content,
+                RectTransformUtility.WorldToScreenPoint(null, viewWC[1]),
+                null,
+                out viewTopLocal
+            );
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                content,
+                RectTransformUtility.WorldToScreenPoint(null, viewWC[0]),
+                null,
+                out viewBottomLocal
+            );
+            
+            Vector2 targetTopLocal, targetBottomLocal;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                content,
+                RectTransformUtility.WorldToScreenPoint(null, targetWC[1]),
+                null,
+                out targetTopLocal
+            );
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                content,
+                RectTransformUtility.WorldToScreenPoint(null, targetWC[0]),
+                null,
+                out targetBottomLocal
+            );
+            
+            const float tol = 2f;
+            bool above = targetTopLocal.y > viewTopLocal.y - tol;
+            bool below = targetBottomLocal.y < viewBottomLocal.y + tol;
+            
+            if (!above && !below)
+                yield break;
+            
+            float viewportHeight = viewport.rect.height;
+            float contentHeight = content.rect.height;
+            float maxY = Mathf.Max(0f, contentHeight - viewportHeight);
+            Vector2 anchored = content.anchoredPosition;
+            
+            if (above)
+            {
+                float delta = targetTopLocal.y - viewTopLocal.y;
+                anchored.y = Mathf.Clamp(anchored.y - delta, 0f, maxY);
+            }
+            else // below
+            {
+                float delta = viewBottomLocal.y - targetBottomLocal.y;
+                anchored.y = Mathf.Clamp(anchored.y + delta, 0f, maxY);
+            }
+            
+            content.anchoredPosition = anchored;
         }
         
         #endregion

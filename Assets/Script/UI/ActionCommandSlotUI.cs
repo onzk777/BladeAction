@@ -49,12 +49,6 @@ namespace BladeAction.UI
         [Tooltip("유파 검술 배경 색상")]
         [SerializeField] private Color styleBackgroundColor = new Color(0.2f, 0.3f, 0.4f, 1f);
         
-        [Tooltip("선택된 배경 색상")]
-        [SerializeField] private Color selectedBackgroundColor = new Color(0.3f, 0.5f, 0.8f, 1f);
-        
-        [Tooltip("하이라이트 색상")]
-        [SerializeField] private Color highlightColor = new Color(1f, 1f, 0f, 0.5f);
-        
         // 슬롯 데이터
         private ActionCommandData actionData;
         private ActionCommandEquipUI parentUI;
@@ -62,6 +56,9 @@ namespace BladeAction.UI
         private bool isEquippedSlot = false;
         private bool isSelected = false;
         private bool isStyleAction = false;  // 유파 검술인지 여부
+        
+        // 선택 상태 관리 컴포넌트
+        private SelectableSlotUI selectableSlot;
         
         // 프로퍼티
         public ActionCommandData ActionData => actionData;
@@ -72,6 +69,16 @@ namespace BladeAction.UI
         
         private void Awake()
         {
+            // SelectableSlotUI 컴포넌트 가져오기 또는 추가
+            selectableSlot = GetComponent<SelectableSlotUI>();
+            if (selectableSlot == null)
+            {
+                selectableSlot = gameObject.AddComponent<SelectableSlotUI>();
+                Debug.Log($"[ActionCommandSlotUI] SelectableSlotUI 컴포넌트 자동 추가: {gameObject.name}");
+            }
+            
+            // SelectableSlotUI가 자체 색상 설정을 사용
+            
             // 컴포넌트 null 체크
             ValidateComponents();
             
@@ -263,25 +270,17 @@ namespace BladeAction.UI
         {
             isSelected = selected;
             
-            // 배경 색상 변경
-            if (backgroundImage != null)
+            // SelectableSlotUI에 위임
+            if (selectableSlot != null)
             {
-                if (isSelected)
+                // 카테고리별 배경 색상 설정
+                if (!selected)
                 {
-                    backgroundImage.color = selectedBackgroundColor;
+                    Color normalColor = isStyleAction ? styleBackgroundColor : acquiredBackgroundColor;
+                    selectableSlot.SetNormalColors(backgroundColor: normalColor);
                 }
-                else
-                {
-                    // 카테고리별 색상 적용
-                    backgroundImage.color = isStyleAction ? styleBackgroundColor : acquiredBackgroundColor;
-                }
-            }
-            
-            // 하이라이트 표시
-            if (highlightImage != null)
-            {
-                highlightImage.enabled = isSelected;
-                highlightImage.color = highlightColor;
+                
+                selectableSlot.SetSelected(selected);
             }
         }
         

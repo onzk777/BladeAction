@@ -52,26 +52,96 @@ namespace BladeAction.Item
         /// </summary>
         public CharacterInventory()
         {
-            InitializeDefaultEquipmentSlots();
+            InitializeDefaultEquipmentSlots(3); // 기본 3개
+        }
+        
+        /// <summary>
+        /// 장신구 슬롯 개수를 지정한 생성자
+        /// </summary>
+        public CharacterInventory(int accessorySlotCount)
+        {
+            InitializeDefaultEquipmentSlots(accessorySlotCount);
         }
         
         /// <summary>
         /// 기본 장비 슬롯 초기화
-        /// 총 6개 슬롯: 무기 1, 갑옷 1, 장신구 3, 검술 유파 1
+        /// 총 슬롯: 무기 1, 갑옷 1, 장신구 N개, 검술 유파 1
         /// </summary>
-        private void InitializeDefaultEquipmentSlots()
+        private void InitializeDefaultEquipmentSlots(int accessorySlotCount = 3)
         {
             equipmentSlots.Clear();
             equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Weapon, "주무기"));
             equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Armor, "갑옷"));
             
-            // 장신구 슬롯 3개
-            equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Accessory, "장신구1"));
-            equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Accessory, "장신구2"));
-            equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Accessory, "장신구3"));
+            // 장신구 슬롯 동적 생성
+            for (int i = 0; i < accessorySlotCount; i++)
+            {
+                equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Accessory, $"장신구{i + 1}"));
+            }
             
             // 검술 유파 슬롯
             equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.SwordArtStyle, "검술 유파"));
+        }
+        
+        /// <summary>
+        /// 장신구 슬롯 추가 (런타임)
+        /// </summary>
+        public void AddAccessorySlot()
+        {
+            int currentCount = equipmentSlots.Count(s => s.slotType == EquipmentSlotType.Accessory);
+            string slotName = $"장신구{currentCount + 1}";
+            
+            // SwordArtStyle 슬롯 앞에 삽입
+            int insertIndex = equipmentSlots.FindIndex(s => s.slotType == EquipmentSlotType.SwordArtStyle);
+            if (insertIndex >= 0)
+            {
+                equipmentSlots.Insert(insertIndex, new EquipmentSlot(EquipmentSlotType.Accessory, slotName));
+                Debug.Log($"[CharacterInventory] 장신구 슬롯 추가: {slotName} (총 {currentCount + 1}개)");
+            }
+            else
+            {
+                // SwordArtStyle 슬롯이 없으면 맨 뒤에 추가
+                equipmentSlots.Add(new EquipmentSlot(EquipmentSlotType.Accessory, slotName));
+            }
+        }
+        
+        /// <summary>
+        /// 장비 슬롯 재초기화 (장신구 슬롯 수 변경 시)
+        /// </summary>
+        public void ReinitializeEquipmentSlots(int accessorySlotCount)
+        {
+            // 기존 장착 아이템 백업
+            var equippedBackup = new Dictionary<EquipmentSlotType, string>();
+            foreach (var slot in equipmentSlots)
+            {
+                if (!slot.IsEmpty())
+                {
+                    // 장신구는 인덱스별로 백업
+                    if (slot.slotType == EquipmentSlotType.Accessory)
+                    {
+                        // 장신구는 여러 개이므로 패스 (재초기화 시 유지하려면 별도 로직 필요)
+                    }
+                    else
+                    {
+                        equippedBackup[slot.slotType] = slot.equippedItemKey;
+                    }
+                }
+            }
+            
+            // 슬롯 재초기화
+            InitializeDefaultEquipmentSlots(accessorySlotCount);
+            
+            // 장비 복원 (장신구 제외)
+            foreach (var kvp in equippedBackup)
+            {
+                var slot = equipmentSlots.FirstOrDefault(s => s.slotType == kvp.Key);
+                if (slot != null)
+                {
+                    slot.EquipItem(kvp.Value);
+                }
+            }
+            
+            Debug.Log($"[CharacterInventory] 장비 슬롯 재초기화 완료 (장신구 {accessorySlotCount}개)");
         }
         
         #region 아이템 관리
@@ -251,12 +321,24 @@ namespace BladeAction.Item
         /// <summary>
         /// 아이템 장착
         /// </summary>
-        public bool EquipItem(string itemKey, EquipmentSlotType slotType)
+        /// <param name="itemKey">장착할 아이템 키</param>
+        /// <param name="slotType">슬롯 타입</param>
+        /// <param name="equippedSlot">실제 장착된 슬롯 (out 파라미터)</param>
+        /// <returns>장착 성공 여부</returns>
+        public bool EquipItem(string itemKey, EquipmentSlotType slotType, out EquipmentSlot equippedSlot)
         {
+            equippedSlot = null;
+            
             if (isLocked || string.IsNullOrEmpty(itemKey))
                 return false;
-                
-            var slot = equipmentSlots.FirstOrDefault(s => s.slotType == slotType);
+            
+            // 아이템 데이터 가져오기
+            var item = ItemDatabase.GetItemSafe(itemKey);
+            if (item == null)
+                return false;
+            
+            // 적절한 슬롯 찾기
+            EquipmentSlot slot = FindBestSlotForItem(itemKey, slotType);
             if (slot == null || !slot.CanEquipItem(itemKey))
                 return false;
                 
@@ -280,6 +362,9 @@ namespace BladeAction.Item
                     // 스탯 재계산 트리거
                     TriggerStatsRecalculation();
                     
+                    // 실제 장착된 슬롯 반환
+                    equippedSlot = slot;
+                    
                     return true;
                 }
             }
@@ -288,15 +373,98 @@ namespace BladeAction.Item
         }
         
         /// <summary>
-        /// 아이템 해제
+        /// 아이템 장착 (하위 호환용 - out 파라미터 없음)
         /// </summary>
-        public bool UnequipItem(EquipmentSlotType slotType)
+        public bool EquipItem(string itemKey, EquipmentSlotType slotType)
         {
-            if (isLocked)
-                return false;
-                
-            var slot = equipmentSlots.FirstOrDefault(s => s.slotType == slotType);
-            if (slot == null || slot.IsEmpty())
+            return EquipItem(itemKey, slotType, out _);
+        }
+        
+        /// <summary>
+        /// 아이템에 가장 적합한 슬롯 찾기 (장신구 다중 슬롯 지원)
+        /// </summary>
+        private EquipmentSlot FindBestSlotForItem(string itemKey, EquipmentSlotType slotType)
+        {
+            var item = ItemDatabase.GetItemSafe(itemKey);
+            if (item == null)
+                return null;
+            
+            // 장신구가 아니면 기존 로직 (첫 번째 슬롯)
+            if (slotType != EquipmentSlotType.Accessory)
+            {
+                return equipmentSlots.FirstOrDefault(s => s.slotType == slotType && s.CanEquipItem(itemKey));
+            }
+            
+            // 장신구인 경우: 비어있는 슬롯 우선 찾기
+            var accessorySlots = equipmentSlots.Where(s => s.slotType == EquipmentSlotType.Accessory).ToList();
+            
+            // 1. 비어있는 슬롯 찾기
+            var emptySlot = accessorySlots.FirstOrDefault(s => s.IsEmpty() && s.CanEquipItem(itemKey));
+            if (emptySlot != null)
+            {
+                Debug.Log($"[CharacterInventory] 빈 장신구 슬롯 찾음: {emptySlot.slotName}");
+                return emptySlot;
+            }
+            
+            // 2. 같은 카테고리의 장신구가 있는 슬롯 찾기 (교체용)
+            // ItemTypeDatabase 찾기 (Resources 폴더에서 로드)
+            ItemTypeDatabase typeDatabase = null;
+            string[] paths = { "Data/Item/ItemTypeDatabase", "Item/ItemTypeDatabase", "ItemTypeDatabase" };
+            foreach (var path in paths)
+            {
+                typeDatabase = Resources.Load<ItemTypeDatabase>(path);
+                if (typeDatabase != null) break;
+            }
+            
+            // 전체 Resources 스캔 (Fallback)
+            if (typeDatabase == null)
+            {
+                var allDatabases = Resources.LoadAll<ItemTypeDatabase>("");
+                if (allDatabases != null && allDatabases.Length > 0)
+                {
+                    typeDatabase = allDatabases[0];
+                }
+            }
+            
+            if (typeDatabase != null)
+            {
+                var accessoryType = item.GetAccessoryType(typeDatabase);
+                if (accessoryType != null)
+                {
+                    foreach (var slot in accessorySlots)
+                    {
+                        if (!slot.IsEmpty())
+                        {
+                            var equippedItem = slot.GetEquippedItem();
+                            if (equippedItem != null)
+                            {
+                                var equippedAccessoryType = equippedItem.GetAccessoryType(typeDatabase);
+                                if (equippedAccessoryType != null && equippedAccessoryType.category == accessoryType.category)
+                                {
+                                    Debug.Log($"[CharacterInventory] 같은 카테고리 장신구 슬롯 찾음: {slot.slotName} (교체)");
+                                    return slot;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 3. 모든 슬롯이 차있고 같은 카테고리가 없으면 첫 번째 슬롯 (교체)
+            var firstSlot = accessorySlots.FirstOrDefault(s => s.CanEquipItem(itemKey));
+            if (firstSlot != null)
+            {
+                Debug.Log($"[CharacterInventory] 첫 번째 장신구 슬롯 사용 (교체): {firstSlot.slotName}");
+            }
+            return firstSlot;
+        }
+        
+        /// <summary>
+        /// 아이템 해제 (특정 슬롯 인스턴스)
+        /// </summary>
+        public bool UnequipItem(EquipmentSlot slot)
+        {
+            if (isLocked || slot == null || slot.IsEmpty())
                 return false;
                 
             string unequippedKey = slot.UnequipItem();
@@ -306,7 +474,7 @@ namespace BladeAction.Item
                 bool success = AddItem(unequippedKey, 1);
                 if (success)
                 {
-                    SafeTriggerEvent(events => events.TriggerItemUnequipped(unequippedKey, slotType, inventoryName));
+                    SafeTriggerEvent(events => events.TriggerItemUnequipped(unequippedKey, slot.slotType, inventoryName));
                     
                     // 스탯 재계산 트리거
                     TriggerStatsRecalculation();
@@ -318,7 +486,34 @@ namespace BladeAction.Item
         }
         
         /// <summary>
-        /// 장착된 아이템 가져오기
+        /// 아이템 해제 (슬롯 타입) - 하위 호환용
+        /// </summary>
+        public bool UnequipItem(EquipmentSlotType slotType)
+        {
+            if (isLocked)
+                return false;
+                
+            var slot = equipmentSlots.FirstOrDefault(s => s.slotType == slotType && !s.IsEmpty());
+            if (slot == null)
+                return false;
+            
+            return UnequipItem(slot);
+        }
+        
+        /// <summary>
+        /// 특정 아이템이 장착된 슬롯 찾기
+        /// </summary>
+        public EquipmentSlot FindEquippedSlot(string itemKey)
+        {
+            if (string.IsNullOrEmpty(itemKey))
+                return null;
+            
+            return equipmentSlots.FirstOrDefault(s => 
+                !s.IsEmpty() && s.equippedItemKey == itemKey);
+        }
+        
+        /// <summary>
+        /// 장착된 아이템 가져오기 (타입으로)
         /// </summary>
         public Item GetEquippedItem(EquipmentSlotType slotType)
         {

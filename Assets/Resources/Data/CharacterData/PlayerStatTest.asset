@@ -46,6 +46,14 @@ MonoBehaviour:
     quantity: 1
   - itemId: 'itm_accessory_test1 '
     quantity: 1
+  - itemId: itm_accessory_test2
+    quantity: 1
+  - itemId: itm_accessory_test3
+    quantity: 1
+  - itemId: itm_accessory_test4
+    quantity: 1
+  - itemId: itm_accessory_test5
+    quantity: 1
   initialEquipment:
   - slotType: 1
     itemId: itm_weapon_test2
@@ -61,6 +69,11 @@ MonoBehaviour:
   - actionKey: imperial_horizontal
   - actionKey: imperial_defend
   - actionKey: imperial_ult
+  - actionKey: street_defend
+  - actionKey: street_ult
+  - actionKey: street_horizontal
+  - actionKey: street_vertical
+  - actionKey: street_vertical
   equippedActionSlot1: imperial_vertical
   equippedActionSlot2: imperial_horizontal
   equippedActionSlot3: 

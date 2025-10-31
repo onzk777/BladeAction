@@ -224,6 +224,38 @@ public class InventoryTestManager : MonoBehaviour
         }
     }
     
+    [ContextMenu("장신구 슬롯 추가")]
+    public void AddAccessorySlot()
+    {
+        if (CharacterManager.Instance?.PlayerCharacter != null)
+        {
+            bool success = CharacterManager.Instance.PlayerCharacter.AddAccessorySlot();
+            if (success)
+            {
+                // UI 갱신
+                if (inventoryUI != null)
+                {
+                    inventoryUI.RefreshAll();
+                }
+                Debug.Log("✅ 장신구 슬롯 추가 완료");
+            }
+            else
+            {
+                Debug.LogWarning("❌ 장신구 슬롯이 최대치입니다!");
+            }
+        }
+    }
+    
+    [ContextMenu("장신구 슬롯 정보")]
+    public void PrintAccessorySlotInfo()
+    {
+        if (CharacterManager.Instance?.PlayerCharacter != null)
+        {
+            var player = CharacterManager.Instance.PlayerCharacter;
+            Debug.Log($"현재 장신구 슬롯: {player.CurrentAccessorySlots}/{player.MaxAccessorySlots}");
+        }
+    }
+    
     [ContextMenu("인벤토리 새로고침")]
     public void RefreshInventory()
     {

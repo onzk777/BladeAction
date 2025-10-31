@@ -83,12 +83,12 @@ public class CharacterManager : MonoBehaviour
     /// </summary>
     private void InitializeInventory(Character character, CharacterData data)
     {
-        // Inventory 생성 (생성자에서 자동으로 장비 슬롯 초기화됨)
-        var inventory = new CharacterInventory();
+        // Inventory 생성 (장신구 슬롯 개수를 Character에서 가져옴)
+        var inventory = new CharacterInventory(character.CurrentAccessorySlots);
         inventory.Owner = character;
         character.Inventory = inventory;
         
-        Debug.Log($"[CharacterManager] {character.Name} Inventory 생성 완료");
+        Debug.Log($"[CharacterManager] {character.Name} Inventory 생성 완료 (장신구 슬롯: {character.CurrentAccessorySlots}개)");
         
         // 초기 아이템 추가
         if (data.initialItems != null && data.initialItems.Count > 0)

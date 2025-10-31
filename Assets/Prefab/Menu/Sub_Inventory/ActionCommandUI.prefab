@@ -477,7 +477,7 @@ GameObject:
   - component: {fileID: 5873166284849298306}
   - component: {fileID: 7993832364336485769}
   m_Layer: 5
-  m_Name: ActionCommandItemUI
+  m_Name: ActionCommandUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
