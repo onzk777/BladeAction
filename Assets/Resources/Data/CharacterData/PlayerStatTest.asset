@@ -41,7 +41,7 @@ MonoBehaviour:
   - itemId: 'itm_weapon_test2 '
     quantity: 20
   - itemId: 'itm_swordartstyle_imperial '
-    quantity: 1
+    quantity: 100
   - itemId: 'itm_swordartstyle_street '
     quantity: 1
   - itemId: 'itm_armor_test1 '
