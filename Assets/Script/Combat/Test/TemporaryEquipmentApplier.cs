@@ -27,22 +27,22 @@ namespace BladeAction.Test
         private void Start()
         {
             // Combatant.Inventory를 직접 할당
-            if (CharacterManager.Instance?.PlayerCharacter != null)
+            if (CombatCharacterManager.Instance?.PlayerCharacter != null)
             {
-                CharacterManager.Instance.PlayerCharacter.Inventory = playerInventory;
+                CombatCharacterManager.Instance.PlayerCharacter.Inventory = playerInventory;
                 if (playerInventory != null)
-                    playerInventory.Owner = CharacterManager.Instance.PlayerCharacter;
+                    playerInventory.Owner = CombatCharacterManager.Instance.PlayerCharacter;
             }
             
-            if (CharacterManager.Instance?.EnemyCharacter != null)
+            if (CombatCharacterManager.Instance?.CurrentEnemy != null)
             {
-                CharacterManager.Instance.EnemyCharacter.Inventory = enemyInventory;
+                CombatCharacterManager.Instance.CurrentEnemy.Inventory = enemyInventory;
                 if (enemyInventory != null)
-                    enemyInventory.Owner = CharacterManager.Instance.EnemyCharacter;
+                    enemyInventory.Owner = CombatCharacterManager.Instance.CurrentEnemy;
             }
 
-            TryEquipFor(CharacterManager.Instance?.PlayerCharacter, playerInventory, playerEquipKeysCsv, isPlayer:true);
-            TryEquipFor(CharacterManager.Instance?.EnemyCharacter, enemyInventory, enemyEquipKeysCsv, isPlayer:false);
+            TryEquipFor(CombatCharacterManager.Instance?.PlayerCharacter, playerInventory, playerEquipKeysCsv, isPlayer:true);
+            TryEquipFor(CombatCharacterManager.Instance?.CurrentEnemy, enemyInventory, enemyEquipKeysCsv, isPlayer:false);
         }
 
         private void TryEquipFor(Character combatant, CharacterInventory inventory, string csv, bool isPlayer)

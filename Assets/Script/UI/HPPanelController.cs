@@ -62,13 +62,13 @@ public class HPPanelController : MonoBehaviour
     private IEnumerator WaitForCharacterManager()
     {
         // CharacterManager가 초기화될 때까지 대기
-        while (CharacterManager.Instance == null)
+        while (CombatCharacterManager.Instance == null)
         {
             yield return null;
         }
 
         // CharacterManager의 데이터가 준비될 때까지 대기
-        while (CharacterManager.Instance.PlayerCharacter == null || CharacterManager.Instance.EnemyCharacter == null)
+        while (CombatCharacterManager.Instance.PlayerCharacter == null || CombatCharacterManager.Instance.CurrentEnemy == null)
         {
             yield return null;
         }
@@ -83,16 +83,16 @@ public class HPPanelController : MonoBehaviour
 
     private void InitializeHPValues()
     {
-        if (CharacterManager.Instance?.PlayerCharacter != null)
+        if (CombatCharacterManager.Instance?.PlayerCharacter != null)
         {
-            currentPlayerHP = CharacterManager.Instance.PlayerCharacter.currentHP;
-            maxPlayerHP = (int)CharacterManager.Instance.PlayerCharacter.MaxHP;
+            currentPlayerHP = CombatCharacterManager.Instance.PlayerCharacter.currentHP;
+            maxPlayerHP = (int)CombatCharacterManager.Instance.PlayerCharacter.MaxHP;
         }
 
-        if (CharacterManager.Instance?.EnemyCharacter != null)
+        if (CombatCharacterManager.Instance?.CurrentEnemy != null)
         {
-            currentEnemyHP = CharacterManager.Instance.EnemyCharacter.currentHP;
-            maxEnemyHP = (int)CharacterManager.Instance.EnemyCharacter.MaxHP;
+            currentEnemyHP = CombatCharacterManager.Instance.CurrentEnemy.currentHP;
+            maxEnemyHP = (int)CombatCharacterManager.Instance.CurrentEnemy.MaxHP;
         }
 
         if (debugMode)
@@ -104,15 +104,15 @@ public class HPPanelController : MonoBehaviour
     private void SubscribeToHPEvents()
     {
         // 플레이어 HP 이벤트 구독
-        if (CharacterManager.Instance?.PlayerCharacter != null)
+        if (CombatCharacterManager.Instance?.PlayerCharacter != null)
         {
-            CharacterManager.Instance.PlayerCharacter.OnHPChanged += OnPlayerHPChanged;
+            CombatCharacterManager.Instance.PlayerCharacter.OnHPChanged += OnPlayerHPChanged;
         }
 
         // 적 HP 이벤트 구독
-        if (CharacterManager.Instance?.EnemyCharacter != null)
+        if (CombatCharacterManager.Instance?.CurrentEnemy != null)
         {
-            CharacterManager.Instance.EnemyCharacter.OnHPChanged += OnEnemyHPChanged;
+            CombatCharacterManager.Instance.CurrentEnemy.OnHPChanged += OnEnemyHPChanged;
         }
     }
 
@@ -261,32 +261,32 @@ public class HPPanelController : MonoBehaviour
     [ContextMenu("Test Player Take Damage")]
     public void TestPlayerTakeDamage()
     {
-        if (CharacterManager.Instance?.PlayerCharacter != null)
+        if (CombatCharacterManager.Instance?.PlayerCharacter != null)
         {
-            CharacterManager.Instance.PlayerCharacter.TakeDamage(10);
+            CombatCharacterManager.Instance.PlayerCharacter.TakeDamage(10);
         }
     }
 
     [ContextMenu("Test Enemy Take Damage")]
     public void TestEnemyTakeDamage()
     {
-        if (CharacterManager.Instance?.EnemyCharacter != null)
+        if (CombatCharacterManager.Instance?.CurrentEnemy != null)
         {
-            CharacterManager.Instance.EnemyCharacter.TakeDamage(10);
+            CombatCharacterManager.Instance.CurrentEnemy.TakeDamage(10);
         }
     }
 
     private void OnDestroy()
     {
         // 이벤트 구독 해제
-        if (CharacterManager.Instance?.PlayerCharacter != null)
+        if (CombatCharacterManager.Instance?.PlayerCharacter != null)
         {
-            CharacterManager.Instance.PlayerCharacter.OnHPChanged -= OnPlayerHPChanged;
+            CombatCharacterManager.Instance.PlayerCharacter.OnHPChanged -= OnPlayerHPChanged;
         }
 
-        if (CharacterManager.Instance?.EnemyCharacter != null)
+        if (CombatCharacterManager.Instance?.CurrentEnemy != null)
         {
-            CharacterManager.Instance.EnemyCharacter.OnHPChanged -= OnEnemyHPChanged;
+            CombatCharacterManager.Instance.CurrentEnemy.OnHPChanged -= OnEnemyHPChanged;
         }
 
         // 코루틴 정리

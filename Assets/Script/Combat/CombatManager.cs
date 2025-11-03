@@ -11,6 +11,14 @@ public class CombatManager : MonoBehaviour
 {
     public static CombatManager Instance { get; private set; } // CombatManager의 싱글톤 인스턴스
 
+    [Header("테스트: 전투 참가자 지정")]
+    [Tooltip("테스트용 플레이어 Instance ID (비어있으면 기본값 'Player' 사용)")]
+    [SerializeField] private string testPlayerInstanceId = "Player";
+    
+    [Tooltip("테스트용 적 Instance ID 목록 (비어있으면 CharacterDatabase에서 첫 번째 Enemy 사용)")]
+    [SerializeField] private string[] testEnemyInstanceIds = new string[] { "Test_Enemy1" };
+    
+    [Header("컨트롤러")]
     [SerializeField] private PlayerController playerController; // 플레이어 컨트롤러
     [SerializeField] private EnemyController enemyController; // 적 컨트롤러
     
@@ -145,37 +153,89 @@ public class CombatManager : MonoBehaviour
         battleResult = new BattleResult();
         battleResult.InitializeBattle();
         
-        // CharacterManager 초기화 대기 후 Controller 연결
-        StartCoroutine(WaitForCharacterManagerAndConnect());
+        // CharacterManager 초기화 대기 후 전투 시작
+        StartCoroutine(WaitForManagersAndStartBattle());
     }
 
-    private System.Collections.IEnumerator WaitForCharacterManagerAndConnect()
+    private System.Collections.IEnumerator WaitForManagersAndStartBattle()
     {
-        // CharacterManager가 초기화될 때까지 대기
-        while (CharacterManager.Instance == null)
+        // CombatCharacterManager와 CharacterDatabaseManager가 초기화될 때까지 대기
+        while (CombatCharacterManager.Instance == null || CharacterDatabaseManager.Instance == null)
         {
             yield return null;
         }
+        
+        // 추가 1프레임 대기 (모든 매니저가 완전히 초기화되도록)
+        yield return null;
+        
+        // 테스트용 전투 시작
+        StartBattleTest();
+    }
+    
+    /// <summary>
+    /// 테스트용 전투 시작
+    /// Inspector에서 지정한 전투원으로 전투를 시작합니다.
+    /// </summary>
+    private void StartBattleTest()
+    {
+        // 플레이어 ID 검증
+        string playerId = string.IsNullOrEmpty(testPlayerInstanceId) ? "Player" : testPlayerInstanceId;
+        
+        // 적 ID 검증
+        string[] enemyIds;
+        if (testEnemyInstanceIds == null || testEnemyInstanceIds.Length == 0 || string.IsNullOrEmpty(testEnemyInstanceIds[0]))
+        {
+            // 기본값: CharacterDatabase에서 첫 번째 Enemy 사용
+            var enemyEntry = CharacterDatabaseManager.Instance.GetFirstEnemyEntry();
+            if (enemyEntry == null || string.IsNullOrEmpty(enemyEntry.instanceId))
+            {
+                Debug.LogError("[CombatManager] 전투할 Enemy가 없습니다! CharacterDatabase를 확인하세요.");
+                return;
+            }
+            enemyIds = new string[] { enemyEntry.instanceId };
+        }
+        else
+        {
+            enemyIds = testEnemyInstanceIds;
+        }
+        
+        // 전투 시작
+        StartBattle(playerId, enemyIds);
+    }
+    
+    /// <summary>
+    /// 전투를 시작합니다
+    /// 추후 상위 시스템(필드, 던전 등)에서 호출하게 될 진입점
+    /// </summary>
+    /// <param name="playerInstanceId">플레이어 Instance ID</param>
+    /// <param name="enemyInstanceIds">적 Instance ID 배열</param>
+    public void StartBattle(string playerInstanceId, params string[] enemyInstanceIds)
+    {
+        Debug.Log($"[CombatManager] === 전투 시작 명령 수신 ===");
+        Debug.Log($"[CombatManager] 전투원: {playerInstanceId} vs [{string.Join(", ", enemyInstanceIds)}]");
+        
+        // CombatCharacterManager에 전투 초기화 지시
+        CombatCharacterManager.Instance.InitializeBattle(playerInstanceId, enemyInstanceIds);
 
         // Controller 연결
         ConnectControllers();
         
-        // 전투 시작
+        // 전투 진행 시작
         StartCoroutine(RunCombat());
     }
 
     private void ConnectControllers() // Controller 연결
     {
-        // CharacterManager를 통해 Controller 연결
-        if (CharacterManager.Instance != null)
+        // CombatCharacterManager를 통해 Controller 연결
+        if (CombatCharacterManager.Instance != null)
         {
-            CharacterManager.Instance.ConnectController(CharacterType.Player, playerController);
-            CharacterManager.Instance.ConnectController(CharacterType.Enemy, enemyController);
+            CombatCharacterManager.Instance.ConnectController(CharacterType.Player, playerController);
+            CombatCharacterManager.Instance.ConnectController(CharacterType.Enemy, enemyController);
             Debug.Log("[CombatManager] Controller 연결 완료");
         }
         else
         {
-            Debug.LogError("[CombatManager] CharacterManager.Instance가 null입니다!");
+            Debug.LogError("[CombatManager] CombatCharacterManager.Instance가 null입니다!");
         }
     }
     
@@ -310,7 +370,7 @@ public class CombatManager : MonoBehaviour
             
             // 🆕 디버그: 턴 완료 확인
             Debug.Log($"[RunCombat] ========== 턴 {CurrentTurnNumber} 완료 - 다음 턴으로 ==========");
-            Debug.Log($"[RunCombat] 플레이어 HP: {CharacterManager.Instance.PlayerCharacter.HP}, 적 HP: {CharacterManager.Instance.EnemyCharacter.HP}");
+            Debug.Log($"[RunCombat] 플레이어 HP: {CombatCharacterManager.Instance.PlayerCharacter.HP}, 적 HP: {CombatCharacterManager.Instance.CurrentEnemy.HP}");
             Debug.Log($"[RunCombat] isBattleEnded: {isBattleEnded}");
         }
         Debug.Log("전투 종료!");
@@ -325,10 +385,10 @@ public class CombatManager : MonoBehaviour
     /// </summary>
     private void ResetBehaviorTreeStates()
     {
-        if (CharacterManager.Instance != null)
+        if (CombatCharacterManager.Instance != null)
         {
             // 플레이어 블랙보드 리셋
-            var playerCharacter = CharacterManager.Instance.PlayerCharacter as PlayerCharacter;
+            var playerCharacter = CombatCharacterManager.Instance.PlayerCharacter as PlayerCharacter;
             if (playerCharacter != null)
             {
                 playerCharacter.ResetBlackboard();
@@ -336,7 +396,7 @@ public class CombatManager : MonoBehaviour
             }
             
             // 적 블랙보드 리셋
-            var enemyCharacter = CharacterManager.Instance.EnemyCharacter as EnemyCharacter;
+            var enemyCharacter = CombatCharacterManager.Instance.CurrentEnemy as EnemyCharacter;
             if (enemyCharacter != null)
             {
                 enemyCharacter.ResetBlackboard();
@@ -347,7 +407,7 @@ public class CombatManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[CombatManager] CharacterManager.Instance가 null입니다 - BT 상태 리셋 건너뜀");
+            Debug.LogWarning("[CombatManager] CombatCharacterManager.Instance가 null입니다 - BT 상태 리셋 건너뜀");
         }
     }
     
@@ -364,10 +424,10 @@ public class CombatManager : MonoBehaviour
     /// </summary>
     private void ResetNPCProbabilities()
     {
-        if (CharacterManager.Instance != null)
+        if (CombatCharacterManager.Instance != null)
         {
             // 적 Combatant의 확률 리셋
-            var enemyCharacter = CharacterManager.Instance.EnemyCharacter as EnemyCharacter;
+            var enemyCharacter = CombatCharacterManager.Instance.CurrentEnemy as EnemyCharacter;
             if (enemyCharacter != null)
             {
                 enemyCharacter.ResetProbabilities();
@@ -375,7 +435,7 @@ public class CombatManager : MonoBehaviour
             }
             
             // TODO: 플레이어도 NPC일 수 있다면 여기에 추가
-            // var playerCharacter = CharacterManager.Instance.PlayerCharacter as EnemyCharacter;
+            // var playerCharacter = CombatCharacterManager.Instance.PlayerCharacter as EnemyCharacter;
             // if (playerCharacter != null)
             // {
             //     playerCharacter.ResetProbabilities();
@@ -383,7 +443,7 @@ public class CombatManager : MonoBehaviour
         }
         else
         {
-            Debug.LogWarning("[CombatManager] CharacterManager.Instance가 null입니다 - NPC 확률 리셋 건너뜀");
+            Debug.LogWarning("[CombatManager] CombatCharacterManager.Instance가 null입니다 - NPC 확률 리셋 건너뜀");
         }
     }
 
@@ -393,8 +453,8 @@ public class CombatManager : MonoBehaviour
         
         // 초기화 (순서 중요! isPlayerAttacker를 먼저 계산해야 defender가 올바름)
         Character actor = controller.Character; // 현재 턴을 수행하는 Character (공격자)
-        isPlayerAttacker = (controller.Character == CharacterManager.Instance?.PlayerCharacter) ? true : false; // 플레이어 여부 (먼저 계산!)
-        Character defender = isPlayerAttacker ? CharacterManager.Instance.EnemyCharacter : CharacterManager.Instance.PlayerCharacter; // 피격자 (isPlayerAttacker 사용)
+        isPlayerAttacker = (controller.Character == CombatCharacterManager.Instance?.PlayerCharacter) ? true : false; // 플레이어 여부 (먼저 계산!)
+        Character defender = isPlayerAttacker ? CombatCharacterManager.Instance.CurrentEnemy : CombatCharacterManager.Instance.PlayerCharacter; // 피격자 (isPlayerAttacker 사용)
         
         // 🆕 BT 평가 (공격자 + 방어자 모두!)
         // 왜 필요한가?
@@ -1269,8 +1329,8 @@ public class CombatManager : MonoBehaviour
         Debug.Log($"[CombatManager] 판정 결과: {resultVersus} (공격자 완벽: {atkPerfect}, 방어자 완벽: {defPerfect}, 막기: {guard}) - 히트 {hitIndex}");
 
         // 현재 공격자와 방어자 Character 찾기
-        Character attacker = isPlayerAttacker ? CharacterManager.Instance.PlayerCharacter : CharacterManager.Instance.EnemyCharacter;
-        Character defender = isPlayerAttacker ? CharacterManager.Instance.EnemyCharacter : CharacterManager.Instance.PlayerCharacter;
+        Character attacker = isPlayerAttacker ? CombatCharacterManager.Instance.PlayerCharacter : CombatCharacterManager.Instance.CurrentEnemy;
+        Character defender = isPlayerAttacker ? CombatCharacterManager.Instance.CurrentEnemy : CombatCharacterManager.Instance.PlayerCharacter;
         
         // 현재 사용된 검술 커맨드 가져오기
         var currentCommand = CurrentResult?.Command;
@@ -1286,7 +1346,7 @@ public class CombatManager : MonoBehaviour
         // 쳐내기 판정 시 공격자 자세 포인트 감소
         if (resultVersus == InputVersusResult.ResultType.Parry || resultVersus == InputVersusResult.ResultType.HalfParry)
         {
-            int poiseDamage = defender.CharacterData.ParryPoiseDamage;
+            int poiseDamage = defender.CharacterInitData.ParryPoiseDamage;
             
             Debug.Log($"[CombatManager] {resultVersus} 판정! {attacker.Name}의 Poise 감소 시작 (현재: {attacker.GetPoiseStatus()}, {defender.Name}의 ParryPoiseDamage: {poiseDamage})");
             
@@ -1685,7 +1745,7 @@ public class CombatManager : MonoBehaviour
         // DR 적용 결과 로그
         if (defenderInputHandler.IsGuardActive)
         {
-            Debug.Log($"[피해량 계산] 막기 상태 - 막기 DR 적용: {damageAfterReduction} - {effectiveDR} = {damageAfterDR} (기본 DR: {defender.DR}, 막기 보너스: {defender.CharacterData.baseStats.guardDRBonus}, 임시 보너스: {defender.tempDRBonus})");
+            Debug.Log($"[피해량 계산] 막기 상태 - 막기 DR 적용: {damageAfterReduction} - {effectiveDR} = {damageAfterDR} (기본 DR: {defender.DR}, 막기 보너스: {defender.CharacterInitData.baseStats.guardDRBonus}, 임시 보너스: {defender.tempDRBonus})");
         }
         else
         {
@@ -1707,7 +1767,7 @@ public class CombatManager : MonoBehaviour
             if (defender.IsDefeated)
             {
                 Debug.LogWarning($"[피해량 계산] {defender.Name}이 패배했습니다! (HP: {defender.GetHPStatus()})");
-                EndBattle(defender == CharacterManager.Instance.PlayerCharacter ? BattleResult.BattleEndReason.PlayerDefeated : BattleResult.BattleEndReason.EnemyDefeated);
+                EndBattle(defender == CombatCharacterManager.Instance.PlayerCharacter ? BattleResult.BattleEndReason.PlayerDefeated : BattleResult.BattleEndReason.EnemyDefeated);
                 return; // 피해 처리 후 즉시 종료
             }
         }
@@ -1833,14 +1893,14 @@ public class CombatManager : MonoBehaviour
         
         if (reason == BattleResult.BattleEndReason.PlayerDefeated)
         {
-            winner = CharacterManager.Instance.EnemyCharacter;
-            loser = CharacterManager.Instance.PlayerCharacter;
+            winner = CombatCharacterManager.Instance.CurrentEnemy;
+            loser = CombatCharacterManager.Instance.PlayerCharacter;
             winnerName = "적";
         }
         else if (reason == BattleResult.BattleEndReason.EnemyDefeated)
         {
-            winner = CharacterManager.Instance.PlayerCharacter;
-            loser = CharacterManager.Instance.EnemyCharacter;
+            winner = CombatCharacterManager.Instance.PlayerCharacter;
+            loser = CombatCharacterManager.Instance.CurrentEnemy;
             winnerName = "플레이어";
         }
         
@@ -1859,6 +1919,12 @@ public class CombatManager : MonoBehaviour
         if (GameInputManager.Instance != null)
         {
             GameInputManager.Instance.EnableUIActionMap();
+        }
+        
+        // 🆕 전투 종료 후처리 (플레이어 상태 저장 및 보상 적용)
+        if (CombatCharacterManager.Instance != null)
+        {
+            CombatCharacterManager.Instance.FinalizeBattle(battleResult);
         }
         
         // 전투 종료 이벤트 발생
@@ -1956,10 +2022,10 @@ public class CombatManager : MonoBehaviour
         // 3. 캐릭터 재활성화 및 스테이터스 초기화
         EnableCharacters();
         
-        if (CharacterManager.Instance != null)
+        if (CombatCharacterManager.Instance != null)
         {
             // 플레이어 스테이터스 초기화
-            var playerCharacter = CharacterManager.Instance.PlayerCharacter;
+            var playerCharacter = CombatCharacterManager.Instance.PlayerCharacter;
             if (playerCharacter != null)
             {
                 playerCharacter.InitializeRuntimeStats();
@@ -1967,7 +2033,7 @@ public class CombatManager : MonoBehaviour
             }
             
             // 적 스테이터스 초기화
-            var enemyCharacter = CharacterManager.Instance.EnemyCharacter;
+            var enemyCharacter = CombatCharacterManager.Instance.CurrentEnemy;
             if (enemyCharacter != null)
             {
                 enemyCharacter.InitializeRuntimeStats();

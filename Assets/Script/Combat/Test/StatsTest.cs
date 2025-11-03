@@ -38,7 +38,7 @@ namespace BladeAction.Combat.Test
         {
             Debug.Log("========== Test 1: GetFinalStats 기본 테스트 ==========");
             
-            var player = CharacterManager.Instance.PlayerCharacter;
+            var player = CombatCharacterManager.Instance.PlayerCharacter;
             if (player == null)
             {
                 Debug.LogError("[StatsTest] PlayerCharacter가 null입니다!");
@@ -81,7 +81,7 @@ namespace BladeAction.Combat.Test
         {
             Debug.Log("========== Test 2: 무기 장착 시 ATK 증가 ==========");
             
-            var player = CharacterManager.Instance.PlayerCharacter;
+            var player = CombatCharacterManager.Instance.PlayerCharacter;
             if (player == null || player.Inventory == null)
             {
                 Debug.LogError("[StatsTest] PlayerCharacter 또는 Inventory가 null입니다!");
@@ -127,16 +127,16 @@ namespace BladeAction.Combat.Test
         {
             Debug.Log("========== Test 3: 무기 해제 시 ATK 복귀 ==========");
             
-            var player = CharacterManager.Instance.PlayerCharacter;
+            var player = CombatCharacterManager.Instance.PlayerCharacter;
             if (player == null || player.Inventory == null)
             {
                 Debug.LogError("[StatsTest] PlayerCharacter 또는 Inventory가 null입니다!");
                 return;
             }
             
-            // 기본 ATK 저장 (CharacterData의 baseStats)
-            int baseATK = player.CharacterData.ATK;
-            Debug.Log($"[StatsTest] 기본 ATK (CharacterData): {baseATK}");
+            // 기본 ATK 저장 (CharacterInitData의 baseStats)
+            int baseATK = player.CharacterInitData.ATK;
+            Debug.Log($"[StatsTest] 기본 ATK (CharacterInitData): {baseATK}");
             
             // 현재 ATK (장착 상태)
             int equippedATK = StatsCalculationManager.Instance.GetFinalATK(player);
@@ -168,7 +168,7 @@ namespace BladeAction.Combat.Test
         {
             Debug.Log("========== Test 4: HP 비율 보존 테스트 ==========");
             
-            var player = CharacterManager.Instance.PlayerCharacter;
+            var player = CombatCharacterManager.Instance.PlayerCharacter;
             if (player == null || player.Inventory == null)
             {
                 Debug.LogError("[StatsTest] PlayerCharacter 또는 Inventory가 null입니다!");
@@ -215,7 +215,7 @@ namespace BladeAction.Combat.Test
         {
             Debug.Log("========== Test 5: 여러 장비 장착 시 스탯 누적 ==========");
             
-            var player = CharacterManager.Instance.PlayerCharacter;
+            var player = CombatCharacterManager.Instance.PlayerCharacter;
             if (player == null || player.Inventory == null)
             {
                 Debug.LogError("[StatsTest] PlayerCharacter 또는 Inventory가 null입니다!");
@@ -268,7 +268,7 @@ namespace BladeAction.Combat.Test
         {
             Debug.Log("========== Test 6: GetFinalStat 특정 스탯 조회 ==========");
             
-            var player = CharacterManager.Instance.PlayerCharacter;
+            var player = CombatCharacterManager.Instance.PlayerCharacter;
             if (player == null)
             {
                 Debug.LogError("[StatsTest] PlayerCharacter가 null입니다!");
@@ -305,7 +305,7 @@ namespace BladeAction.Combat.Test
         {
             Debug.Log("========== Test 7: RecalculateAndCommit 테스트 ==========");
             
-            var player = CharacterManager.Instance.PlayerCharacter;
+            var player = CombatCharacterManager.Instance.PlayerCharacter;
             if (player == null || player.Inventory == null)
             {
                 Debug.LogError("[StatsTest] PlayerCharacter 또는 Inventory가 null입니다!");
@@ -341,7 +341,7 @@ namespace BladeAction.Combat.Test
         {
             Debug.Log("========== Test 8: 모든 스탯 상세 출력 ==========");
             
-            var player = CharacterManager.Instance.PlayerCharacter;
+            var player = CombatCharacterManager.Instance.PlayerCharacter;
             if (player == null)
             {
                 Debug.LogError("[StatsTest] PlayerCharacter가 null입니다!");
@@ -378,7 +378,7 @@ namespace BladeAction.Combat.Test
             }
             
             var connectedInventory = inventoryUI.GetInventory();
-            var player = CharacterManager.Instance.PlayerCharacter;
+            var player = CombatCharacterManager.Instance.PlayerCharacter;
             
             Debug.Log($"[StatsTest] InventoryUI 상태:");
             Debug.Log($"  - InventoryUI 존재: {inventoryUI != null}");

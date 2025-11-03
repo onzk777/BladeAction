@@ -11,10 +11,9 @@ public class ActionCommandSelectionManager : MonoBehaviour
 {
     public static ActionCommandSelectionManager Instance { get; private set; }
     
-    // UI References - SerializeField로 Inspector 할당 지원
-    [Header("UI References (Inspector 할당 또는 자동 등록)")]
-    [SerializeField] private PlayerActionSelectUI _playerActionSelectUI;
-    [SerializeField] private EnemyActionSelectUI _enemyActionSelectUI;
+    // UI References - 자동으로 찾아서 등록됨 (Inspector에 표시 안함)
+    [HideInInspector] [SerializeField] private PlayerActionSelectUI _playerActionSelectUI;
+    [HideInInspector] [SerializeField] private EnemyActionSelectUI _enemyActionSelectUI;
     
     // Public 프로퍼티로 읽기 전용 접근 제공
     public PlayerActionSelectUI playerActionSelectUI => _playerActionSelectUI;

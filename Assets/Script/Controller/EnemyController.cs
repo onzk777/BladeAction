@@ -3,7 +3,7 @@ using Spine.Unity;
 
 public class EnemyController : MonoBehaviour, ICombatController
 {
-    public Character Character => CharacterManager.Instance?.EnemyCharacter;
+    public Character Character => CombatCharacterManager.Instance?.CurrentEnemy;
 
     [Header("테스트 모드 설정")]
     [Tooltip("테스트 모드 ON/OFF")]
@@ -82,14 +82,14 @@ public class EnemyController : MonoBehaviour, ICombatController
 
     void Awake()
     {
-        // CharacterManager 초기화 대기 후 Spine 애니메이션 설정
+        // CombatCharacterManager 초기화 대기 후 Spine 애니메이션 설정
         StartCoroutine(WaitForCharacterManagerAndSetup());
     }
 
     private System.Collections.IEnumerator WaitForCharacterManagerAndSetup()
     {
-        // CharacterManager가 초기화될 때까지 대기
-        while (CharacterManager.Instance == null)
+        // CombatCharacterManager가 초기화될 때까지 대기
+        while (CombatCharacterManager.Instance == null || CombatCharacterManager.Instance.CurrentEnemy == null)
         {
             yield return null;
         }

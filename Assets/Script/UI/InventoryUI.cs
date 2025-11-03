@@ -157,8 +157,51 @@ namespace BladeAction.UI
             // Character가 아직 연결되지 않았으면 자동 연결 시도
             if (targetCharacter == null)
             {
-                AutoConnectToPlayerInventory();
+                // PlayerCharacterManager 초기화 대기 후 연결
+                StartCoroutine(WaitForPlayerCharacterManagerAndConnect());
             }
+            else
+            {
+                // 이미 연결되어 있으면 UI만 갱신
+                if (Inventory != null)
+                {
+                    RefreshAll();
+                    
+                    if (enableDebugLog)
+                        Debug.Log("[InventoryUI] InventoryUI 활성화 - UI 갱신");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 플레이어 캐릭터 준비 대기 후 연결
+        /// 전투 중이면 CombatCharacterManager.PlayerCharacter, 아니면 PlayerCharacterManager.Inventory 대기
+        /// </summary>
+        private System.Collections.IEnumerator WaitForPlayerCharacterManagerAndConnect()
+        {
+            // 전투 중 또는 전투 외 플레이어 데이터가 준비될 때까지 대기
+            while (true)
+            {
+                // 전투 중: CombatCharacterManager.PlayerCharacter 확인
+                if (CombatCharacterManager.Instance != null && CombatCharacterManager.Instance.PlayerCharacter != null)
+                {
+                    break; // 전투 캐릭터 준비됨
+                }
+                
+                // 전투 외: PlayerCharacterManager.Inventory 확인
+                if (PlayerCharacterManager.Instance != null && PlayerCharacterManager.Instance.Inventory != null)
+                {
+                    break; // 영속 데이터 준비됨
+                }
+                
+                yield return null;
+            }
+            
+            // 추가 안정성을 위해 1프레임 더 대기
+            yield return null;
+            
+            // 자동 연결 시도
+            AutoConnectToPlayerInventory();
             
             // UI 갱신
             if (targetCharacter != null && Inventory != null)
@@ -166,7 +209,7 @@ namespace BladeAction.UI
                 RefreshAll();
                 
                 if (enableDebugLog)
-                    Debug.Log("[InventoryUI] InventoryUI 활성화 - UI 갱신");
+                    Debug.Log("[InventoryUI] 플레이어 캐릭터 연결 완료 - UI 갱신");
             }
         }
         
@@ -229,7 +272,8 @@ namespace BladeAction.UI
         
         /// <summary>
         /// PlayerCharacter의 Inventory에 자동 연결
-        /// 외부에서 이미 Initialize()가 호출되었으면 스킵합니다.
+        /// 전투 중이면 CombatCharacterManager.PlayerCharacter 사용
+        /// 전투 중이 아니면 PlayerCharacterManager의 영속 데이터 사용
         /// </summary>
         private void AutoConnectToPlayerInventory()
         {
@@ -244,37 +288,47 @@ namespace BladeAction.UI
             
             Debug.Log("[InventoryUI-AutoConnect] ✓ targetCharacter는 null, 연결 시도 중...");
             
-            // CharacterManager 확인
-            if (CharacterManager.Instance == null)
+            // 1. 전투 중인지 확인 (CombatCharacterManager 존재 여부)
+            if (CombatCharacterManager.Instance != null && CombatCharacterManager.Instance.PlayerCharacter != null)
             {
-                Debug.LogWarning("[InventoryUI-AutoConnect] ❌ CharacterManager.Instance가 null입니다!");
+                Debug.Log("[InventoryUI-AutoConnect] ✓ 전투 중 - CombatCharacterManager.PlayerCharacter 사용");
+                ConnectToCharacter(CombatCharacterManager.Instance.PlayerCharacter);
+                Debug.Log("[InventoryUI-AutoConnect] ✅✅✅ PlayerCharacter 자동 연결 완료 (전투 중) ✅✅✅");
                 return;
             }
             
-            Debug.Log("[InventoryUI-AutoConnect] ✓ CharacterManager.Instance 존재");
+            // 2. 전투 중이 아니면 PlayerCharacterManager 사용
+            Debug.Log("[InventoryUI-AutoConnect] ✓ 전투 외 - PlayerCharacterManager 사용");
             
-            // PlayerCharacter 확인
-            if (CharacterManager.Instance.PlayerCharacter == null)
+            // PlayerCharacterManager 확인
+            if (PlayerCharacterManager.Instance == null)
             {
-                Debug.LogWarning("[InventoryUI-AutoConnect] ❌ PlayerCharacter가 null입니다!");
+                Debug.LogWarning("[InventoryUI-AutoConnect] ❌ PlayerCharacterManager.Instance가 null입니다!");
                 return;
             }
             
-            Debug.Log($"[InventoryUI-AutoConnect] ✓ PlayerCharacter 존재: {CharacterManager.Instance.PlayerCharacter.Name}");
+            Debug.Log("[InventoryUI-AutoConnect] ✓ PlayerCharacterManager.Instance 존재");
             
-            // PlayerCharacter.Inventory 확인
-            if (CharacterManager.Instance.PlayerCharacter.Inventory == null)
+            // PlayerCharacterManager.Inventory 확인
+            if (PlayerCharacterManager.Instance.Inventory == null)
             {
-                Debug.LogWarning("[InventoryUI-AutoConnect] ❌ PlayerCharacter.Inventory가 null입니다!");
+                Debug.Log("[InventoryUI-AutoConnect] ⏳ PlayerCharacterManager.Inventory가 아직 초기화되지 않았습니다. (대기 중...)");
                 return;
             }
             
-            Debug.Log($"[InventoryUI-AutoConnect] ✓ PlayerCharacter.Inventory 존재: {CharacterManager.Instance.PlayerCharacter.Inventory.GetDebugInfo()}");
+            Debug.Log($"[InventoryUI-AutoConnect] ✓ PlayerCharacterManager.Inventory 존재: {PlayerCharacterManager.Instance.Inventory.GetDebugInfo()}");
             
-            // Character 연결
-            ConnectToCharacter(CharacterManager.Instance.PlayerCharacter);
-            
-            Debug.Log("[InventoryUI-AutoConnect] ✅✅✅ PlayerCharacter 자동 연결 완료 ✅✅✅");
+            // PlayerCharacter 임시 생성 (UI 표시용)
+            var tempPlayer = PlayerCharacterManager.Instance.CreatePlayerCharacterForBattle();
+            if (tempPlayer != null)
+            {
+                ConnectToCharacter(tempPlayer);
+                Debug.Log("[InventoryUI-AutoConnect] ✅✅✅ PlayerCharacter 자동 연결 완료 (전투 외) ✅✅✅");
+            }
+            else
+            {
+                Debug.LogError("[InventoryUI-AutoConnect] PlayerCharacter 생성 실패!");
+            }
         }
         
         /// <summary>

@@ -26,7 +26,7 @@ namespace BladeAction.Editor
             }
 
             // CharacterManager에서 Character 가져오기
-            if (CharacterManager.Instance == null)
+            if (CombatCharacterManager.Instance == null)
             {
                 EditorUtility.DisplayDialog("오류", "CharacterManager가 Scene에 없습니다.", "확인");
                 return;
@@ -38,9 +38,9 @@ namespace BladeAction.Editor
             log.AppendLine("=====================================");
 
             // 플레이어
-            if (CharacterManager.Instance.PlayerCharacter != null)
+            if (CombatCharacterManager.Instance.PlayerCharacter != null)
             {
-                var player = CharacterManager.Instance.PlayerCharacter;
+                var player = CombatCharacterManager.Instance.PlayerCharacter;
                 if (player.Inventory != null)
                 {
                     var stats = manager.RecalculateAndCommit(player);
@@ -57,9 +57,9 @@ namespace BladeAction.Editor
             }
 
             // 적
-            if (CharacterManager.Instance.EnemyCharacter != null)
+            if (CombatCharacterManager.Instance.CurrentEnemy != null)
             {
-                var enemy = CharacterManager.Instance.EnemyCharacter;
+                var enemy = CombatCharacterManager.Instance.CurrentEnemy;
                 if (enemy.Inventory != null)
                 {
                     var stats = manager.RecalculateAndCommit(enemy);

@@ -29,10 +29,10 @@ namespace BladeAction.Combat
         /// </summary>
         public CombatStats GetFinalStats(Character character)
         {
-            if (character == null || character.CharacterData == null)
+            if (character == null || character.CharacterInitData == null)
                 return default;
 
-            var baseStats = ConvertToCombatStats(character.CharacterData);
+            var baseStats = ConvertToCombatStats(character.CharacterInitData);
             var equipDelta = CalculateEquipmentDelta(character);
             var raw = baseStats + equipDelta;
             var clamped = StatLimiter.ClampAll(raw, statLimitRules);
@@ -121,7 +121,7 @@ namespace BladeAction.Combat
             }
         }
 
-        private CombatStats ConvertToCombatStats(CharacterData data)
+        private CombatStats ConvertToCombatStats(CharacterInitData data)
         {
             CombatStats s = new CombatStats();
             s.attack = data.ATK;

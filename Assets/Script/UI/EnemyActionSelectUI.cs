@@ -37,6 +37,33 @@ public class EnemyActionSelectUI : MonoBehaviour
             ActionCommandSelectionManager.Instance.RegisterEnemyActionUI(this);
         }
         
+        // CombatCharacterManager.CurrentEnemy 준비 대기 후 초기화
+        StartCoroutine(WaitForEnemyCharacterAndInitialize());
+    }
+    
+    /// <summary>
+    /// CombatCharacterManager.CurrentEnemy가 준비될 때까지 대기 후 초기화
+    /// </summary>
+    private System.Collections.IEnumerator WaitForEnemyCharacterAndInitialize()
+    {
+        // CombatCharacterManager.CurrentEnemy가 준비될 때까지 대기
+        while (CombatCharacterManager.Instance == null || CombatCharacterManager.Instance.CurrentEnemy == null)
+        {
+            yield return null;
+        }
+        
+        // EnemyController.Character가 연결될 때까지 대기
+        while (enemyController == null || enemyController.Character == null)
+        {
+            yield return null;
+            if (enemyController == null)
+            {
+                enemyController = FindFirstObjectByType<EnemyController>();
+            }
+        }
+        
+        Debug.Log("[EnemyActionSelectUI] EnemyCharacter 준비 완료 - UI 초기화 시작");
+        
         Initialize();
     }
 

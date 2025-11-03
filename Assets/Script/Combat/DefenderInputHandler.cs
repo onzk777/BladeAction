@@ -872,8 +872,8 @@ public class DefenderInputHandler : BaseInputHandler
         
         // 방어자 Character 가져오기 (BT 확률 참조용)
         Character defenderCharacter = combatManager.IsPlayerAttacker 
-            ? CharacterManager.Instance?.EnemyCharacter 
-            : CharacterManager.Instance?.PlayerCharacter;
+            ? CombatCharacterManager.Instance?.CurrentEnemy 
+            : CombatCharacterManager.Instance?.PlayerCharacter;
         
         return new AIContext(
             projectile.hitIndex,
@@ -969,8 +969,8 @@ public class DefenderInputHandler : BaseInputHandler
         
         // 방어자 Character 가져오기 (BT 확률 참조용)
         Character defenderCharacter = combatManager.IsPlayerAttacker 
-            ? CharacterManager.Instance?.EnemyCharacter 
-            : CharacterManager.Instance?.PlayerCharacter;
+            ? CombatCharacterManager.Instance?.CurrentEnemy 
+            : CombatCharacterManager.Instance?.PlayerCharacter;
         
         return new AIContext(
             0, // 막기 의사결정 시에는 hitIndex 0 사용

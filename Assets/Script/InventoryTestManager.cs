@@ -227,9 +227,9 @@ public class InventoryTestManager : MonoBehaviour
     [ContextMenu("장신구 슬롯 추가")]
     public void AddAccessorySlot()
     {
-        if (CharacterManager.Instance?.PlayerCharacter != null)
+        if (CombatCharacterManager.Instance?.PlayerCharacter != null)
         {
-            bool success = CharacterManager.Instance.PlayerCharacter.AddAccessorySlot();
+            bool success = CombatCharacterManager.Instance.PlayerCharacter.AddAccessorySlot();
             if (success)
             {
                 // UI 갱신
@@ -249,9 +249,9 @@ public class InventoryTestManager : MonoBehaviour
     [ContextMenu("장신구 슬롯 정보")]
     public void PrintAccessorySlotInfo()
     {
-        if (CharacterManager.Instance?.PlayerCharacter != null)
+        if (CombatCharacterManager.Instance?.PlayerCharacter != null)
         {
-            var player = CharacterManager.Instance.PlayerCharacter;
+            var player = CombatCharacterManager.Instance.PlayerCharacter;
             Debug.Log($"현재 장신구 슬롯: {player.CurrentAccessorySlots}/{player.MaxAccessorySlots}");
         }
     }

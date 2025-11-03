@@ -66,6 +66,33 @@ public class PlayerActionSelectUI : MonoBehaviour
             ActionCommandSelectionManager.Instance.RegisterPlayerActionUI(this);
         }
         
+        // CombatCharacterManager.PlayerCharacter 준비 대기 후 초기화
+        StartCoroutine(WaitForPlayerCharacterAndInitialize());
+    }
+    
+    /// <summary>
+    /// CombatCharacterManager.PlayerCharacter가 준비될 때까지 대기 후 초기화
+    /// </summary>
+    private System.Collections.IEnumerator WaitForPlayerCharacterAndInitialize()
+    {
+        // CombatCharacterManager.PlayerCharacter가 준비될 때까지 대기
+        while (CombatCharacterManager.Instance == null || CombatCharacterManager.Instance.PlayerCharacter == null)
+        {
+            yield return null;
+        }
+        
+        // PlayerController.Character가 연결될 때까지 대기
+        while (playerController == null || playerController.Character == null)
+        {
+            yield return null;
+            if (playerController == null)
+            {
+                playerController = FindFirstObjectByType<PlayerController>();
+            }
+        }
+        
+        Debug.Log("[PlayerActionSelectUI] PlayerCharacter 준비 완료 - UI 초기화 시작");
+        
         Initialize();
         CheckUIState(); // 디버깅용 메서드 활성화
         CheckCanvasGroupState(); // Canvas Group 상태 확인

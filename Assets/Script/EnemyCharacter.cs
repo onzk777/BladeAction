@@ -52,26 +52,26 @@ public class EnemyCharacter : Character
     /// </summary>
     /// <param name="data">캐릭터 데이터 (원본 확률 포함)</param>
     /// <param name="controller">EnemyController 참조</param>
-    public EnemyCharacter(CharacterData data, EnemyController controller) : base(data)
+    public EnemyCharacter(string instanceId, CharacterInitData initData, EnemyController controller = null) : base(instanceId, initData)
     {
         this.controller = controller;
         
         // NPCRuntimeProbabilities 인스턴스 생성
-        // CharacterData의 npcBehavior를 복사하여 독립적인 확률 관리
-        if (data != null && data.npcBehavior != null)
+        // CharacterInitData의 npcBehavior를 복사하여 독립적인 확률 관리
+        if (initData != null && initData.npcBehavior != null)
         {
-            runtimeProbabilities = new NPCRuntimeProbabilities(data.npcBehavior);
-            Debug.Log($"[EnemyCharacter] {Name} 런타임 확률 초기화 완료");
+            runtimeProbabilities = new NPCRuntimeProbabilities(initData.npcBehavior);
+            Debug.Log($"[EnemyCharacter] {Name} (ID: {InstanceId}) 런타임 확률 초기화 완료");
         }
         else
         {
-            Debug.LogWarning($"[EnemyCharacter] {Name} CharacterData 또는 npcBehavior가 null입니다!");
+            Debug.LogWarning($"[EnemyCharacter] {Name} (ID: {InstanceId}) CharacterInitData 또는 npcBehavior가 null입니다!");
         }
         
         // BTBlackboard 인스턴스 생성
         // 개체별 BT 실행 상태 관리 (executeOncePerCombat 등)
-        btBlackboard = new BladeAction.BT.BTBlackboard(data?.characterName ?? "Unknown");
-        Debug.Log($"[EnemyCharacter] {Name} BT 블랙보드 초기화 완료");
+        btBlackboard = new BladeAction.BT.BTBlackboard(initData?.characterName ?? "Unknown");
+        Debug.Log($"[EnemyCharacter] {Name} (ID: {InstanceId}) BT 블랙보드 초기화 완료");
     }
 
     public void SetController(EnemyController newController)
@@ -130,22 +130,22 @@ public class EnemyCharacter : Character
     public void ExecuteBehaviorTrees()
     {
         Debug.Log($"[EnemyCharacter] 🔍 ExecuteBehaviorTrees 호출");
-        Debug.Log($"  - CharacterData: {CharacterData?.name ?? "null"}");
-        Debug.Log($"  - BT 수: {CharacterData?.behaviorTrees?.Count ?? 0}");
+        Debug.Log($"  - CharacterInitData: {CharacterInitData?.name ?? "null"}");
+        Debug.Log($"  - BT 수: {CharacterInitData?.behaviorTrees?.Count ?? 0}");
         
-        if (CharacterData?.behaviorTrees == null || CharacterData.behaviorTrees.Count == 0)
+        if (CharacterInitData?.behaviorTrees == null || CharacterInitData.behaviorTrees.Count == 0)
         {
             Debug.LogWarning("[EnemyCharacter] ⚠️ BT가 설정되지 않았습니다!");
-            Debug.LogWarning($"  - CharacterData: {(CharacterData == null ? "null" : CharacterData.name)}");
-            Debug.LogWarning($"  - behaviorTrees: {(CharacterData?.behaviorTrees == null ? "null" : $"Count={CharacterData.behaviorTrees.Count}")}");
+            Debug.LogWarning($"  - CharacterInitData: {(CharacterInitData == null ? "null" : CharacterInitData.name)}");
+            Debug.LogWarning($"  - behaviorTrees: {(CharacterInitData?.behaviorTrees == null ? "null" : $"Count={CharacterInitData.behaviorTrees.Count}")}");
             Debug.LogError("  → Unity Inspector에서 'Behavior Tree 설정'에 BT 에셋을 할당하세요!");
             return;
         }
         
-        Debug.Log($"[EnemyCharacter] ✅ BT 발견: {CharacterData.behaviorTrees.Count}개");
+        Debug.Log($"[EnemyCharacter] ✅ BT 발견: {CharacterInitData.behaviorTrees.Count}개");
         
         // BT 실행 컨텍스트 생성
-        var playerCharacter = CharacterManager.Instance?.PlayerCharacter;
+        var playerCharacter = CombatCharacterManager.Instance?.PlayerCharacter;
         if (playerCharacter == null)
         {
             Debug.LogWarning("[EnemyCharacter] PlayerCharacter를 찾을 수 없습니다.");
@@ -157,7 +157,7 @@ public class EnemyCharacter : Character
         
         // BT 실행 (블랙보드 패턴: 원본 BT 사용, 상태는 blackboard에 저장)
         currentBTContext = BladeAction.BT.BehaviorTreeExecutor.EvaluateMultipleTrees(
-            CharacterData.behaviorTrees,
+            CharacterInitData.behaviorTrees,
             this,
             playerCharacter,
             currentTurn,

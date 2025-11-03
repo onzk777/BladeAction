@@ -72,20 +72,20 @@ public class BTMonitorUI : MonoBehaviour
     {
         if (enemyBTStatusText == null) return;
         
-        var characterManager = CharacterManager.Instance;
-        if (characterManager == null || characterManager.EnemyCharacter == null)
+        var characterManager = CombatCharacterManager.Instance;
+        if (characterManager == null || characterManager.CurrentEnemy == null)
         {
             enemyBTStatusText.text = "<color=#888888>Enemy 없음</color>";
             return;
         }
         
-        var enemy = characterManager.EnemyCharacter;
+        var enemy = characterManager.CurrentEnemy;
         StringBuilder sb = new StringBuilder();
         
         sb.AppendLine($"<color=#FF6B6B>╔═══ Enemy: {enemy.Name} ═══╗</color>");
         
         // BT 설정 상태
-        int btCount = enemy.CharacterData?.behaviorTrees?.Count ?? 0;
+        int btCount = enemy.CharacterInitData?.behaviorTrees?.Count ?? 0;
         sb.AppendLine($"<color=#FF6B6B>║</color> BT 수: {btCount}개");
         
         // 런타임 확률 표시
@@ -145,7 +145,7 @@ public class BTMonitorUI : MonoBehaviour
     {
         if (playerBTStatusText == null) return;
         
-        var characterManager = CharacterManager.Instance;
+        var characterManager = CombatCharacterManager.Instance;
         if (characterManager == null || characterManager.PlayerCharacter == null)
         {
             playerBTStatusText.text = "<color=#888888>Player 없음</color>";
@@ -158,7 +158,7 @@ public class BTMonitorUI : MonoBehaviour
         sb.AppendLine($"<color=#00FF00>╔═══ Player: {player.Name} ═══╗</color>");
         
         // BT 설정 상태
-        int btCount = player.CharacterData?.behaviorTrees?.Count ?? 0;
+        int btCount = player.CharacterInitData?.behaviorTrees?.Count ?? 0;
         if (btCount > 0)
         {
             sb.AppendLine($"<color=#00FF00>║</color> BT 수: {btCount}개");

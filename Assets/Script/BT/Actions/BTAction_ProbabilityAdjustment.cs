@@ -63,10 +63,10 @@ namespace BladeAction.BT
         
         private float GetOriginalValue(BehaviorTreeContext context, string key)
         {
-            if (context?.self?.CharacterData?.npcBehavior == null)
+            if (context?.self?.CharacterInitData?.npcBehavior == null)
                 return 0f;
             
-            var npcBehavior = context.self.CharacterData.npcBehavior;
+            var npcBehavior = context.self.CharacterInitData.npcBehavior;
             
             switch (key)
             {

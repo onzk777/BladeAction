@@ -5,6 +5,11 @@ using BladeAction.Combat;
 using BladeAction.Item;
 
 /// <summary>
+/// 캐릭터 타입 구분
+/// </summary>
+public enum CharacterType { Player, Enemy }
+
+/// <summary>
 /// 초기 인벤토리 아이템 항목
 /// </summary>
 [System.Serializable]
@@ -42,10 +47,19 @@ public class InitialActionEntry
     public string actionKey;
 }
 
-[CreateAssetMenu(fileName = "CharacterData", menuName = "Character/CharacterData", order = 1)]
-public class CharacterData : ScriptableObject
+/// <summary>
+/// 캐릭터 초기화 데이터 (템플릿)
+/// Character 인스턴스를 생성할 때 사용하는 초기 값들을 정의합니다.
+/// 여러 Character 인스턴스가 동일한 CharacterInitData를 참조할 수 있습니다.
+/// </summary>
+[CreateAssetMenu(fileName = "CharacterInitData", menuName = "Character/CharacterInitData", order = 1)]
+public class CharacterInitData : ScriptableObject
 {
     [Header("캐릭터 기본 정보")]
+    [Tooltip("초기화 데이터 Key (템플릿 식별자)")] 
+    public string key = ""; // 예: "player_default", "goblin_warrior", "orc_shaman"
+    
+    [Tooltip("캐릭터 이름")]
     public string characterName = "Unknown";
     
     [Header("기본 전투 스탯")]
@@ -60,7 +74,11 @@ public class CharacterData : ScriptableObject
         maxPoise = 100,
         parryPoiseDamage = 25,
         guardDamageReduction = 0.5f,
-        guardDRBonus = 5
+        guardDRBonus = 5,
+        blockEfficiency = 0.5f,
+        blockPoiseConsumption = 10f,
+        parryEfficiency = 0.9f,
+        parryPoiseConsumption = 5f
     };
     
     [Header("장신구 슬롯 설정")]
@@ -132,11 +150,11 @@ public class CharacterData : ScriptableObject
         if (behaviorTrees == null || behaviorTrees.Count == 0)
         {
             // BT는 선택사항이므로 경고 제거
-            // Debug.LogWarning($"[CharacterData] {characterName} - Behavior Tree가 설정되지 않았습니다!");
+            // Debug.LogWarning($"[CharacterInitData] {characterName} - Behavior Tree가 설정되지 않았습니다!");
         }
         else
         {
-            Debug.Log($"[CharacterData] {characterName} - Behavior Tree {behaviorTrees.Count}개 확인 (블랙보드 패턴, 복사 불필요)");
+            Debug.Log($"[CharacterInitData] {characterName} - Behavior Tree {behaviorTrees.Count}개 확인 (블랙보드 패턴, 복사 불필요)");
         }
     }
     
@@ -152,7 +170,7 @@ public class CharacterData : ScriptableObject
     {
         // 블랙보드 패턴으로 변경되어 BT 상태 리셋이 불필요함
         // 각 Combatant의 Blackboard.ResetCombat()을 호출해야 함
-        Debug.Log($"[CharacterData] {characterName} - BT 상태 리셋 (블랙보드 패턴, BT 리셋 불필요)");
+        Debug.Log($"[CharacterInitData] {characterName} - BT 상태 리셋 (블랙보드 패턴, BT 리셋 불필요)");
     }
 }
 
@@ -181,3 +199,4 @@ public class NPCBehaviorProbabilities
     [Range(0f, 1f)]
     public float parryWhileGuardingRate = 0f;
 }
+

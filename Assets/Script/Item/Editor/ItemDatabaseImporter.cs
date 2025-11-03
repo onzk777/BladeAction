@@ -28,7 +28,7 @@ namespace BladeAction.Item.Editor
         {
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("ItemDatabase Import/Export", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("ItemDatabase ↔ CSV 파일 간 데이터를 Import/Export 합니다.\n주의: Unity Asset 참조(icon, weaponType 등)는 CSV에 포함되지 않으며, Inspector에서 수동 설정해야 합니다.", MessageType.Info);
+            EditorGUILayout.HelpBox("ItemDatabase ↔ CSV 파일 간 데이터를 Import/Export 합니다.\n\n⚠️ Import는 완전 동기화 방식입니다:\n  • CSV에 있는 Key → 업데이트 또는 추가\n  • CSV에 없는 Key → 삭제됨\n  • Unity Asset 참조(icon 등)는 보존됨", MessageType.Info);
             
             EditorGUILayout.Space();
             
@@ -77,7 +77,7 @@ namespace BladeAction.Item.Editor
             GUI.enabled = true;
             
             GUI.enabled = loadedData.Count > 0 && itemDatabase != null;
-            if (GUILayout.Button("Import (Merge 업데이트)", GUILayout.Height(30)))
+            if (GUILayout.Button("Import (CSV와 완전 동기화)", GUILayout.Height(30)))
             {
                 ImportMergeToDatabase();
             }
@@ -128,10 +128,9 @@ namespace BladeAction.Item.Editor
             }
         }
         /// <summary>
-        /// ItemDatabase로 임포트 (머지 업데이트 방식)
-        /// - 기존 아이템은 유지하고, CSV 필드만 갱신(빈 값은 미변경)
-        /// - Unity 전용 필드(icon, appearance 등)는 보존
-        /// - 신규 키는 추가
+        /// ItemDatabase로 임포트 (완전 동기화 방식)
+        /// - CSV에 있는 Key: 업데이트 또는 추가 (Unity Asset 참조는 보존)
+        /// - CSV에 없는 Key: 삭제
         /// </summary>
         private void ImportMergeToDatabase()
         {
@@ -146,8 +145,18 @@ namespace BladeAction.Item.Editor
                 return;
             }
 
+            // CSV Key 집합 생성
+            var csvKeys = new HashSet<string>();
+            foreach (var csv in loadedData)
+            {
+                if (!string.IsNullOrEmpty(csv.Key))
+                    csvKeys.Add(csv.Key);
+            }
+
             int updated = 0;
             int added = 0;
+            
+            // 1단계: CSV 데이터로 업데이트/추가
             foreach (var csv in loadedData)
             {
                 if (string.IsNullOrEmpty(csv.Key))
@@ -169,12 +178,27 @@ namespace BladeAction.Item.Editor
                 }
             }
 
+            // 2단계: CSV에 없는 아이템 삭제
+            int deleted = 0;
+            for (int i = itemDatabase.items.Count - 1; i >= 0; i--)
+            {
+                var item = itemDatabase.items[i];
+                if (item != null && !string.IsNullOrEmpty(item.itemKey))
+                {
+                    if (!csvKeys.Contains(item.itemKey))
+                    {
+                        itemDatabase.items.RemoveAt(i);
+                        deleted++;
+                    }
+                }
+            }
+
             EditorUtility.SetDirty(itemDatabase);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
             EditorUtility.DisplayDialog("성공",
-                $"✅ Merge Import 완료\n업데이트: {updated}개, 추가: {added}개\nUnity Asset 참조(아이콘 등)는 보존되었습니다.",
+                $"✅ Sync Import 완료\n업데이트: {updated}개, 추가: {added}개, 삭제: {deleted}개\nUnity Asset 참조(아이콘 등)는 보존되었습니다.",
                 "확인");
         }
 

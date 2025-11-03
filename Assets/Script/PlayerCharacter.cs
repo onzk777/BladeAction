@@ -38,14 +38,14 @@ public class PlayerCharacter : Character
     /// </summary>
     public BehaviorTreeContext CurrentBTContext => currentBTContext;
     
-    public PlayerCharacter(CharacterData data, PlayerController controller) : base(data)
+    public PlayerCharacter(string instanceId, CharacterInitData initData, PlayerController controller = null) : base(instanceId, initData)
     {
         this.controller = controller;
         
         // BTBlackboard 인스턴스 생성
         // 현재는 사용하지 않지만, 향후 자동 전투 시스템 추가 시 사용
-        btBlackboard = new BTBlackboard(data?.characterName ?? "Player");
-        Debug.Log($"[PlayerCharacter] {Name} BT 블랙보드 초기화 완료 (향후 자동 전투 대비)");
+        btBlackboard = new BTBlackboard(initData?.characterName ?? "Player");
+        Debug.Log($"[PlayerCharacter] {Name} (ID: {InstanceId}) BT 블랙보드 초기화 완료 (향후 자동 전투 대비)");
     }
     
     public void SetController(PlayerController newController)
@@ -99,7 +99,7 @@ public class PlayerCharacter : Character
     /// - ResetBTEvaluation()으로 턴 시작 시 리셋
     /// 
     /// 현재 상태:
-    /// - CharacterData에 BT가 설정되어 있으면 평가 실행
+    /// - CharacterInitData에 BT가 설정되어 있으면 평가 실행
     /// - 없으면 로그만 남기고 스킵
     /// </summary>
     public void ExecuteBehaviorTrees()
@@ -113,17 +113,17 @@ public class PlayerCharacter : Character
             return;
         }
         
-        if (CharacterData?.behaviorTrees == null || CharacterData.behaviorTrees.Count == 0)
+        if (CharacterInitData?.behaviorTrees == null || CharacterInitData.behaviorTrees.Count == 0)
         {
             Debug.Log("[PlayerCharacter] BT가 설정되지 않음 - 스킵 (정상, Player는 UI 기반)");
             btEvaluatedThisTurn = true; // 평가 완료 처리
             return;
         }
         
-        Debug.Log($"[PlayerCharacter] ✅ BT 발견: {CharacterData.behaviorTrees.Count}개");
+        Debug.Log($"[PlayerCharacter] ✅ BT 발견: {CharacterInitData.behaviorTrees.Count}개");
         
         // BT 실행 컨텍스트 생성
-        var enemyCharacter = CharacterManager.Instance?.EnemyCharacter;
+        var enemyCharacter = CombatCharacterManager.Instance?.CurrentEnemy;
         if (enemyCharacter == null)
         {
             Debug.LogWarning("[PlayerCharacter] EnemyCharacter를 찾을 수 없습니다.");
@@ -136,7 +136,7 @@ public class PlayerCharacter : Character
         
         // BT 실행 (블랙보드 패턴: 원본 BT 사용, 상태는 blackboard에 저장)
         currentBTContext = BehaviorTreeExecutor.EvaluateMultipleTrees(
-            CharacterData.behaviorTrees,
+            CharacterInitData.behaviorTrees,
             this,
             enemyCharacter,
             currentTurn,

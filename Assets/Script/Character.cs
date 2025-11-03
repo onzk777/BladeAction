@@ -7,8 +7,11 @@ using BladeAction.Combat;
 
 public abstract class Character
 {
-    public CharacterData CharacterData { get; protected set; }
-    public string Name => CharacterData?.characterName ?? "Unknown";
+    // 🆕 Instance 고유 ID
+    public string InstanceId { get; protected set; }
+    
+    public CharacterInitData CharacterInitData { get; protected set; }
+    public string Name => CharacterInitData?.characterName ?? "Unknown";
     public SwordArtStyleData EquippedStyle { get; protected set; }
     public event Action<SwordArtStyleData> OnStyleEquipped;
     public event Action<SwordArtStyleData> OnStyleUnequipped;
@@ -78,15 +81,16 @@ public abstract class Character
         }
     }
 
-    public Character(CharacterData characterData)
+    public Character(string instanceId, CharacterInitData initData)
     {
-        CharacterData = characterData;
+        this.InstanceId = instanceId;
+        this.CharacterInitData = initData;
         
         // 장신구 슬롯 설정 초기화
-        if (characterData != null)
+        if (initData != null)
         {
-            currentAccessorySlots = characterData.initialAccessorySlots;
-            maxAccessorySlots = characterData.maxAccessorySlots;
+            currentAccessorySlots = initData.initialAccessorySlots;
+            maxAccessorySlots = initData.maxAccessorySlots;
         }
         
         InitializeRuntimeStats();
@@ -98,16 +102,16 @@ public abstract class Character
     /// </summary>
     public void InitializeRuntimeStats()
     {
-        if (CharacterData != null)
+        if (CharacterInitData != null)
         {
-            // CharacterData의 baseStats를 복사
-            stats = CharacterData.baseStats;
+            // CharacterInitData의 baseStats를 복사
+            stats = CharacterInitData.baseStats;
             
             // currentHP/currentPoise를 maxHP/maxPoise로 초기화
             stats.currentHP = stats.maxHP;
             stats.currentPoise = stats.maxPoise;
             
-            Debug.Log($"[Character] {Name} 런타임 스테이터스 초기화 - HP: {stats.currentHP}/{stats.maxHP}, Poise: {stats.currentPoise}/{stats.maxPoise}");
+            Debug.Log($"[Character] {Name} (ID: {InstanceId}) 런타임 스테이터스 초기화 - HP: {stats.currentHP}/{stats.maxHP}, Poise: {stats.currentPoise}/{stats.maxPoise}");
         }
     }
     

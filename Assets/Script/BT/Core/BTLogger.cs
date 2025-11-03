@@ -49,7 +49,7 @@ namespace BladeAction.BT
         public static void LogTreeEvaluationStart(BehaviorTreeData tree, BehaviorTreeContext context)
         {
             // 히스토리에 기록
-            string combatantName = context.self?.CharacterData?.characterName ?? "Unknown";
+            string combatantName = context.self?.CharacterInitData?.characterName ?? "Unknown";
             BTLogHistory.Instance.StartEvaluation(tree.name, combatantName, context.currentTurn, context.isAttackTurn);
             
             if (!EnableLogging) return;
@@ -59,8 +59,8 @@ namespace BladeAction.BT
                      $"<color={COLOR_HEADER}>╠═══════════════════════════════════════════════════════════════</color>\n" +
                      $"  턴: {context.currentTurn}\n" +
                      $"  공격 턴: {(context.isAttackTurn ? "✓" : "✗")}\n" +
-                     $"  Self: {context.self?.CharacterData?.characterName ?? "N/A"} (HP: {context.self?.HP ?? 0}/{context.self?.MaxHP ?? 0})\n" +
-                     $"  Target: {context.target?.CharacterData?.characterName ?? "N/A"} (HP: {context.target?.HP ?? 0}/{context.target?.MaxHP ?? 0})\n" +
+                     $"  Self: {context.self?.CharacterInitData?.characterName ?? "N/A"} (HP: {context.self?.HP ?? 0}/{context.self?.MaxHP ?? 0})\n" +
+                     $"  Target: {context.target?.CharacterInitData?.characterName ?? "N/A"} (HP: {context.target?.HP ?? 0}/{context.target?.MaxHP ?? 0})\n" +
                      $"<color={COLOR_HEADER}>╚═══════════════════════════════════════════════════════════════</color>");
         }
         

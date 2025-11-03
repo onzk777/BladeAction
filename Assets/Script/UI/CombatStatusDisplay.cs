@@ -76,13 +76,13 @@ public class CombatStatusDisplay : MonoBehaviour
     private System.Collections.IEnumerator WaitForCharacterManager()
     {
         // CharacterManager가 초기화될 때까지 대기
-        while (CharacterManager.Instance == null)
+        while (CombatCharacterManager.Instance == null)
         {
             yield return null;
         }
 
         // CharacterManager의 데이터가 준비될 때까지 대기
-        while (CharacterManager.Instance.PlayerCharacter == null || CharacterManager.Instance.EnemyCharacter == null)
+        while (CombatCharacterManager.Instance.PlayerCharacter == null || CombatCharacterManager.Instance.CurrentEnemy == null)
         {
             yield return null;
         }
@@ -102,15 +102,15 @@ public class CombatStatusDisplay : MonoBehaviour
     private void SubscribeToStatusEvents()
     {
         // 플레이어 스테이터스 이벤트 구독
-        if (CharacterManager.Instance.PlayerCharacter != null)
+        if (CombatCharacterManager.Instance.PlayerCharacter != null)
         {
-            CharacterManager.Instance.PlayerCharacter.OnStatsChanged += OnPlayerStatsChanged;
+            CombatCharacterManager.Instance.PlayerCharacter.OnStatsChanged += OnPlayerStatsChanged;
         }
 
         // 적 스테이터스 이벤트 구독
-        if (CharacterManager.Instance.EnemyCharacter != null)
+        if (CombatCharacterManager.Instance.CurrentEnemy != null)
         {
-            CharacterManager.Instance.EnemyCharacter.OnStatsChanged += OnEnemyStatsChanged;
+            CombatCharacterManager.Instance.CurrentEnemy.OnStatsChanged += OnEnemyStatsChanged;
         }
     }
 
@@ -126,9 +126,13 @@ public class CombatStatusDisplay : MonoBehaviour
 
     private void UpdatePlayerStatus()
     {
-        if (CharacterManager.Instance?.PlayerCharacter == null) return;
+        if (CombatCharacterManager.Instance?.PlayerCharacter == null) return;
 
-        var combatant = CharacterManager.Instance.PlayerCharacter;
+        var combatant = CombatCharacterManager.Instance.PlayerCharacter;
+        
+        // 이름 업데이트
+        if (playerName != null) playerName.text = combatant.Name;
+        
         if (playerHP != null) playerHP.text = $"HP: {combatant.GetHPStatus()}";
         if (playerPoise != null) playerPoise.text = $"Poise: {combatant.GetPoiseStatus()}";
         if (playerATK != null) playerATK.text = GetEffectiveAttackText(combatant, true);
@@ -149,9 +153,13 @@ public class CombatStatusDisplay : MonoBehaviour
 
     private void UpdateEnemyStatus()
     {
-        if (CharacterManager.Instance?.EnemyCharacter == null) return;
+        if (CombatCharacterManager.Instance?.CurrentEnemy == null) return;
 
-        var combatant = CharacterManager.Instance.EnemyCharacter;
+        var combatant = CombatCharacterManager.Instance.CurrentEnemy;
+        
+        // 이름 업데이트
+        if (enemyName != null) enemyName.text = combatant.Name;
+        
         if (enemyHP != null) enemyHP.text = $"HP: {combatant.GetHPStatus()}";
         if (enemyPoise != null) enemyPoise.text = $"Poise: {combatant.GetPoiseStatus()}";
         if (enemyATK != null) enemyATK.text = GetEffectiveAttackText(combatant, false);
@@ -257,25 +265,25 @@ public class CombatStatusDisplay : MonoBehaviour
     [ContextMenu("Test Player Take Damage")]
     public void TestPlayerTakeDamage()
     {
-        CharacterManager.Instance?.PlayerCharacter?.TakeDamage(10);
+        CombatCharacterManager.Instance?.PlayerCharacter?.TakeDamage(10);
     }
 
     [ContextMenu("Test Enemy Take Damage")]
     public void TestEnemyTakeDamage()
     {
-        CharacterManager.Instance?.EnemyCharacter?.TakeDamage(10);
+        CombatCharacterManager.Instance?.CurrentEnemy?.TakeDamage(10);
     }
 
     [ContextMenu("Test Player Lose Poise")]
     public void TestPlayerLosePoise()
     {
-        CharacterManager.Instance?.PlayerCharacter?.LosePoise(25);
+        CombatCharacterManager.Instance?.PlayerCharacter?.LosePoise(25);
     }
 
     [ContextMenu("Test Enemy Lose Poise")]
     public void TestEnemyLosePoise()
     {
-        CharacterManager.Instance?.EnemyCharacter?.LosePoise(25);
+        CombatCharacterManager.Instance?.CurrentEnemy?.LosePoise(25);
     }
 
     public void whosTurnText(bool isPlayer)
@@ -620,14 +628,14 @@ public class CombatStatusDisplay : MonoBehaviour
     private void OnDestroy()
     {
         // 이벤트 구독 해제
-        if (CharacterManager.Instance?.PlayerCharacter != null)
+        if (CombatCharacterManager.Instance?.PlayerCharacter != null)
         {
-            CharacterManager.Instance.PlayerCharacter.OnStatsChanged -= OnPlayerStatsChanged;
+            CombatCharacterManager.Instance.PlayerCharacter.OnStatsChanged -= OnPlayerStatsChanged;
         }
 
-        if (CharacterManager.Instance?.EnemyCharacter != null)
+        if (CombatCharacterManager.Instance?.CurrentEnemy != null)
         {
-            CharacterManager.Instance.EnemyCharacter.OnStatsChanged -= OnEnemyStatsChanged;
+            CombatCharacterManager.Instance.CurrentEnemy.OnStatsChanged -= OnEnemyStatsChanged;
         }
 
         // 가이드 정리
