@@ -874,3 +874,5 @@ A: 불필요. Resources.Load로 충분. GameObject 제거.
 - [ ] Scene 전환 플로우 동작 여부
 - [ ] 발생한 문제 및 해결 방법
 
+
+

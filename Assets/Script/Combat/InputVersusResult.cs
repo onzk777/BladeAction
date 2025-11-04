@@ -77,22 +77,22 @@ public class InputVersusResult
         switch (resultType)
         {
             case InputVersusResult.ResultType.Hit:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "적중!");
+                CombatDebugDisplay.Instance?.ShowHitVersusResult(hitIndex, "적중!");
                 break;
             case InputVersusResult.ResultType.Parry:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "완벽하게 쳐냈다!");
+                CombatDebugDisplay.Instance?.ShowHitVersusResult(hitIndex, "완벽하게 쳐냈다!");
                 break;
             case InputVersusResult.ResultType.HalfParry:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "가까스로 쳐냈다...");
+                CombatDebugDisplay.Instance?.ShowHitVersusResult(hitIndex, "가까스로 쳐냈다...");
                 break;
             case InputVersusResult.ResultType.Guard:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "막아냈다!");
+                CombatDebugDisplay.Instance?.ShowHitVersusResult(hitIndex, "막아냈다!");
                 break;
             case InputVersusResult.ResultType.GuardBreak:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "가드 브레이크!");
+                CombatDebugDisplay.Instance?.ShowHitVersusResult(hitIndex, "가드 브레이크!");
                 break;
             case InputVersusResult.ResultType.PerfectAttack:
-                CombatStatusDisplay.Instance.ShowHitVersusResult(hitIndex, "완벽한 일격!");
+                CombatDebugDisplay.Instance?.ShowHitVersusResult(hitIndex, "완벽한 일격!");
                 break;
         }
     }

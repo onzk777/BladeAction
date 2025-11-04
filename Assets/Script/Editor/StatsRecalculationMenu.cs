@@ -91,15 +91,15 @@ namespace BladeAction.Editor
                 return;
             }
 
-            var display = CombatStatusDisplay.Instance;
+            var display = CombatDebugDisplay.Instance;
             if (display != null)
             {
                 display.ForceUpdateUI();
-                EditorUtility.DisplayDialog("완료", "Combat UI가 강제로 업데이트되었습니다.", "확인");
+                EditorUtility.DisplayDialog("완료", "Combat Debug UI가 강제로 업데이트되었습니다.", "확인");
             }
             else
             {
-                EditorUtility.DisplayDialog("오류", "CombatStatusDisplay가 Scene에 없습니다.", "확인");
+                EditorUtility.DisplayDialog("오류", "CombatDebugDisplay가 Scene에 없습니다.", "확인");
             }
         }
     }

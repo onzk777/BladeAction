@@ -1,8 +1,9 @@
 # Scene 계층 구조 설계
 
 **작성일**: 2025-11-03  
-**상태**: 설계 완료 (구현 대기)  
-**목적**: 프로토타입에서 실제 게임으로 전환하기 위한 Scene 구조 설계
+**최종 업데이트**: 2025-11-04  
+**상태**: ✅ 구현 완료  
+**목적**: 프로토타입에서 실제 게임으로 전환하기 위한 Scene 구조 설계 및 구현
 
 ---
 
@@ -922,6 +923,54 @@ Scene      복귀
 | 인벤토리→메뉴 | MainMenu + InventoryScene | MainMenuScene | Inventory 언로드 (MainMenu 유지) |
 | 전투→결과 | CombatScene | ResultScene | Combat 언로드 → Result 로드 |
 | 결과→메뉴 | ResultScene | MainMenuScene | Result 언로드 → MainMenu 로드 |
+
+---
+
+## 구현 상태 (2025-11-04)
+
+### ✅ 완료된 구현
+
+#### 1. Core Scene 구조
+- **01.CoreSystemScene** 생성 완료
+  - EventSystem 배치
+  - GameInputManager (PlayerInput) 배치
+  - StatCalculationManager 배치
+  - CoreSystemInitializer 생성 및 Scene 로딩 관리
+
+#### 2. Persistent UI Scene
+- **02.PersistentUIScene** 생성 완료
+  - MainMenuManager (인벤토리, 검술설정)
+  - Canvas_Debug (디버그 패널)
+  - ItemEvents
+
+#### 3. Content Scene
+- **03.CombatScene** 정리 완료
+  - ProtoType Scene 기반으로 재구성
+  - DontDestroyOnLoad 제거 (Scene 생명주기 관리)
+  - CombatCharacterManager만 포함
+
+#### 4. 주요 시스템 구현
+- CoreSystemInitializer: Additive Scene Loading 관리
+- GameInputManager: 크로스 Scene 입력 중재
+- MainMenuManager: TopNavigationBar 자동 표시/숨김
+- UI 시스템 분리: CombatDebugDisplay / CombatHUD
+
+#### 5. 해결된 이슈
+- ✅ 전투 중 UI 입력 차단 문제 (BaseInputHandler의 SwitchCurrentActionMap)
+- ✅ 크로스 Scene 참조 문제 (GameInputManager 중재자 패턴)
+- ✅ DontDestroyOnLoad 남용 문제 (Scene별 생명주기 명확화)
+
+### 🔄 남은 구현
+
+#### 1. Scene 전환 시스템
+- SceneTransitionManager 생성 필요
+- Fade In/Out 트랜지션 효과
+- 로딩 화면 (선택)
+
+#### 2. 추가 Content Scenes
+- TitleScene (타이틀 화면)
+- MainMenuScene (메인 메뉴)
+- ResultScene (전투 결과)
 
 ---
 

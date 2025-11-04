@@ -283,11 +283,11 @@ public class EnemyController : MonoBehaviour, ICombatController
         string msg = isPerfect ? "Perfect!" : "Miss!";
         if (isPerfect)
         {
-            CombatStatusDisplay.Instance.ShowEnemyHitResult(hitIndex, msg);
+            CombatDebugDisplay.Instance?.ShowEnemyHitResult(hitIndex, msg);
         }
         else
         {
-            CombatStatusDisplay.Instance.ShowEnemyHitResult(hitIndex, msg);
+            CombatDebugDisplay.Instance?.ShowEnemyHitResult(hitIndex, msg);
         }
     }
     

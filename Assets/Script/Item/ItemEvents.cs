@@ -64,12 +64,7 @@ namespace BladeAction.Item
                     {
                         GameObject go = new GameObject("ItemEvents");
                         _instance = go.AddComponent<ItemEvents>();
-                        
-                        // 플레이 모드에서만 DontDestroyOnLoad 사용
-                        if (Application.isPlaying)
-                        {
-                            DontDestroyOnLoad(go);
-                        }
+                        // PersistentUIScene 전용이므로 DontDestroyOnLoad 적용 안함
                     }
                 }
                 return _instance;
@@ -107,12 +102,7 @@ namespace BladeAction.Item
             if (_instance == null)
             {
                 _instance = this;
-                
-                // 플레이 모드에서만 DontDestroyOnLoad 사용
-                if (Application.isPlaying)
-                {
-                    DontDestroyOnLoad(gameObject);
-                }
+                // PersistentUIScene 전용이므로 DontDestroyOnLoad 적용 안함
             }
             else if (_instance != this)
             {

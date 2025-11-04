@@ -26,6 +26,10 @@ namespace BladeAction.UI
     /// </summary>
     public class MainMenuManager : MonoBehaviour
     {
+        [Header("네비게이션 바")]
+        [Tooltip("탑 네비게이션 바 GameObject")]
+        [SerializeField] private GameObject topNavigationBar;
+        
         [Header("메뉴 탭 목록")]
         [Tooltip("각 탭의 패널과 버튼을 명시적으로 연결")]
         [SerializeField] private List<MenuTab> menuTabs = new List<MenuTab>();
@@ -82,14 +86,19 @@ namespace BladeAction.UI
                 }
             }
             
+            // TopNavigationBar도 초기에는 비활성화
+            if (topNavigationBar != null)
+            {
+                topNavigationBar.SetActive(false);
+            }
+            
             Log("모든 패널 초기화 완료 (비활성화)");
         }
         
         private void Start()
         {
-            // 초기 상태: 메뉴 닫힌 상태로 시작
-            gameObject.SetActive(false);
-            Log("메인 메뉴 초기화 완료 (닫힌 상태)");
+            // MainMenuManager는 활성화 유지, 하위 패널들은 Awake에서 이미 비활성화됨
+            Log("메인 메뉴 초기화 완료 (패널들은 비활성화)");
         }
         
         private void OnDestroy()
@@ -151,6 +160,13 @@ namespace BladeAction.UI
             
             // 탭 버튼 상태 업데이트
             UpdateTabButtons(tabIndex);
+            
+            // TopNavigationBar 활성화
+            if (topNavigationBar != null && !topNavigationBar.activeSelf)
+            {
+                topNavigationBar.SetActive(true);
+                Log("TopNavigationBar 활성화");
+            }
             
             currentTabIndex = tabIndex;
             Log($"탭 전환 완료: '{menuTabs[tabIndex].tabName}'");
@@ -231,18 +247,55 @@ namespace BladeAction.UI
         /// </summary>
         public void OpenMainMenu()
         {
-            gameObject.SetActive(true);
             ShowTab(0); // 첫 번째 탭으로 시작
             Log("메인 메뉴 열림");
         }
         
         /// <summary>
-        /// 메인 메뉴 전체 닫기
+        /// 메인 메뉴 전체 닫기 (모든 패널 비활성화)
         /// </summary>
         public void CloseMainMenu()
         {
-            gameObject.SetActive(false);
+            CloseAllPanels();
             Log("메인 메뉴 닫힘");
+        }
+        
+        /// <summary>
+        /// 모든 패널 비활성화
+        /// </summary>
+        private void CloseAllPanels()
+        {
+            foreach (var tab in menuTabs)
+            {
+                if (tab.panelObject != null)
+                {
+                    tab.panelObject.SetActive(false);
+                }
+            }
+            
+            // TopNavigationBar도 비활성화
+            if (topNavigationBar != null && topNavigationBar.activeSelf)
+            {
+                topNavigationBar.SetActive(false);
+                Log("TopNavigationBar 비활성화");
+            }
+            
+            currentTabIndex = -1;
+        }
+        
+        /// <summary>
+        /// 메뉴가 열려있는지 확인 (하나라도 패널이 활성화되어 있으면 true)
+        /// </summary>
+        private bool IsMenuOpen()
+        {
+            foreach (var tab in menuTabs)
+            {
+                if (tab.panelObject != null && tab.panelObject.activeSelf)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
         
         /// <summary>
@@ -254,17 +307,18 @@ namespace BladeAction.UI
             int inventoryIndex = FindTabIndexByName("소지품");
             if (inventoryIndex < 0) inventoryIndex = 0; // fallback
             
-            if (!gameObject.activeSelf)
+            Log($"[ToggleInventoryTab] 호출됨 - IsMenuOpen: {IsMenuOpen()}, currentTabIndex: {currentTabIndex}, inventoryIndex: {inventoryIndex}");
+            
+            if (!IsMenuOpen())
             {
                 // 메뉴가 닫혀있으면 인벤토리 탭으로 열기
-                gameObject.SetActive(true);
                 ShowTab(inventoryIndex);
                 Log("메인 메뉴 열림 (소지품 탭)");
             }
             else if (currentTabIndex == inventoryIndex)
             {
-                // 인벤토리 탭이 열려있으면 메뉴 닫기
-                gameObject.SetActive(false);
+                // 인벤토리 탭이 열려있으면 메뉴 닫기 (모든 패널 비활성화)
+                CloseAllPanels();
                 Log("메인 메뉴 닫힘 (소지품 탭에서)");
             }
             else
@@ -284,17 +338,18 @@ namespace BladeAction.UI
             int actionIndex = FindTabIndexByName("검술");
             if (actionIndex < 0) actionIndex = 1; // fallback
             
-            if (!gameObject.activeSelf)
+            Log($"[ToggleActionCommandTab] 호출됨 - IsMenuOpen: {IsMenuOpen()}, currentTabIndex: {currentTabIndex}, actionIndex: {actionIndex}");
+            
+            if (!IsMenuOpen())
             {
                 // 메뉴가 닫혀있으면 검술 탭으로 열기
-                gameObject.SetActive(true);
                 ShowTab(actionIndex);
                 Log("메인 메뉴 열림 (검술 탭)");
             }
             else if (currentTabIndex == actionIndex)
             {
-                // 검술 탭이 열려있으면 메뉴 닫기
-                gameObject.SetActive(false);
+                // 검술 탭이 열려있으면 메뉴 닫기 (모든 패널 비활성화)
+                CloseAllPanels();
                 Log("메인 메뉴 닫힘 (검술 탭에서)");
             }
             else
@@ -302,6 +357,21 @@ namespace BladeAction.UI
                 // 다른 탭이 열려있으면 검술 탭으로 전환
                 ShowTab(actionIndex);
                 Log("검술 탭으로 전환");
+            }
+        }
+        
+        /// <summary>
+        /// 메뉴 취소/닫기 (ESC, Cancel 키용)
+        /// 메뉴가 열려있으면 닫기
+        /// </summary>
+        public void CancelMenu()
+        {
+            Log($"[CancelMenu] 호출됨 - IsMenuOpen: {IsMenuOpen()}");
+            
+            if (IsMenuOpen())
+            {
+                CloseAllPanels();
+                Log("메뉴 취소 - 모든 패널 닫힘");
             }
         }
         

@@ -307,7 +307,7 @@ public class PlayerController : MonoBehaviour, ICombatController
     private void UpdateCommandDisplay()
     {
         var cmd = GetSelectedCommand();
-        CombatStatusDisplay.Instance?.SetPlayerActionCommandName(cmd?.commandName);
+        CombatDebugDisplay.Instance?.SetPlayerActionCommandName(cmd?.commandName);
     }
     
     /// <summary>
@@ -393,11 +393,11 @@ public class PlayerController : MonoBehaviour, ICombatController
         string msg = isPerfect ? "Perfect!" : "Miss!";
         if (isPerfect)
         {
-            CombatStatusDisplay.Instance.ShowPlayerHitResult(hitIndex, msg);
+            CombatDebugDisplay.Instance?.ShowPlayerHitResult(hitIndex, msg);
         }
         else
         {
-            CombatStatusDisplay.Instance.ShowPlayerHitResult(hitIndex, msg);
+            CombatDebugDisplay.Instance?.ShowPlayerHitResult(hitIndex, msg);
         }
     }
     

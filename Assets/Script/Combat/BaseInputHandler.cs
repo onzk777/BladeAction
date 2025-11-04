@@ -64,11 +64,14 @@ public abstract class BaseInputHandler : MonoBehaviour
         // 액션맵 "Combat" 내 PerfectInput 액션을 가져옴
         try
         {
-            playerInput.SwitchCurrentActionMap("Combat");
-            perfectAction = playerInput.actions["PerfectInput"];
+            // ❌ 제거: SwitchCurrentActionMap()은 다른 ActionMap을 비활성화함
+            // CombatManager에서 EnableCombatMap()으로 이미 활성화되므로 여기서는 액션만 가져옴
+            // playerInput.SwitchCurrentActionMap("Combat");
+            
+            perfectAction = playerInput.actions["Combat/PerfectInput"];
             if (perfectAction == null)
             {
-                Debug.LogError("[TimingInputHandler] 'PerfectInput' 액션을 찾을 수 없습니다.");
+                Debug.LogError("[TimingInputHandler] 'Combat/PerfectInput' 액션을 찾을 수 없습니다.");
             }
             else
             {
@@ -77,7 +80,7 @@ public abstract class BaseInputHandler : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            Debug.LogError($"[TimingInputHandler] 액션 맵 전환 실패: {e.Message}");
+            Debug.LogError($"[TimingInputHandler] 액션 가져오기 실패: {e.Message}");
         }
     }
     // ⬇️ 입력 콜백 등록

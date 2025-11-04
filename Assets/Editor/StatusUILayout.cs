@@ -46,13 +46,13 @@ public class StatusUILayout : MonoBehaviour
         return tmpText;
     }
 
-    [ContextMenu("Connect to CombatStatusDisplay")]
-    private void ConnectToCombatStatusDisplay()
+    [ContextMenu("Connect to CombatDebugDisplay")]
+    private void ConnectToCombatDebugDisplay()
     {
-        CombatStatusDisplay display = FindFirstObjectByType<CombatStatusDisplay>();
+        CombatDebugDisplay display = FindFirstObjectByType<CombatDebugDisplay>();
         if (display == null)
         {
-            Debug.LogError("CombatStatusDisplay not found in scene!");
+            Debug.LogError("CombatDebugDisplay not found in scene!");
             return;
         }
 
@@ -72,6 +72,6 @@ public class StatusUILayout : MonoBehaviour
             display.enemyDR = parentTransform.Find("DR")?.GetComponent<TextMeshProUGUI>();
             display.enemyCrit = parentTransform.Find("Crit")?.GetComponent<TextMeshProUGUI>();
         }
-        Debug.Log("Status UI connected to CombatStatusDisplay for " + (isPlayer ? "Player" : "Enemy"));
+        Debug.Log("Status UI connected to CombatDebugDisplay for " + (isPlayer ? "Player" : "Enemy"));
     }
 }

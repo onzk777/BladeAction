@@ -32,16 +32,7 @@ public class FloatingTextManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            
-            // root GameObject일 때만 DontDestroyOnLoad 적용
-            if (transform.parent == null)
-            {
-                DontDestroyOnLoad(gameObject);
-            }
-            else
-            {
-                Debug.LogWarning("[FloatingTextManager] DontDestroyOnLoad는 root GameObject에만 적용됩니다. 부모에서 분리하거나 root로 이동하세요.");
-            }
+            // CombatScene 전용이므로 DontDestroyOnLoad 적용 안함
         }
         else
         {

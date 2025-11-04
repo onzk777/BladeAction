@@ -118,16 +118,7 @@ public class CombatManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this; // CombatManager의 싱글톤 인스턴스 설정
-            
-            // root GameObject일 때만 DontDestroyOnLoad 적용
-            if (transform.parent == null)
-            {
-                DontDestroyOnLoad(gameObject); // CombatManager는 씬 전환 시에도 유지
-            }
-            else
-            {
-                Debug.LogWarning("[CombatManager] DontDestroyOnLoad는 root GameObject에만 적용됩니다. 부모에서 분리하거나 root로 이동하세요.");
-            }
+            // CombatScene 전용이므로 DontDestroyOnLoad 적용 안함
         }
         else
         {
@@ -147,6 +138,13 @@ public class CombatManager : MonoBehaviour
         else
         {
             Debug.Log($"[CombatManager] Start에서 EventSystem 활성화 상태: {eventSystem.enabled}");
+        }
+        
+        // Combat ActionMap 활성화 (UI ActionMap은 유지)
+        if (GameInputManager.Instance != null)
+        {
+            GameInputManager.Instance.EnableCombatMap();
+            Debug.Log("[CombatManager] Combat ActionMap 활성화 (UI는 유지)");
         }
         
         // 전투 결과 초기화
@@ -552,11 +550,14 @@ public class CombatManager : MonoBehaviour
         actor.ResetPoise(); // 공격 턴 시작 시 Poise 회복
         isInterrupted = false; // 중단 상태 초기화
         
-        CombatStatusDisplay.Instance.ClearResults(); // 결과 표시 초기화        
-        CombatStatusDisplay.Instance.whosTurnText(isPlayerAttacker); // 현재 턴 표시
+        // HUD 초기화
+        CombatHUD.Instance?.ClearHUD(); // HUD 초기화 (Perfect Timing 가이드 제거)
         
         // Perfect Timing 가이드 표시
-        CombatStatusDisplay.Instance.ShowPerfectTimingGuides(command, turnDuration);
+        CombatHUD.Instance?.ShowPerfectTimingGuides(command, turnDuration);
+        
+        // 디버그 패널 초기화
+        CombatDebugDisplay.Instance?.ClearDebugResults(); // 디버그 결과 표시 초기화
 
         if (isPlayerAttacker)
         {
@@ -581,8 +582,11 @@ public class CombatManager : MonoBehaviour
             yield break;  // 잘못된 인덱스면 턴 건너뜀
         }
 
-        CombatStatusDisplay.Instance.ShowCommandStart(isPlayerAttacker, command.commandName); // 3. 커맨드 시작 표시
-        CombatStatusDisplay.Instance.ShowInputPrompt("입력 대기"); // 입력 프롬프트 표시
+        // 디버그 정보: 커맨드 시작 표시
+        CombatDebugDisplay.Instance?.ShowCommandStart(isPlayerAttacker, command.commandName);
+        
+        // 디버그 패널: 입력 프롬프트 표시
+        CombatDebugDisplay.Instance?.ShowInputPrompt("입력 대기");
         Debug.Log($"[InputTrace][Turn] PerformTurn Start - actor:{actor.Name}, defender:{defender.Name}, Time:{Time.time:F4}, Frame:{Time.frameCount}");
         
         // ❌ 제거: 턴 종료 플래그 초기화 (PerformTurn에서 직접 처리)
@@ -635,8 +639,9 @@ public class CombatManager : MonoBehaviour
             float elapsed = TurnTimer.ElapsedTime; // 현재 경과 시간
             float remaining = turnDuration - elapsed; // 잔여 시간
 
-            // 턴 타이머 UI 업데이트 (잔여 시간, 전체 시간)
-            CombatStatusDisplay.Instance?.updateTurnInfo(remaining, turnDuration);
+            // 턴 타이머 UI 업데이트
+            CombatHUD.Instance?.UpdateTurnProgressBar(remaining, turnDuration); // 게임 HUD: 진행률 바
+            CombatDebugDisplay.Instance?.UpdateTurnInfo(remaining, turnDuration); // 디버그 패널: 시간 텍스트
             
             // ❌ 제거: 턴 종료 플래그 확인 (PerformTurn에서 직접 처리)
             // if (turnEndRequested)
@@ -699,7 +704,7 @@ public class CombatManager : MonoBehaviour
                     CurrentClashResultShown = false;
                     attackerInputHandler.ResetInputState(); // 👈 히트마다 입력 기록 초기화
                     defenderInputHandler.ResetInputState(); // 👈 히트마다 입력 기록 초기화
-                    CombatStatusDisplay.Instance.ShowInputPrompt("입력 가능!");
+                    CombatDebugDisplay.Instance?.ShowInputPrompt("입력 가능!");
                     CurrentController = controller;
                     CurrentResult = result;
                     attackerInputHandler.RegisterHitTiming(perfectWindow);
@@ -727,7 +732,7 @@ public class CombatManager : MonoBehaviour
                         // 플레이어 입력 대기 UI 표시
                         if (elapsed < perfectWindowEnd)
                         {
-                            CombatStatusDisplay.Instance.ShowInputPrompt("지금이닷!");
+                            CombatDebugDisplay.Instance?.ShowInputPrompt("지금이닷!");
                             Debug.Log($"[UI표시:막아!] 히트 {CurrentHit + 1}, elapsed={elapsed:F5}, 타이밍창=({perfectWindow.start:F5} ~ {perfectWindow.End:F5})");
                         }
                         else if (elapsed >= perfectWindowEnd)
@@ -761,11 +766,11 @@ public class CombatManager : MonoBehaviour
                 // }
                 if(isPlayerAttacker && CurrentAttackResultShown)
                 {
-                    CombatStatusDisplay.Instance.ShowInputPrompt("V");
+                    CombatDebugDisplay.Instance?.ShowInputPrompt("V");
                 }
                 else if (!isPlayerAttacker && CurrentDefenseResultShown)
                 {
-                    CombatStatusDisplay.Instance.ShowInputPrompt("V");
+                    CombatDebugDisplay.Instance?.ShowInputPrompt("V");
                 }
                 
 
@@ -795,7 +800,7 @@ public class CombatManager : MonoBehaviour
                     
                     Debug.Log($"[PerformTurn] 🆕 발사체 기반 히트 {CurrentHit} 완료 → 전환, CurrentClashResultShown:{CurrentClashResultShown}");
 
-                    CombatStatusDisplay.Instance.ShowInputPrompt("");
+                    CombatDebugDisplay.Instance?.ShowInputPrompt("");
                     CurrentAttackResultShown = false; // 히트 결과 표시 초기화
                     CurrentDefenseResultShown = false; // 히트 결과 표시 초기화
                     CurrentClashResultShown = false; // 판정 결과 표시 초기화
@@ -1279,9 +1284,9 @@ public class CombatManager : MonoBehaviour
             CurrentAttackResultShown = true; // 히트 결과가 표시되었음을 설정
             
             // 🆕 완벽 입력 성공 시 가이드 완료 상태로 전환
-            if (isPerfect && CombatStatusDisplay.Instance != null)
+            if (isPerfect && CombatHUD.Instance != null)
             {
-                CombatStatusDisplay.Instance.MarkGuideAsCompleted(CurrentHit);
+                CombatHUD.Instance.MarkGuideAsCompleted(CurrentHit);
             }
             
             // 🆕 공격자 입력 처리 시 발사체 발사 (성공/실패 무관)
@@ -1911,9 +1916,16 @@ public class CombatManager : MonoBehaviour
         // 캐릭터 비활성화 처리
         DisableCharacters();
         
-        // UI에 전투 종료 및 승리자 표시
+        // UI에 전투 종료 및 승리자 표시 (디버그 패널)
         string resultMessage = "승리!"; // 승리자에게는 항상 승리 메시지
-        CombatStatusDisplay.Instance?.ShowBattleEndResult(winnerName, resultMessage);
+        if (CombatDebugDisplay.Instance != null)
+        {
+            if (CombatDebugDisplay.Instance.actionProgress != null)
+            {
+                CombatDebugDisplay.Instance.actionProgress.text = $"전투 종료! {winnerName} {resultMessage}";
+            }
+            CombatDebugDisplay.Instance.ShowInputPrompt("Restart 버튼을 눌러 다시 시작하세요");
+        }
         
         // UI ActionMap 활성화 (GameInputManager 사용)
         if (GameInputManager.Instance != null)
@@ -2042,8 +2054,9 @@ public class CombatManager : MonoBehaviour
         }
         
         // 4. UI 초기화
-        CombatStatusDisplay.Instance?.ClearResults();
-        CombatStatusDisplay.Instance?.ShowInputPrompt("전투 다시 시작!");
+        CombatHUD.Instance?.ClearHUD();
+        CombatDebugDisplay.Instance?.ClearDebugResults();
+        CombatDebugDisplay.Instance?.ShowInputPrompt("전투 다시 시작!");
         
         // 5. 전투 결과 초기화
         battleResult = new BattleResult();
@@ -2058,7 +2071,7 @@ public class CombatManager : MonoBehaviour
 
     public void Update()
     {
-        CombatStatusDisplay.Instance?.SetPlayerActionInputCooldown(attackerInputHandler.NextAllowedInputTime - Time.time);
+        CombatDebugDisplay.Instance?.SetPlayerActionInputCooldown(attackerInputHandler.NextAllowedInputTime - Time.time);
     }
     
     /// <summary>

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using BladeAction.UI;
 
 /// <summary>
 /// 게임 전체 입력 관리자
@@ -21,16 +22,6 @@ public class GameInputManager : MonoBehaviour
         if (Instance == null)
         {
             Instance = this;
-            
-            // root GameObject일 때만 DontDestroyOnLoad 적용
-            if (transform.parent == null)
-            {
-                DontDestroyOnLoad(gameObject);
-            }
-            else
-            {
-                Debug.LogWarning("[GameInputManager] DontDestroyOnLoad는 root GameObject에만 적용됩니다. 부모에서 분리하거나 root로 이동하세요.");
-            }
             
             // PlayerInput 컴포넌트 가져오기
             playerInput = GetComponent<PlayerInput>();
@@ -69,7 +60,37 @@ public class GameInputManager : MonoBehaviour
     }
     
     /// <summary>
-    /// Combat ActionMap으로 전환
+    /// Combat ActionMap 활성화 (UI ActionMap은 유지)
+    /// </summary>
+    public void EnableCombatMap()
+    {
+        if (playerInput == null) return;
+        
+        var combatMap = playerInput.actions.FindActionMap("Combat");
+        if (combatMap != null)
+        {
+            combatMap.Enable();
+            Log("Combat ActionMap 활성화 (UI는 유지)");
+        }
+    }
+    
+    /// <summary>
+    /// Combat ActionMap 비활성화 (UI ActionMap은 유지)
+    /// </summary>
+    public void DisableCombatMap()
+    {
+        if (playerInput == null) return;
+        
+        var combatMap = playerInput.actions.FindActionMap("Combat");
+        if (combatMap != null)
+        {
+            combatMap.Disable();
+            Log("Combat ActionMap 비활성화 (UI는 유지)");
+        }
+    }
+    
+    /// <summary>
+    /// Combat ActionMap으로 전환 (호환성 유지, 비추천)
     /// </summary>
     public void SwitchToCombatMap()
     {
@@ -80,7 +101,7 @@ public class GameInputManager : MonoBehaviour
     }
     
     /// <summary>
-    /// UI ActionMap으로 전환
+    /// UI ActionMap으로 전환 (호환성 유지, 비추천)
     /// </summary>
     public void SwitchToUIMap()
     {
@@ -119,6 +140,73 @@ public class GameInputManager : MonoBehaviour
     {
         return playerInput;
     }
+    
+    #region UI 이벤트 중재 (크로스 Scene 참조 해결)
+    
+    /// <summary>
+    /// 인벤토리 UI 토글 (Input System에서 호출)
+    /// MainMenuManager를 찾아서 인벤토리 토글
+    /// </summary>
+    public void OnToggleInventoryUI()
+    {
+        Log("OnInventoryToggle 호출됨");
+        
+        // MainMenuManager 찾기 (PersistentUIScene에 있음)
+        var mainMenuManager = FindFirstObjectByType<MainMenuManager>();
+        if (mainMenuManager != null)
+        {
+            mainMenuManager.ToggleInventoryTab();
+            Log("인벤토리 토글 성공"); 
+        }
+        else
+        {
+            Debug.LogWarning("[GameInputManager] MainMenuManager를 찾을 수 없습니다!");
+        }
+    }
+    
+    /// <summary>
+    /// 액션 커맨드 설정 UI 토글 (Input System에서 호출)
+    /// MainMenuManager를 찾아서 액션 커맨드 UI 토글
+    /// </summary>
+    public void OnToggleActionCommandEquipUI()
+    {
+        Log("OnActionCommandToggle 호출됨");
+        
+        // MainMenuManager 찾기 (PersistentUIScene에 있음)
+        var mainMenuManager = FindFirstObjectByType<MainMenuManager>();
+        if (mainMenuManager != null)
+        {
+            mainMenuManager.ToggleActionCommandTab();
+            Log("액션 커맨드 UI 토글 성공");
+        }
+        else
+        {
+            Debug.LogWarning("[GameInputManager] MainMenuManager를 찾을 수 없습니다!");
+        }
+    }
+    
+    /// <summary>
+    /// UI 취소/닫기 (Input System에서 호출 - ESC, Cancel 키용)
+    /// MainMenuManager를 찾아서 메뉴 닫기
+    /// </summary>
+    public void OnCancelUI()
+    {
+        Log("OnCancel 호출됨");
+        
+        // MainMenuManager 찾기 (PersistentUIScene에 있음)
+        var mainMenuManager = FindFirstObjectByType<MainMenuManager>();
+        if (mainMenuManager != null)
+        {
+            mainMenuManager.CancelMenu();
+            Log("메뉴 취소 성공");
+        }
+        else
+        {
+            Debug.LogWarning("[GameInputManager] MainMenuManager를 찾을 수 없습니다!");
+        }
+    }
+    
+    #endregion
     
     #region 디버그
     

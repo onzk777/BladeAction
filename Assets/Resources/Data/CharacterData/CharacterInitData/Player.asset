@@ -68,8 +68,8 @@ MonoBehaviour:
     itemId: 'itm_armor_test1 '
   initialAcquiredActions: []
   equippedActionSlot1: imperial_vertical
-  equippedActionSlot2: 
-  equippedActionSlot3: 
+  equippedActionSlot2: imperial_horizontal
+  equippedActionSlot3: imperial_defend
   equippedActionSlot4: 
   npcBehavior:
     attackPerfectRate: 0

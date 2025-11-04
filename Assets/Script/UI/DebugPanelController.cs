@@ -10,7 +10,7 @@ public class DebugPanelController : MonoBehaviour
     [SerializeField] private GameObject debugPanel; // 디버그 정보들을 묶는 상위 Panel
     
     [Header("정보 패널 설정")]
-    [Tooltip("전투 정보를 표시하는 패널 (CombatStatusDisplay 등)")]
+    [Tooltip("전투 정보를 표시하는 패널 (CombatDebugDisplay 등)")]
     [SerializeField] private GameObject combatInfoPanel;
     
     [Tooltip("BT 정보를 표시하는 패널 (BTMonitorUI 등)")]
@@ -44,13 +44,10 @@ public class DebugPanelController : MonoBehaviour
     {
         Debug.Log("[DebugPanelController] InitializeInput 시작");
         
-        // PlayerController에서 사용하는 Input Action Asset 가져오기
-        var playerController = FindFirstObjectByType<PlayerController>();
-        Debug.Log($"[DebugPanelController] PlayerController 찾기: {(playerController != null ? "성공" : "실패")}");
-        
-        if (playerController != null)
+        // GameInputManager에서 PlayerInput 가져오기
+        if (GameInputManager.Instance != null)
         {
-            var playerInput = playerController.GetComponent<PlayerInput>();
+            var playerInput = GameInputManager.Instance.GetPlayerInput();
             Debug.Log($"[DebugPanelController] PlayerInput 찾기: {(playerInput != null ? "성공" : "실패")}");
             
             if (playerInput != null && playerInput.actions != null)

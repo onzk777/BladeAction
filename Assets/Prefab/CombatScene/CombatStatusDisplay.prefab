@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &3126117989846877528
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2171717366591259708}
+  - component: {fileID: 8538044029792223389}
+  m_Layer: 0
+  m_Name: CombatStatusDisplay
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2171717366591259708
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3126117989846877528}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.4694, y: -0.25255, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &8538044029792223389
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3126117989846877528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ce9ae301e2f47a344bc05b55173e1c7a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  actionProgress: {fileID: 0}
+  turnLabel: {fileID: 0}
+  resultLinePrefab: {fileID: 7168899615823708564, guid: 6e0e667a8fb8ad648821b9e71e6e18ef, type: 3}
+  inputPromptText: {fileID: 0}
+  turnTimerProgressBar: {fileID: 0}
+  turnTimerProgressBarBackground: {fileID: 0}
+  perfectTimingGuidePrefab: {fileID: 1446225109018535748, guid: 71498ad82de22a142bad728e9bdd2f54, type: 3}
+  guideContainer: {fileID: 0}
+  playerName: {fileID: 0}
+  playerActionCommandName: {fileID: 0}
+  playerActionInputCooldown: {fileID: 0}
+  playerHitResultContainer: {fileID: 0}
+  TurnResultContainer: {fileID: 0}
+  playerHP: {fileID: 0}
+  playerPoise: {fileID: 0}
+  playerATK: {fileID: 0}
+  playerDR: {fileID: 0}
+  playerCrit: {fileID: 0}
+  enemyName: {fileID: 0}
+  enemyActionCommandName: {fileID: 0}
+  enemyActionInputCooldown: {fileID: 0}
+  enemyHitResultContainer: {fileID: 0}
+  enemyHP: {fileID: 0}
+  enemyPoise: {fileID: 0}
+  enemyATK: {fileID: 0}
+  enemyDR: {fileID: 0}
+  enemyCrit: {fileID: 0}
