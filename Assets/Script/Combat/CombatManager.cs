@@ -10,14 +10,22 @@ using UnityEngine.InputSystem.XR;
 public class CombatManager : MonoBehaviour
 {
     public static CombatManager Instance { get; private set; } // CombatManager의 싱글톤 인스턴스
+    
+    // === 다음 전투 설정 (Scene 전환 전 저장) ===
+    private static string pendingPlayerId = "Player"; // 기본값
+    private static string pendingEnemyId = "Test_Enemy1"; // 기본값
+    
+    /// <summary>
+    /// 다음 전투의 참가자를 설정합니다 (Scene 전환 전 호출)
+    /// TestScene 등에서 전투 시작 전에 호출
+    /// </summary>
+    public static void SetupNextBattle(string playerId, string enemyId)
+    {
+        pendingPlayerId = playerId;
+        pendingEnemyId = enemyId;
+        Debug.Log($"[CombatManager-Static] 다음 전투 설정: {playerId} vs {enemyId}");
+    }
 
-    [Header("테스트: 전투 참가자 지정")]
-    [Tooltip("테스트용 플레이어 Instance ID (비어있으면 기본값 'Player' 사용)")]
-    [SerializeField] private string testPlayerInstanceId = "Player";
-    
-    [Tooltip("테스트용 적 Instance ID 목록 (비어있으면 CharacterDatabase에서 첫 번째 Enemy 사용)")]
-    [SerializeField] private string[] testEnemyInstanceIds = new string[] { "Test_Enemy1" };
-    
     [Header("컨트롤러")]
     [SerializeField] private PlayerController playerController; // 플레이어 컨트롤러
     [SerializeField] private EnemyController enemyController; // 적 컨트롤러
@@ -151,54 +159,15 @@ public class CombatManager : MonoBehaviour
         battleResult = new BattleResult();
         battleResult.InitializeBattle();
         
-        // CharacterManager 초기화 대기 후 전투 시작
-        StartCoroutine(WaitForManagersAndStartBattle());
-    }
-
-    private System.Collections.IEnumerator WaitForManagersAndStartBattle()
-    {
-        // CombatCharacterManager와 CharacterDatabaseManager가 초기화될 때까지 대기
-        while (CombatCharacterManager.Instance == null || CharacterDatabaseManager.Instance == null)
-        {
-            yield return null;
-        }
-        
-        // 추가 1프레임 대기 (모든 매니저가 완전히 초기화되도록)
-        yield return null;
-        
-        // 테스트용 전투 시작
-        StartBattleTest();
+        Debug.Log($"[CombatManager] 초기화 완료. 외부에서 StartBattle() 호출 대기 중...");
     }
     
     /// <summary>
-    /// 테스트용 전투 시작
-    /// Inspector에서 지정한 전투원으로 전투를 시작합니다.
+    /// 전투를 시작합니다 (SetupNextBattle()로 설정된 참가자 사용)
     /// </summary>
-    private void StartBattleTest()
+    public void StartBattle()
     {
-        // 플레이어 ID 검증
-        string playerId = string.IsNullOrEmpty(testPlayerInstanceId) ? "Player" : testPlayerInstanceId;
-        
-        // 적 ID 검증
-        string[] enemyIds;
-        if (testEnemyInstanceIds == null || testEnemyInstanceIds.Length == 0 || string.IsNullOrEmpty(testEnemyInstanceIds[0]))
-        {
-            // 기본값: CharacterDatabase에서 첫 번째 Enemy 사용
-            var enemyEntry = CharacterDatabaseManager.Instance.GetFirstEnemyEntry();
-            if (enemyEntry == null || string.IsNullOrEmpty(enemyEntry.instanceId))
-            {
-                Debug.LogError("[CombatManager] 전투할 Enemy가 없습니다! CharacterDatabase를 확인하세요.");
-                return;
-            }
-            enemyIds = new string[] { enemyEntry.instanceId };
-        }
-        else
-        {
-            enemyIds = testEnemyInstanceIds;
-        }
-        
-        // 전투 시작
-        StartBattle(playerId, enemyIds);
+        StartBattle(pendingPlayerId, pendingEnemyId);
     }
     
     /// <summary>
@@ -2098,9 +2067,6 @@ public class CombatManager : MonoBehaviour
     /// </summary>
     private void TransitionToResultScene()
     {
-        // BattleResult를 ResultSceneManager에 전달
-        ResultSceneManager.LastBattleResult = battleResult;
-        
         // 약간의 지연 후 Scene 전환 (결과 확인 시간)
         StartCoroutine(DelayedSceneTransition());
     }
@@ -2113,14 +2079,15 @@ public class CombatManager : MonoBehaviour
         // 2초 대기 (플레이어가 전투 종료 결과를 확인할 시간)
         yield return new WaitForSeconds(2f);
         
-        if (SceneTransitionManager.Instance != null)
+        if (SceneFlowController.Instance != null)
         {
             Debug.Log("[CombatManager] ResultScene으로 전환합니다.");
-            SceneTransitionManager.Instance.TransitionToScene("07.ResultScene");
+            // Flow Controller가 데이터 전달 + Scene 전환 담당
+            SceneFlowController.Instance.ShowResultFlow(battleResult);
         }
         else
         {
-            Debug.LogError("[CombatManager] SceneTransitionManager를 찾을 수 없습니다!");
+            Debug.LogError("[CombatManager] SceneFlowController를 찾을 수 없습니다!");
         }
     }
 }

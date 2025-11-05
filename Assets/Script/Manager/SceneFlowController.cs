@@ -4,9 +4,18 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// 게임의 Scene 흐름을 제어하는 컨트롤러 (CoreSystemScene 소속)
-/// 전투 시작, 인벤토리 접근, Scene 전환 등 게임 컨텐츠 진입을 관리
-/// TestScene, LobbyScene 등에서 호출하여 사용
+/// 게임의 Scene Flow를 제어하는 컨트롤러 (CoreSystemScene 소속)
+/// 
+/// 역할:
+/// - Scene 전환 관리
+/// - Scene 진입 시 필요한 데이터 전달
+/// - Scene 로드 후 초기화 트리거
+/// 
+/// 컨텐츠별 Flow 메서드 제공:
+/// - GoToTitle(): 타이틀 화면
+/// - GoToTestScene(): 테스트/Lobby
+/// - StartCombatFlow(playerId, enemyId): 전투 시작
+/// - ShowResultFlow(result): 전투 결과 표시
 /// </summary>
 public class SceneFlowController : MonoBehaviour
 {
@@ -25,18 +34,18 @@ public class SceneFlowController : MonoBehaviour
 #if UNITY_EDITOR
     [SerializeField] private SceneAsset testSceneAsset;
 #endif
+    [Tooltip("전투 결과 Scene")]
+#if UNITY_EDITOR
+    [SerializeField] private SceneAsset resultSceneAsset;
+#endif
     [HideInInspector]
-    [SerializeField] private string combatSceneName = "03.CombatScene";
+    [SerializeField] private string combatSceneName = "";
     [HideInInspector]
-    [SerializeField] private string titleSceneName = "05.TitleScene";
+    [SerializeField] private string titleSceneName = "";
     [HideInInspector]
-    [SerializeField] private string testSceneName = "00.TestScene";
-
-    [Header("전투 설정")]
-    [Tooltip("전투 시작 시 기본으로 사용할 플레이어 ID (CharacterDatabase에 등록된 ID)")]
-    [SerializeField] private string defaultPlayerId = "Player";
-    [Tooltip("전투 시작 시 기본으로 사용할 적 ID (테스트용, 커스텀 ID로 호출 가능)")]
-    [SerializeField] private string defaultEnemyId = "Test_Enemy1";
+    [SerializeField] private string testSceneName = "";
+    [HideInInspector]
+    [SerializeField] private string resultSceneName = "";
 
     [Header("디버그")]
     [Tooltip("디버그 로그 활성화")]
@@ -52,6 +61,8 @@ public class SceneFlowController : MonoBehaviour
             titleSceneName = titleSceneAsset.name;
         if (testSceneAsset != null)
             testSceneName = testSceneAsset.name;
+        if (resultSceneAsset != null)
+            resultSceneName = resultSceneAsset.name;
     }
 #endif
 
@@ -70,18 +81,20 @@ public class SceneFlowController : MonoBehaviour
     }
 
     /// <summary>
-    /// 전투 시작 (CombatScene으로 전환 후 자동 시작)
+    /// 전투 시작 (Scene 전환 + 전투 트리거)
     /// </summary>
-    public void StartCombat(string playerId = null, string enemyId = null)
+    /// <param name="playerId">플레이어 Character Instance ID</param>
+    /// <param name="enemyId">적 Character Instance ID</param>
+    public void StartCombatFlow(string playerId, string enemyId)
     {
-        string actualPlayerId = string.IsNullOrEmpty(playerId) ? defaultPlayerId : playerId;
-        string actualEnemyId = string.IsNullOrEmpty(enemyId) ? defaultEnemyId : enemyId;
-
-        Log($"전투 시작: {actualPlayerId} vs {actualEnemyId}");
-
+        Log($"전투 시작 Flow: {playerId} vs {enemyId}");
+        
+        // 1. CombatManager에 전투 참가자 설정 (static)
+        CombatManager.SetupNextBattle(playerId, enemyId);
+        
+        // 2. CombatScene 전환 완료 시 콜백 등록
         if (SceneTransitionManager.Instance != null)
         {
-            // Scene 전환 완료 후 전투 시작
             SceneTransitionManager.Instance.OnSceneTransitionComplete += OnCombatSceneLoaded;
             SceneTransitionManager.Instance.TransitionToScene(combatSceneName);
         }
@@ -90,9 +103,9 @@ public class SceneFlowController : MonoBehaviour
             Debug.LogError("[SceneFlowController] SceneTransitionManager를 찾을 수 없습니다!");
         }
     }
-
+    
     /// <summary>
-    /// CombatScene 로드 완료 시 전투 시작
+    /// CombatScene 로드 완료 시 전투 시작 트리거
     /// </summary>
     private void OnCombatSceneLoaded(string sceneName)
     {
@@ -100,12 +113,12 @@ public class SceneFlowController : MonoBehaviour
         {
             // 이벤트 구독 해제
             SceneTransitionManager.Instance.OnSceneTransitionComplete -= OnCombatSceneLoaded;
-
-            // CombatManager 찾아서 전투 시작
+            
+            // 3. CombatManager에게 전투 시작 명령
             if (CombatManager.Instance != null)
             {
-                Log($"전투 시작 명령 전달: {defaultPlayerId} vs {defaultEnemyId}");
-                CombatManager.Instance.StartBattle(defaultPlayerId, defaultEnemyId);
+                Log($"CombatScene 로드 완료 - 전투 시작 트리거");
+                CombatManager.Instance.StartBattle(); // SetupNextBattle()로 설정된 참가자로 시작
             }
             else
             {
@@ -115,11 +128,11 @@ public class SceneFlowController : MonoBehaviour
     }
 
     /// <summary>
-    /// 타이틀 화면으로 복귀
+    /// 타이틀 화면으로 이동
     /// </summary>
-    public void ReturnToTitle()
+    public void GoToTitle()
     {
-        Log("타이틀 화면으로 복귀");
+        Log("타이틀 화면으로 이동");
 
         if (SceneTransitionManager.Instance != null)
         {
@@ -132,11 +145,11 @@ public class SceneFlowController : MonoBehaviour
     }
 
     /// <summary>
-    /// TestScene으로 전환
+    /// TestScene(Lobby)으로 이동
     /// </summary>
     public void GoToTestScene()
     {
-        Log("TestScene으로 전환");
+        Log("TestScene으로 이동");
 
         if (SceneTransitionManager.Instance != null)
         {
@@ -146,6 +159,30 @@ public class SceneFlowController : MonoBehaviour
         {
             Debug.LogError("[SceneFlowController] SceneTransitionManager를 찾을 수 없습니다!");
         }
+    }
+
+    /// <summary>
+    /// 전투 결과 표시 Flow (데이터 전달 + Scene 전환)
+    /// </summary>
+    /// <param name="result">전투 결과 데이터</param>
+    public void ShowResultFlow(BattleResult result)
+    {
+        Log($"전투 결과 표시 Flow: {(result.isVictory ? "승리" : "패배")}");
+        
+        // 1. ResultSceneManager에 결과 데이터 전달 (static)
+        ResultSceneManager.LastBattleResult = result;
+        
+        // 2. ResultScene으로 전환
+        if (SceneTransitionManager.Instance != null)
+        {
+            SceneTransitionManager.Instance.TransitionToScene(resultSceneName);
+        }
+        else
+        {
+            Debug.LogError("[SceneFlowController] SceneTransitionManager를 찾을 수 없습니다!");
+        }
+        
+        // ResultSceneManager.Start()에서 자동으로 LastBattleResult 표시
     }
 
     private void OnDestroy()

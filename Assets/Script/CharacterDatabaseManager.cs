@@ -146,5 +146,192 @@ public class CharacterDatabaseManager : MonoBehaviour
         Debug.LogError("[CharacterDatabaseManager] 등록된 Enemy가 없습니다!");
         return null;
     }
+    
+    /// <summary>
+    /// 등록된 모든 Enemy Entry 목록 반환
+    /// </summary>
+    public List<CharacterDatabaseEntry> GetAllEnemyEntries()
+    {
+        if (databaseCopy?.enemyEntries != null)
+        {
+            return new List<CharacterDatabaseEntry>(databaseCopy.enemyEntries);
+        }
+        
+        return new List<CharacterDatabaseEntry>();
+    }
+    
+    /// <summary>
+    /// 등록된 모든 Enemy의 Instance ID 목록 반환
+    /// </summary>
+    public List<string> GetAllEnemyIds()
+    {
+        var ids = new List<string>();
+        
+        if (databaseCopy?.enemyEntries != null)
+        {
+            foreach (var entry in databaseCopy.enemyEntries)
+            {
+                if (entry != null && !string.IsNullOrEmpty(entry.instanceId))
+                {
+                    ids.Add(entry.instanceId);
+                }
+            }
+        }
+        
+        return ids;
+    }
+    
+    /// <summary>
+    /// Character Factory: Instance ID로 Character 인스턴스 생성
+    /// 
+    /// 역할: 템플릿(CharacterInitData)을 기반으로 Character 인스턴스를 생성만 함
+    /// 관리: 생성한 인스턴스는 호출자가 관리함 (이 클래스는 관리 안 함)
+    /// </summary>
+    /// <param name="instanceId">생성할 Character의 Instance ID</param>
+    /// <returns>생성된 Character 인스턴스 (Player는 null, Enemy/NPC는 EnemyCharacter)</returns>
+    public Character CreateCharacter(string instanceId)
+    {
+        if (string.IsNullOrEmpty(instanceId))
+        {
+            Debug.LogError("[CharacterDatabaseManager] instanceId가 null 또는 빈 문자열입니다!");
+            return null;
+        }
+        
+        // 1. Entry 조회
+        var entry = GetEntry(instanceId);
+        if (entry == null)
+        {
+            Debug.LogError($"[CharacterDatabaseManager] Instance '{instanceId}'를 찾을 수 없습니다!");
+            return null;
+        }
+        
+        // Player는 PlayerCharacterManager가 관리하므로 여기서 생성 안 함
+        if (entry == databaseCopy.playerEntry)
+        {
+            Debug.LogWarning($"[CharacterDatabaseManager] Player Character는 PlayerCharacterManager에서 생성합니다. instanceId: {instanceId}");
+            return null;
+        }
+        
+        // 2. Resources에서 템플릿 로드
+        var initData = CharacterInitDataLoader.Load(entry.initDataKey);
+        if (initData == null)
+        {
+            Debug.LogError($"[CharacterDatabaseManager] 템플릿 '{entry.initDataKey}'를 로드할 수 없습니다!");
+            return null;
+        }
+        
+        // 3. 템플릿 복사 (BT 인스턴스화)
+        CharacterInitData characterInitData = Instantiate(initData);
+        characterInitData.InstantiateBehaviorTrees();
+        
+        // 4. EnemyCharacter 생성
+        var character = new EnemyCharacter(instanceId, characterInitData, null);
+        
+        // 5. 인벤토리 초기화
+        InitializeInventory(character, characterInitData);
+        
+        // 6. 검술 초기화
+        InitializeActions(character, characterInitData);
+        
+        Debug.Log($"[CharacterDatabaseManager] ✅ Character 생성: {character.Name} (ID: {instanceId}, 템플릿: {entry.initDataKey})");
+        return character;
+    }
+    
+    /// <summary>
+    /// Character의 인벤토리 초기화
+    /// </summary>
+    private void InitializeInventory(Character character, CharacterInitData initData)
+    {
+        // Inventory 생성
+        var inventory = new BladeAction.Item.CharacterInventory(character.CurrentAccessorySlots);
+        inventory.Owner = character;
+        character.Inventory = inventory;
+        
+        // 초기 아이템 추가
+        if (initData.initialItems != null && initData.initialItems.Count > 0)
+        {
+            foreach (var itemEntry in initData.initialItems)
+            {
+                if (!string.IsNullOrEmpty(itemEntry.itemId))
+                {
+                    bool added = inventory.AddItem(itemEntry.itemId, itemEntry.quantity);
+                    if (!added)
+                    {
+                        Debug.LogWarning($"[CharacterDatabaseManager] {character.Name} 초기 아이템 추가 실패: {itemEntry.itemId}");
+                    }
+                }
+            }
+        }
+        
+        // 초기 장비 장착
+        if (initData.initialEquipment != null && initData.initialEquipment.Count > 0)
+        {
+            foreach (var equipEntry in initData.initialEquipment)
+            {
+                if (!string.IsNullOrEmpty(equipEntry.itemId))
+                {
+                    if (!inventory.HasItem(equipEntry.itemId))
+                    {
+                        inventory.AddItem(equipEntry.itemId, 1);
+                    }
+                    
+                    inventory.EquipItem(equipEntry.itemId, equipEntry.slotType);
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Character의 검술 초기화
+    /// </summary>
+    private void InitializeActions(Character character, CharacterInitData initData)
+    {
+        var database = ActionCommandDatabase.Instance;
+        if (database == null)
+        {
+            Debug.LogError($"[CharacterDatabaseManager] ActionCommandDatabase를 찾을 수 없습니다! {character.Name}의 검술 초기화 실패.");
+            return;
+        }
+        
+        // 습득 검술 초기화
+        if (initData.initialAcquiredActions != null && initData.initialAcquiredActions.Count > 0)
+        {
+            foreach (var entry in initData.initialAcquiredActions)
+            {
+                if (entry == null || string.IsNullOrEmpty(entry.actionKey))
+                    continue;
+                
+                var action = database.GetAction(entry.actionKey);
+                if (action != null)
+                {
+                    character.AcquireAction(action);
+                }
+            }
+        }
+        
+        // 장착 검술 초기화 (4개 슬롯)
+        string[] slotKeys = new string[] 
+        { 
+            initData.equippedActionSlot1, 
+            initData.equippedActionSlot2, 
+            initData.equippedActionSlot3, 
+            initData.equippedActionSlot4 
+        };
+        
+        for (int i = 0; i < 4; i++)
+        {
+            var key = slotKeys[i];
+            if (string.IsNullOrEmpty(key))
+                continue;
+            
+            var action = database.GetAction(key);
+            if (action != null)
+            {
+                character.EquipAction(action, i);
+            }
+        }
+        
+        Debug.Log($"[CharacterDatabaseManager] {character.Name} 검술 초기화 완료 - 습득: {character.GetAcquiredActions().Count}개, 장착: {character.AvailableCommands.Count}개");
+    }
 }
 

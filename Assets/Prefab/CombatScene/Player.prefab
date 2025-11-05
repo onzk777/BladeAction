@@ -89,7 +89,7 @@ MeshRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 1
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!95 &3381887000105123634
 Animator:
@@ -413,8 +413,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cf2d4c7aba938214c8b7ed44e540ae71, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  perfectInputArea: {fileID: 0}
-  characterHitBox: {fileID: 0}
 --- !u!1 &4801913275832181871
 GameObject:
   m_ObjectHideFlags: 0

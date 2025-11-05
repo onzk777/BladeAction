@@ -18,6 +18,44 @@
 
 ## 1. PersistentUIScene 설정
 
+### Main Camera 추가
+
+**Scene**: `02.PersistentUIScene.unity`
+
+**중요**: 게임 전체에서 사용할 공용 Camera를 PersistentUIScene에 배치합니다.
+
+1. **Camera GameObject 생성**
+   ```
+   Hierarchy 우클릭 → Camera
+   이름: Main Camera
+   ```
+
+2. **Transform 설정**
+   - Position: `(0, 0, -10)`
+   - Rotation: `(0, 0, 0)`
+   - Scale: `(1, 1, 1)`
+
+3. **Camera 컴포넌트 설정**
+   - **Projection**: `Orthographic` (2D 게임)
+   - **Size**: `5` (화면에 보이는 세로 범위, 필요시 조정)
+   - **Clear Flags**: `Solid Color`
+   - **Background**: `#000000` (검은색, 원하는 배경색으로 변경 가능)
+   - **Culling Mask**: `Everything` (모든 Layer 렌더링)
+   - **Depth**: `0`
+
+4. **Tag 설정**
+   - Tag: `MainCamera` (필수!)
+
+5. **Audio Listener 확인**
+   - Audio Listener 컴포넌트가 자동으로 추가되어 있음 (유지)
+
+**완료 확인:**
+- PersistentUIScene에 Main Camera가 존재
+- Tag가 MainCamera로 설정되어 있는지 확인
+- Projection이 Orthographic인지 확인
+
+---
+
 ### FadeCanvas 추가
 
 **Scene**: `02.PersistentUIScene.unity`
@@ -60,9 +98,15 @@
      - Default Fade Duration: `0.5`
      - Enable Debug Log: `✓` (체크)
 
+6. **초기 상태 설정**
+   - **FadeCanvas**: ✅ 활성화 (체크박스 켜짐)
+   - **FadeImage**: ❌ 비활성화 (체크박스 꺼짐)
+   - CanvasGroup Alpha: 1 (기본값 유지)
+
 **완료 확인:**
 - FadeCanvas가 가장 위에 렌더링되는지 확인 (Sort Order: 900)
 - FadeImage가 전체 화면을 덮는지 확인
+- **FadeCanvas는 활성화, FadeImage는 비활성화 상태인지 확인** ⭐
 
 ---
 
@@ -105,17 +149,81 @@
 2. **SceneFlowController 컴포넌트 추가**
    - `Add Component → Scene Flow Controller`
 
-3. **설정**
-   - Combat Scene Asset: `03.CombatScene.unity` 드래그
+3. **Scene 참조 설정**
+   - Combat Scene Asset: `04.CombatScene.unity` 드래그
    - Title Scene Asset: `05.TitleScene.unity` 드래그
    - Test Scene Asset: `00.TestScene.unity` 드래그
-   - Default Player Id: `"Player"`
-   - Default Enemy Id: `"Test_Enemy1"`
+   - Result Scene Asset: `07.ResultScene.unity` 드래그
    - Enable Debug Log: `✓` (체크)
 
 **완료 확인:**
 - CoreSystemScene에 SceneFlowController GameObject가 존재
 - SceneFlowController.cs 컴포넌트가 추가됨
+
+---
+
+### PlayerCharacterManager 추가
+
+**Scene**: `01.CoreSystemScene.unity`
+
+1. **빈 GameObject 생성**
+   ```
+   Hierarchy 우클릭 → Create Empty
+   이름: PlayerCharacterManager
+   ```
+
+2. **PlayerCharacterManager 컴포넌트 추가**
+   - `Add Component → Player Character Manager`
+
+3. **설정**
+   - Level: `1`
+   - Experience: `0`
+   - Gold: `100`
+
+**완료 확인:**
+- CoreSystemScene에 PlayerCharacterManager GameObject가 존재
+- 게임 시작 시 자동으로 PlayerCharacter 인스턴스 생성됨
+
+---
+
+### NonPlayerCharacterManager 추가 ⭐ (신규)
+
+**Scene**: `01.CoreSystemScene.unity`
+
+1. **빈 GameObject 생성**
+   ```
+   Hierarchy 우클릭 → Create Empty
+   이름: NonPlayerCharacterManager
+   ```
+
+2. **NonPlayerCharacterManager 컴포넌트 추가**
+   - `Add Component → Non Player Character Manager`
+
+**완료 확인:**
+- CoreSystemScene에 NonPlayerCharacterManager GameObject가 존재
+- 모든 Enemy/NPC가 이 Manager를 통해 관리됨 (Lazy 생성)
+
+---
+
+### CharacterDatabaseManager 추가
+
+**Scene**: `01.CoreSystemScene.unity`
+
+1. **빈 GameObject 생성**
+   ```
+   Hierarchy 우클릭 → Create Empty
+   이름: CharacterDatabaseManager
+   ```
+
+2. **CharacterDatabaseManager 컴포넌트 추가**
+   - `Add Component → Character Database Manager`
+
+3. **설정**
+   - Database Asset: `CharacterDatabase` ScriptableObject 드래그
+
+**완료 확인:**
+- CoreSystemScene에 CharacterDatabaseManager GameObject가 존재
+- CharacterDatabase가 연결되어 있는지 확인
 
 ---
 
@@ -254,30 +362,27 @@ TestScene에 다음 버튼들이 없다면 추가:
 2. **TestSceneManager 컴포넌트 추가**
    - `Add Component → Test Scene Manager`
 
-3. **참조 연결**
-   - Start Combat Button: `StartCombatButton` 드래그 (같은 Scene이므로 가능)
+3. **Enemy 선택 Dropdown 추가**
+   ```
+   Canvas 우클릭 → UI → Dropdown - TextMeshPro
+   이름: EnemySelectionDropdown
+   ```
+   - 위치: 화면 상단 또는 전투 시작 버튼 위
+   - 크기: 적당히 조정 (Width: 300, Height: 40)
+   - Options: 비워두기 (자동으로 채워짐)
+
+4. **참조 연결**
+   - Start Combat Button: `StartCombatButton` 드래그
    - Return To Title Button: `ReturnToTitleButton` 드래그
+   - Enemy Selection Dropdown: `EnemySelectionDropdown` 드래그 ⭐ (새로 추가)
    - Enable Debug Log: `✓` (체크)
 
 **완료 확인:**
 - TestScene에 TestSceneManager GameObject가 존재
-- 버튼들이 TestSceneManager에 연결되어 있는지 확인
-- Play 모드에서 "전투 시작" 버튼 클릭 시 CombatScene으로 전환되는지 확인
-
-### 추가 기능 (선택)
-
-TestScene의 다른 스크립트에서 SceneFlowController를 호출하려면:
-
-```csharp
-// 전투 시작 (기본 ID)
-SceneFlowController.Instance.StartCombat();
-
-// 전투 시작 (커스텀 ID)
-SceneFlowController.Instance.StartCombat("CustomPlayer", "BossEnemy");
-
-// 타이틀로 복귀
-SceneFlowController.Instance.ReturnToTitle();
-```
+- 버튼들과 Dropdown이 TestSceneManager에 연결되어 있는지 확인
+- Play 모드에서:
+  - Dropdown에 Enemy 목록이 자동으로 표시되는지 확인
+  - Enemy를 선택하고 "전투 시작" 버튼 클릭 시 해당 Enemy와 전투가 시작되는지 확인
 
 ---
 
@@ -404,13 +509,13 @@ SceneFlowController.Instance.ReturnToTitle();
 
 ### Build Settings 설정
 
-1. **Build Settings 열기**
+1. **Build Profile 열기**
    ```
-   File → Build Settings
+   File → Build Profile
    ```
 
 2. **Scene 추가**
-   - `Add Open Scenes` 클릭하거나 다음 Scene들을 드래그:
+   - Scene List에 사용되는 Scene 들을 모두 추가. (Open Scene List 버튼을 눌러서 진행하면 편함)
      1. `01.CoreSystemScene`
      2. `02.PersistentUIScene`
      3. `03.CombatScene`

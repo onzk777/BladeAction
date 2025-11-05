@@ -877,3 +877,5 @@ A: 불필요. Resources.Load로 충분. GameObject 제거.
 
 
 
+
+

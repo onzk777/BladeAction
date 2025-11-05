@@ -176,7 +176,7 @@ public class ResultSceneManager : MonoBehaviour
 
         if (SceneFlowController.Instance != null)
         {
-            SceneFlowController.Instance.ReturnToTitle();
+            SceneFlowController.Instance.GoToTitle();
         }
         else
         {

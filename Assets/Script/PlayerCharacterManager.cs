@@ -21,9 +21,9 @@ public class PlayerCharacterManager : MonoBehaviour
     public int Experience => experience;
     public int Gold => gold;
     
-    // === 영속 데이터 ===
+    // === 영속 PlayerCharacter 인스턴스 ===
     [Header("영속 데이터")]
-    public CharacterInventory Inventory { get; private set; }
+    public PlayerCharacter PlayerCharacter { get; private set; }
     
     // === 초기화 ===
     private void Awake()
@@ -90,22 +90,33 @@ public class PlayerCharacterManager : MonoBehaviour
             return;
         }
         
-        // 3. 인벤토리 생성 (영속)
-        int accessorySlots = initData.initialAccessorySlots;
-        Inventory = new CharacterInventory(accessorySlots);
+        // 3. 템플릿 복사 (BT 인스턴스화)
+        CharacterInitData playerInitData = Instantiate(initData);
+        playerInitData.InstantiateBehaviorTrees();
         
-        // 4. 초기 아이템 및 장비 추가
-        InitializeInventory(initData);
+        // 4. PlayerCharacter 인스턴스 생성 (영속)
+        PlayerCharacter = new PlayerCharacter(playerEntry.instanceId, playerInitData, null);
         
-        Debug.Log($"[PlayerCharacterManager] 플레이어 데이터 초기화 완료 - Lv.{level}, 골드 {gold}");
+        // 5. 인벤토리 초기화
+        InitializeInventory(PlayerCharacter, playerInitData);
+        
+        // 6. 검술 초기화
+        InitializeActions(PlayerCharacter, playerInitData);
+        
+        Debug.Log($"[PlayerCharacterManager] 플레이어 데이터 초기화 완료 - {PlayerCharacter.Name} (ID: {PlayerCharacter.InstanceId}), Lv.{level}, 골드 {gold}");
     }
     
     /// <summary>
     /// 인벤토리 초기화
     /// </summary>
-    private void InitializeInventory(CharacterInitData initData)
+    private void InitializeInventory(Character character, CharacterInitData initData)
     {
-        Debug.Log($"[PlayerCharacterManager] 인벤토리 초기화 시작");
+        Debug.Log($"[PlayerCharacterManager] {character.Name} 인벤토리 초기화 시작");
+        
+        // Inventory 생성
+        var inventory = new CharacterInventory(character.CurrentAccessorySlots);
+        inventory.Owner = character;
+        character.Inventory = inventory;
         
         // 초기 아이템 추가
         if (initData.initialItems != null && initData.initialItems.Count > 0)
@@ -114,7 +125,7 @@ public class PlayerCharacterManager : MonoBehaviour
             {
                 if (!string.IsNullOrEmpty(itemEntry.itemId))
                 {
-                    bool added = Inventory.AddItem(itemEntry.itemId, itemEntry.quantity);
+                    bool added = inventory.AddItem(itemEntry.itemId, itemEntry.quantity);
                     if (added)
                     {
                         Debug.Log($"[PlayerCharacterManager] 초기 아이템 추가: {itemEntry.itemId} x{itemEntry.quantity}");
@@ -135,13 +146,13 @@ public class PlayerCharacterManager : MonoBehaviour
                 if (!string.IsNullOrEmpty(equipEntry.itemId))
                 {
                     // 아이템이 인벤토리에 없으면 자동 추가
-                    if (!Inventory.HasItem(equipEntry.itemId))
+                    if (!inventory.HasItem(equipEntry.itemId))
                     {
-                        Inventory.AddItem(equipEntry.itemId, 1);
+                        inventory.AddItem(equipEntry.itemId, 1);
                     }
                     
                     // 장착
-                    bool equipped = Inventory.EquipItem(equipEntry.itemId, equipEntry.slotType);
+                    bool equipped = inventory.EquipItem(equipEntry.itemId, equipEntry.slotType);
                     if (equipped)
                     {
                         Debug.Log($"[PlayerCharacterManager] 초기 장비 장착: {equipEntry.itemId} → {equipEntry.slotType}");
@@ -154,45 +165,7 @@ public class PlayerCharacterManager : MonoBehaviour
             }
         }
         
-        Debug.Log($"[PlayerCharacterManager] 인벤토리 초기화 완료 - {Inventory.GetDebugInfo()}");
-    }
-    
-    // === 전투용 PlayerCharacter 인스턴스 생성 ===
-    public PlayerCharacter CreatePlayerCharacterForBattle()
-    {
-        Debug.Log("[PlayerCharacterManager] 전투용 PlayerCharacter 생성 시작");
-        
-        // 1. CharacterDatabaseManager에서 Player Entry 조회
-        var playerEntry = CharacterDatabaseManager.Instance.GetPlayerEntry();
-        if (playerEntry == null)
-        {
-            Debug.LogError("[PlayerCharacterManager] Player Entry를 찾을 수 없습니다!");
-            return null;
-        }
-        
-        // 2. Resources에서 템플릿 로드
-        var initData = CharacterInitDataLoader.Load(playerEntry.initDataKey);
-        if (initData == null)
-        {
-            Debug.LogError($"[PlayerCharacterManager] 템플릿 '{playerEntry.initDataKey}'를 로드할 수 없습니다!");
-            return null;
-        }
-        
-        // 3. 템플릿 복사 (BT 인스턴스화)
-        CharacterInitData battleInitData = Instantiate(initData);
-        battleInitData.InstantiateBehaviorTrees();
-        
-        // 4. PlayerCharacter 생성
-        var player = new PlayerCharacter(playerEntry.instanceId, battleInitData, null);
-        
-        // 5. 영속 데이터 적용
-        player.Inventory = this.Inventory; // 참조 공유 (전투 중 변경사항이 자동 반영됨)
-        
-        // 6. 검술 초기화
-        InitializeActions(player, battleInitData);
-        
-        Debug.Log($"[PlayerCharacterManager] 전투용 Player 생성: {player.Name} (ID: {player.InstanceId}), Lv.{level}, 골드 {gold}");
-        return player;
+        Debug.Log($"[PlayerCharacterManager] 인벤토리 초기화 완료 - {inventory.GetDebugInfo()}");
     }
     
     /// <summary>
@@ -257,13 +230,17 @@ public class PlayerCharacterManager : MonoBehaviour
     }
     
     // === 전투 후 상태 동기화 ===
-    public void SyncPlayerStateAfterBattle(PlayerCharacter battleInstance)
+    /// <summary>
+    /// 전투 후 플레이어 상태 저장
+    /// (현재는 영속 인스턴스를 사용하므로 자동 동기화됨)
+    /// </summary>
+    public void SyncPlayerStateAfterBattle()
     {
-        // 전투 중 변경된 인벤토리는 이미 참조 공유로 반영됨
-        // (Inventory를 참조로 전달했으므로 자동 동기화)
+        // 영속 PlayerCharacter 인스턴스를 사용하므로
+        // 전투 중 변경사항이 자동으로 반영됨
         
         // 추가로 동기화가 필요한 데이터가 있다면 여기서 처리
-        // 예: 레벨업, 스탯 변경 등
+        // 예: 세이브 파일 업데이트 등
         
         Debug.Log("[PlayerCharacterManager] 전투 후 플레이어 상태 동기화 완료");
     }

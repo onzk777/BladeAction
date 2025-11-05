@@ -5,7 +5,11 @@ using Spine.Unity;
 
 public class PlayerController : MonoBehaviour, ICombatController
 {
-    public Character Character => CombatCharacterManager.Instance?.PlayerCharacter;    
+    /// <summary>
+    /// 모든 Scene에서 통일된 Character 접근
+    /// CoreSystemScene의 PlayerCharacterManager에서 영속 PlayerCharacter 참조
+    /// </summary>
+    public Character Character => PlayerCharacterManager.Instance?.PlayerCharacter;    
     private int currentCommandIndex;
     // Skeleton Mecanim의 Animator 컴포넌트 참조
 
@@ -137,8 +141,8 @@ public class PlayerController : MonoBehaviour, ICombatController
 
     private System.Collections.IEnumerator WaitForCharacterManagerAndSetup()
     {
-        // CombatCharacterManager가 초기화될 때까지 대기
-        while (CombatCharacterManager.Instance == null || CombatCharacterManager.Instance.PlayerCharacter == null)
+        // PlayerCharacterManager가 초기화될 때까지 대기
+        while (PlayerCharacterManager.Instance == null)
         {
             yield return null;
         }

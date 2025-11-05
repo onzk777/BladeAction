@@ -16,9 +16,34 @@ public class CombatCharacterManager : MonoBehaviour
     public string PlayerInstanceId { get; private set; }
     public List<string> EnemyInstanceIds { get; private set; }
     
-    // === 전투 중인 캐릭터 인스턴스 ===
-    public PlayerCharacter PlayerCharacter { get; private set; }
-    public List<EnemyCharacter> EnemyCharacters { get; private set; }
+    // === 전투 중인 캐릭터 인스턴스 (참조만 보관, 소유 안 함) ===
+    /// <summary>
+    /// PlayerCharacterManager의 영속 PlayerCharacter 참조
+    /// </summary>
+    public PlayerCharacter PlayerCharacter => PlayerCharacterManager.Instance?.PlayerCharacter;
+    
+    /// <summary>
+    /// NonPlayerCharacterManager의 Enemy 인스턴스 참조 목록
+    /// </summary>
+    public List<EnemyCharacter> EnemyCharacters
+    {
+        get
+        {
+            if (EnemyInstanceIds == null || EnemyInstanceIds.Count == 0)
+                return null;
+            
+            var enemies = new List<EnemyCharacter>();
+            foreach (var enemyId in EnemyInstanceIds)
+            {
+                var enemy = NonPlayerCharacterManager.Instance?.GetCharacter(enemyId) as EnemyCharacter;
+                if (enemy != null)
+                {
+                    enemies.Add(enemy);
+                }
+            }
+            return enemies;
+        }
+    }
     
     // === 편의 프로퍼티 ===
     public EnemyCharacter CurrentEnemy => EnemyCharacters != null && EnemyCharacters.Count > 0 ? EnemyCharacters[0] : null;
@@ -41,7 +66,7 @@ public class CombatCharacterManager : MonoBehaviour
     // === 전투 초기화 ===
     /// <summary>
     /// 전투를 초기화합니다
-    /// 전투 참가자 정보를 받아서 캐릭터 인스턴스를 생성합니다.
+    /// 전투 참가자 ID를 저장하고, 영속 Character 인스턴스를 참조합니다.
     /// </summary>
     /// <param name="playerInstanceId">플레이어 Character의 Instance ID</param>
     /// <param name="enemyInstanceIds">적 Character(s)의 Instance ID 배열</param>
@@ -49,205 +74,50 @@ public class CombatCharacterManager : MonoBehaviour
     {
         Debug.Log($"[CombatCharacterManager] === 전투 초기화 시작 ===");
         
-        // === 전투 참가자 정보 저장 ===
+        // === 전투 참가자 정보 저장 (ID만 저장) ===
         PlayerInstanceId = playerInstanceId;
         EnemyInstanceIds = new List<string>(enemyInstanceIds);
         
         Debug.Log($"[CombatCharacterManager] 전투 참가자: {PlayerInstanceId} vs [{string.Join(", ", EnemyInstanceIds)}]");
         
-        // === 플레이어 생성 ===
-        PlayerCharacter = CreatePlayer(playerInstanceId);
+        // === Character 참조 확인 및 생성 트리거 ===
+        
+        // 1. PlayerCharacter 확인
         if (PlayerCharacter == null)
         {
-            Debug.LogError("[CombatCharacterManager] PlayerCharacter 생성 실패!");
+            Debug.LogError("[CombatCharacterManager] PlayerCharacter 참조 실패! PlayerCharacterManager가 초기화되지 않았습니다.");
             return;
         }
         
-        // === 적 생성 ===
-        EnemyCharacters = new List<EnemyCharacter>();
+        Debug.Log($"[CombatCharacterManager] ✅ PlayerCharacter: {PlayerCharacter.Name}");
+        
+        // 2. NonPlayerCharacterManager 확인
+        if (NonPlayerCharacterManager.Instance == null)
+        {
+            Debug.LogError("[CombatCharacterManager] NonPlayerCharacterManager.Instance가 null입니다!");
+            return;
+        }
+        
+        // 3. Enemy 생성 트리거 (GetCharacter로 Lazy 생성)
         foreach (var enemyId in enemyInstanceIds)
         {
-            var enemy = CreateEnemy(enemyId);
-            if (enemy != null)
+            var enemy = NonPlayerCharacterManager.Instance.GetCharacter(enemyId);
+            if (enemy == null)
             {
-                EnemyCharacters.Add(enemy);
+                Debug.LogError($"[CombatCharacterManager] Enemy 생성 실패: {enemyId}");
+                return;
             }
+            Debug.Log($"[CombatCharacterManager] ✅ Enemy: {enemy.Name} (ID: {enemyId})");
         }
         
-        if (EnemyCharacters.Count == 0)
+        // 4. EnemyCharacters 프로퍼티 최종 확인
+        if (EnemyCharacters == null || EnemyCharacters.Count == 0)
         {
-            Debug.LogError("[CombatCharacterManager] 생성된 Enemy가 없습니다!");
+            Debug.LogError("[CombatCharacterManager] EnemyCharacter 참조 실패! NonPlayerCharacterManager에 Enemy가 없습니다.");
             return;
         }
         
-        Debug.Log($"[CombatCharacterManager] === 전투 초기화 완료: {PlayerCharacter.Name} vs {EnemyCharacters[0].Name} (외 {EnemyCharacters.Count - 1}명) ===");
-    }
-    
-    /// <summary>
-    /// Player Character 생성
-    /// </summary>
-    private PlayerCharacter CreatePlayer(string instanceId)
-    {
-        if (PlayerCharacterManager.Instance == null)
-        {
-            Debug.LogError("[CombatCharacterManager] PlayerCharacterManager.Instance가 null입니다!");
-            return null;
-        }
-        
-        var player = PlayerCharacterManager.Instance.CreatePlayerCharacterForBattle();
-        if (player == null)
-        {
-            Debug.LogError("[CombatCharacterManager] PlayerCharacter 생성 실패!");
-            return null;
-        }
-        
-        Debug.Log($"[CombatCharacterManager] ✅ Player 생성: {player.Name} (ID: {player.InstanceId})");
-        return player;
-    }
-    
-    /// <summary>
-    /// Enemy Character 생성
-    /// </summary>
-    private EnemyCharacter CreateEnemy(string instanceId)
-    {
-        // 1. CharacterDatabaseManager에서 Entry 조회
-        if (CharacterDatabaseManager.Instance == null)
-        {
-            Debug.LogError("[CombatCharacterManager] CharacterDatabaseManager.Instance가 null입니다!");
-            return null;
-        }
-        
-        var enemyEntry = CharacterDatabaseManager.Instance.GetEntry(instanceId);
-        if (enemyEntry == null)
-        {
-            Debug.LogError($"[CombatCharacterManager] Enemy Instance '{instanceId}'를 CharacterDatabase에서 찾을 수 없습니다!");
-            return null;
-        }
-        
-        Debug.Log($"[CombatCharacterManager] Enemy Entry: ID={enemyEntry.instanceId}, 템플릿={enemyEntry.initDataKey}");
-        
-        // 2. Resources에서 템플릿 로드
-        var initData = CharacterInitDataLoader.Load(enemyEntry.initDataKey);
-        if (initData == null)
-        {
-            Debug.LogError($"[CombatCharacterManager] 템플릿 '{enemyEntry.initDataKey}'를 로드할 수 없습니다!");
-            return null;
-        }
-        
-        Debug.Log($"[CombatCharacterManager] ✅ InitData 로드: {initData.characterName}");
-        
-        // 3. 템플릿 복사 (BT 인스턴스화)
-        CharacterInitData battleInitData = Instantiate(initData);
-        battleInitData.InstantiateBehaviorTrees();
-        
-        // 4. EnemyCharacter 생성
-        var enemy = new EnemyCharacter(instanceId, battleInitData, null);
-        
-        // 5. 인벤토리 초기화
-        InitializeEnemyInventory(enemy, battleInitData);
-        
-        // 6. 검술 초기화
-        InitializeActions(enemy, battleInitData);
-        
-        Debug.Log($"[CombatCharacterManager] ✅ Enemy 생성: {enemy.Name} (ID: {enemy.InstanceId})");
-        return enemy;
-    }
-    
-    /// <summary>
-    /// Enemy의 인벤토리 초기화
-    /// </summary>
-    private void InitializeEnemyInventory(EnemyCharacter enemy, CharacterInitData initData)
-    {
-        // Inventory 생성
-        var inventory = new CharacterInventory(enemy.CurrentAccessorySlots);
-        inventory.Owner = enemy;
-        enemy.Inventory = inventory;
-        
-        // 초기 아이템 추가
-        if (initData.initialItems != null && initData.initialItems.Count > 0)
-        {
-            foreach (var itemEntry in initData.initialItems)
-            {
-                if (!string.IsNullOrEmpty(itemEntry.itemId))
-                {
-                    bool added = inventory.AddItem(itemEntry.itemId, itemEntry.quantity);
-                    if (!added)
-                    {
-                        Debug.LogWarning($"[CombatCharacterManager] {enemy.Name} 초기 아이템 추가 실패: {itemEntry.itemId}");
-                    }
-                }
-            }
-        }
-        
-        // 초기 장비 장착
-        if (initData.initialEquipment != null && initData.initialEquipment.Count > 0)
-        {
-            foreach (var equipEntry in initData.initialEquipment)
-            {
-                if (!string.IsNullOrEmpty(equipEntry.itemId))
-                {
-                    if (!inventory.HasItem(equipEntry.itemId))
-                    {
-                        inventory.AddItem(equipEntry.itemId, 1);
-                    }
-                    
-                    inventory.EquipItem(equipEntry.itemId, equipEntry.slotType);
-                }
-            }
-        }
-    }
-    
-    /// <summary>
-    /// Character의 검술 초기화
-    /// </summary>
-    private void InitializeActions(Character character, CharacterInitData initData)
-    {
-        var database = ActionCommandDatabase.Instance;
-        if (database == null)
-        {
-            Debug.LogError($"[CombatCharacterManager] ActionCommandDatabase를 찾을 수 없습니다! {character.Name}의 검술 초기화 실패.");
-            return;
-        }
-        
-        // 습득 검술 초기화
-        if (initData.initialAcquiredActions != null && initData.initialAcquiredActions.Count > 0)
-        {
-            foreach (var entry in initData.initialAcquiredActions)
-            {
-                if (entry == null || string.IsNullOrEmpty(entry.actionKey))
-                    continue;
-                
-                var action = database.GetAction(entry.actionKey);
-                if (action != null)
-                {
-                    character.AcquireAction(action);
-                }
-            }
-        }
-        
-        // 장착 검술 초기화 (4개 슬롯)
-        string[] slotKeys = new string[] 
-        { 
-            initData.equippedActionSlot1, 
-            initData.equippedActionSlot2, 
-            initData.equippedActionSlot3, 
-            initData.equippedActionSlot4 
-        };
-        
-        for (int i = 0; i < 4; i++)
-        {
-            var key = slotKeys[i];
-            if (string.IsNullOrEmpty(key))
-                continue;
-            
-            var action = database.GetAction(key);
-            if (action != null)
-            {
-                character.EquipAction(action, i);
-            }
-        }
-        
-        Debug.Log($"[CombatCharacterManager] {character.Name} 검술 초기화 완료 - 습득: {character.GetAcquiredActions().Count}개, 장착: {character.AvailableCommands.Count}개");
+        Debug.Log($"[CombatCharacterManager] === 전투 초기화 완료: {PlayerCharacter.Name} vs {CurrentEnemy.Name} (외 {EnemyCharacters.Count - 1}명) ===");
     }
     
     // === 전투 종료 ===
@@ -265,11 +135,8 @@ public class CombatCharacterManager : MonoBehaviour
             return;
         }
         
-        // 1. 플레이어 상태 저장
-        if (PlayerCharacter != null)
-        {
-            PlayerCharacterManager.Instance.SyncPlayerStateAfterBattle(PlayerCharacter);
-        }
+        // 1. 플레이어 상태 저장 (영속 인스턴스이므로 자동 동기화됨)
+        PlayerCharacterManager.Instance.SyncPlayerStateAfterBattle();
         
         // 2. 보상 적용
         if (result.isVictory)
@@ -287,7 +154,8 @@ public class CombatCharacterManager : MonoBehaviour
             Debug.Log($"[CombatCharacterManager] 보상 획득: 골드 +{result.goldReward}, 경험치 +{result.expReward}");
         }
         
-        // 3. 인스턴스들은 Scene 언로드 시 자동 파괴됨
+        // 3. Character 인스턴스는 영속 관리자가 계속 보관함
+        // 4. 전투 참가자 ID는 Scene 언로드 시 자동 소멸
         Debug.Log("[CombatCharacterManager] 전투 후처리 완료");
     }
     

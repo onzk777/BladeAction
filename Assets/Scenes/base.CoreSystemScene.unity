@@ -269,11 +269,11 @@ MonoBehaviour:
   combatSceneAsset: {fileID: 102900000, guid: 9e38b081a3aca6c41ae286c3645b1c98, type: 3}
   titleSceneAsset: {fileID: 102900000, guid: b8225dd6389549e4a83519fa43794394, type: 3}
   testSceneAsset: {fileID: 102900000, guid: 7a4ae8fd65e80154ab559dd1d695af6f, type: 3}
+  resultSceneAsset: {fileID: 102900000, guid: 329672ea2b771b546865d0d115b8ac08, type: 3}
   combatSceneName: content.CombatScene
   titleSceneName: content.TitleScene
   testSceneName: test.TestScene
-  defaultPlayerId: Player
-  defaultEnemyId: Test_Enemy1
+  resultSceneName: content.ResultScene
   enableDebugLog: 1
 --- !u!4 &596039333
 Transform:
@@ -285,6 +285,50 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 541.4416, y: 299.7973, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1170704096
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1170704098}
+  - component: {fileID: 1170704097}
+  m_Layer: 0
+  m_Name: NonPlayerCharacterManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1170704097
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1170704096}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f33be1d1f40fa4e4eb8480a51e13da2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NonPlayerCharacterManager
+--- !u!4 &1170704098
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1170704096}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -585,11 +629,12 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1258551779}
   - {fileID: 24799784}
   - {fileID: 112486971}
   - {fileID: 2019651269}
+  - {fileID: 1170704098}
   - {fileID: 1904852457}
   - {fileID: 1722422237}
   - {fileID: 596039333}
   - {fileID: 2064034675}
+  - {fileID: 1258551779}

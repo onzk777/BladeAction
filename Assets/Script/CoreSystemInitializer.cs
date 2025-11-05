@@ -17,14 +17,14 @@ public class CoreSystemInitializer : MonoBehaviour
     [SerializeField] private SceneAsset persistentUISceneAsset;
 #endif
     [HideInInspector]
-    [SerializeField] private string persistentUISceneName = "02.PersistentUIScene";
+    [SerializeField] private string persistentUISceneName = "";
     
     [Tooltip("게임 시작 시 처음 보여줄 Scene (TitleScene=정식, TestScene=개발용, null=빈화면)")]
 #if UNITY_EDITOR
     [SerializeField] private SceneAsset initialContentSceneAsset;
 #endif
     [HideInInspector]
-    [SerializeField] private string initialContentSceneName = "05.TitleScene";
+    [SerializeField] private string initialContentSceneName = "";
     
     [Header("디버그")]
     [Tooltip("디버그 로그 활성화")]
@@ -98,6 +98,13 @@ public class CoreSystemInitializer : MonoBehaviour
                 {
                     SceneManager.SetActiveScene(contentScene);
                     Log($"Active Scene 설정: {initialContentSceneName}");
+                }
+                
+                // SceneTransitionManager에 현재 Content Scene 등록
+                if (SceneTransitionManager.Instance != null)
+                {
+                    SceneTransitionManager.Instance.SetCurrentContentScene(initialContentSceneName);
+                    Log($"SceneTransitionManager에 초기 Scene 등록: {initialContentSceneName}");
                 }
             }
             else

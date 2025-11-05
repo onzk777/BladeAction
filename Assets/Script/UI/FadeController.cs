@@ -44,7 +44,7 @@ public class FadeController : MonoBehaviour
         // 컴포넌트 자동 찾기
         if (fadeImage == null)
         {
-            fadeImage = GetComponent<Image>();
+            fadeImage = GetComponentInChildren<Image>();
         }
 
         if (canvasGroup == null)
@@ -63,8 +63,12 @@ public class FadeController : MonoBehaviour
             Debug.LogError("[FadeController] CanvasGroup 컴포넌트를 찾을 수 없습니다!");
         }
 
-        // 초기 상태: 완전히 투명 (Fade In 상태)
-        SetAlpha(0f);
+        // 초기 상태: FadeImage 비활성화 (에디터에서 설정한 상태 유지)
+        if (fadeImage != null && fadeImage.gameObject.activeSelf)
+        {
+            fadeImage.gameObject.SetActive(false);
+            Log("FadeImage 초기 비활성화");
+        }
     }
 
     /// <summary>
@@ -134,6 +138,14 @@ public class FadeController : MonoBehaviour
     private IEnumerator FadeCoroutine(float fromAlpha, float toAlpha, float duration)
     {
         isFading = true;
+        
+        // FadeImage 활성화
+        if (fadeImage != null && !fadeImage.gameObject.activeSelf)
+        {
+            fadeImage.gameObject.SetActive(true);
+            Log("FadeImage 활성화");
+        }
+        
         Log($"Fade 시작: {fromAlpha:F2} → {toAlpha:F2} (Duration: {duration}초)");
 
         float elapsedTime = 0f;
@@ -149,6 +161,14 @@ public class FadeController : MonoBehaviour
 
         // 최종 알파값 정확히 설정
         SetAlpha(toAlpha);
+        
+        // Fade In 완료 시 (alpha 0) FadeImage 비활성화
+        if (toAlpha == 0f && fadeImage != null)
+        {
+            fadeImage.gameObject.SetActive(false);
+            Log("FadeImage 비활성화 (Fade In 완료)");
+        }
+        
         isFading = false;
         Log($"Fade 완료: 최종 알파 = {toAlpha:F2}");
     }
@@ -182,6 +202,10 @@ public class FadeController : MonoBehaviour
             currentFadeCoroutine = null;
         }
         SetAlpha(0f);
+        if (fadeImage != null)
+        {
+            fadeImage.gameObject.SetActive(false);
+        }
         isFading = false;
     }
 
@@ -194,6 +218,10 @@ public class FadeController : MonoBehaviour
         {
             StopCoroutine(currentFadeCoroutine);
             currentFadeCoroutine = null;
+        }
+        if (fadeImage != null && !fadeImage.gameObject.activeSelf)
+        {
+            fadeImage.gameObject.SetActive(true);
         }
         SetAlpha(1f);
         isFading = false;

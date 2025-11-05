@@ -157,26 +157,13 @@ namespace BladeAction.UI
         
         /// <summary>
         /// 플레이어 캐릭터 준비 대기 후 연결
-        /// 전투 중이면 CombatCharacterManager.PlayerCharacter, 아니면 PlayerController 대기
+        /// PlayerCharacterManager를 통해 영속 PlayerCharacter에 접근
         /// </summary>
         private System.Collections.IEnumerator WaitForCombatCharacterAndConnect()
         {
-            // 전투 중 또는 전투 외 플레이어 캐릭터가 준비될 때까지 대기
-            while (true)
+            // PlayerCharacterManager의 PlayerCharacter가 준비될 때까지 대기
+            while (PlayerCharacterManager.Instance == null || PlayerCharacterManager.Instance.PlayerCharacter == null)
             {
-                // 전투 중: CombatCharacterManager.PlayerCharacter 확인
-                if (CombatCharacterManager.Instance != null && CombatCharacterManager.Instance.PlayerCharacter != null)
-                {
-                    break; // 전투 캐릭터 준비됨
-                }
-                
-                // 전투 외: PlayerController 확인
-                var playerController = FindFirstObjectByType<PlayerController>();
-                if (playerController != null && playerController.Character != null)
-                {
-                    break; // 컨트롤러 캐릭터 준비됨
-                }
-                
                 yield return null;
             }
             
@@ -215,29 +202,19 @@ namespace BladeAction.UI
         
         /// <summary>
         /// 플레이어 캐릭터에 자동 연결 시도
-        /// 전투 중이면 CombatCharacterManager.PlayerCharacter 사용
+        /// CoreSystemScene의 PlayerCharacterManager를 통해 영속 PlayerCharacter에 접근
         /// </summary>
         private void AutoConnectToPlayerInventory()
         {
-            // 1. 전투 중인지 확인 (CombatCharacterManager 존재 여부)
-            if (CombatCharacterManager.Instance != null && CombatCharacterManager.Instance.PlayerCharacter != null)
+            // PlayerCharacterManager를 통한 통일된 접근 (모든 Scene에서 동일)
+            if (PlayerCharacterManager.Instance != null && PlayerCharacterManager.Instance.PlayerCharacter != null)
             {
-                ConnectToCharacter(CombatCharacterManager.Instance.PlayerCharacter);
-                Log("[ActionCommandEquipUI] ✅ 플레이어 캐릭터에 자동 연결되었습니다. (전투 중)");
+                ConnectToCharacter(PlayerCharacterManager.Instance.PlayerCharacter);
+                Log("[ActionCommandEquipUI] ✅ 플레이어 캐릭터에 자동 연결되었습니다. (PlayerCharacterManager)");
                 return;
             }
             
-            // 2. 전투 중이 아니면 PlayerController 찾기
-            var playerController = FindFirstObjectByType<PlayerController>();
-            if (playerController != null && playerController.Character != null)
-            {
-                ConnectToCharacter(playerController.Character);
-                Log("[ActionCommandEquipUI] ✅ 플레이어 캐릭터에 자동 연결되었습니다.");
-            }
-            else
-            {
-                Log("[ActionCommandEquipUI] ⏳ 플레이어 컨트롤러가 아직 준비되지 않았습니다. (대기 중...)");
-            }
+            Log("[ActionCommandEquipUI] ⏳ PlayerCharacterManager 또는 PlayerCharacter가 아직 준비되지 않았습니다. (대기 중...)");
         }
         
         /// <summary>

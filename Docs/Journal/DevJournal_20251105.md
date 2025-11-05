@@ -206,17 +206,21 @@ SceneFlowController.Instance.GoToTestScene(); // 메서드만 호출
 
 ---
 
-## 🔄 현재 상태
+## 🔄 최종 상태
 
-### 완료된 Scene 설정
+### ✅ 완료된 Scene 설정
 - ✅ CoreSystemScene - SceneTransitionManager, SceneFlowController 추가
-- ✅ PersistentUIScene - FadeCanvas 추가
+- ✅ PersistentUIScene - FadeCanvas, Main Camera 추가
 - ✅ TitleScene - 생성 및 TitleSceneManager 설정 완료
 - ✅ TestScene - TestSceneManager 추가 완료
 - ✅ CombatScene - 전투 종료 후 ResultScene 전환 로직 추가
+- ✅ ResultScene - 생성 및 ResultSceneManager 설정 완료
 
-### 진행 중
-- 🔄 **ResultScene - 생성 및 설정 작업 중**
+### ✅ 검증 완료
+- ✅ Scene 전환 플로우 정상 동작
+- ✅ Fade 효과 정상 작동
+- ✅ 전투 결과 화면 표시
+- ✅ Scene 로드/언로드 정상
 
 ---
 
@@ -244,21 +248,48 @@ TestScene (복귀)
 
 ---
 
-## 🎯 다음 작업 (2025-11-05 재개 시)
+## 🐛 해결된 이슈 (테스트 중 발견 및 해결)
 
-1. **ResultScene 완료**
-   - UI 요소 배치 완료
-   - ResultSceneManager 설정 완료
+### 이슈 #1: TestScene이 언로드되지 않음
+- **원인**: CoreSystemInitializer가 SceneTransitionManager에 초기 Scene 등록 안 함
+- **해결**: `SetCurrentContentScene()` 호출 추가
 
-2. **통합 테스트**
-   - 전체 Scene 전환 플로우 테스트
-   - Fade 효과 동작 확인
-   - 전투 결과 데이터 정상 표시 확인
-   - Scene 전환 시 메모리 누수 확인
+### 이슈 #2: CombatHUD 표시 안 됨
+- **원인**: Canvas가 "Screen Space - Camera" 모드, Camera 참조 끊김
+- **해결**: Canvas를 "Screen Space - Overlay"로 변경 필요 (Unity 작업)
 
-3. **Build Settings 설정**
-   - 모든 Scene을 Build Settings에 추가
-   - Scene 순서 확인 (CoreSystemScene이 Index 0)
+### 이슈 #3: ResultScene 전환 안 됨
+- **원인**: CombatManager에서 Scene 이름 하드코딩
+- **해결**: SceneFlowController.GoToResultScene() 사용, 하드코딩 제거
+
+### 이슈 #6: FadeController 찾을 수 없음
+- **원인**: FadeImage 비활성화 방식 미구현
+- **해결**: FadeImage GameObject 활성화/비활성화 제어 로직 추가
+
+---
+
+## 🔴 남은 이슈 (전투 시스템 - 별도 작업 필요)
+
+- **이슈 #4**: 공격 애니메이션 중복 재생
+- **이슈 #5**: HP Bar 비율 표시 오류
+- **이슈 #7**: 턴 순환 오류 (한 쪽이 두 번 공격)
+
+**비고**: Scene 전환 시스템과는 별개의 전투 시스템 버그
+
+---
+
+## 🎯 다음 작업 (2025-11-06 이후)
+
+1. **전투 시스템 버그 수정**
+   - 이슈 #4, #5, #7 해결
+
+2. **Scene 전환 시스템 개선 (선택)**
+   - Fade 속도 조정
+   - 로딩 화면 추가 (선택)
+
+3. **LobbyScene 구현 (추후)**
+   - TestScene의 검증된 메커니즘을 LobbyScene에 적용
+   - 정식 게임용 UI 구성
 
 ---
 
@@ -369,4 +400,6 @@ TestScene (복귀)
 
 **작업 중단 시점**: ResultScene 작업 중 (UI 구성 단계)  
 **재개 시 할 일**: ResultScene UI 배치 완료 → 통합 테스트
+
+
 

@@ -18,3 +18,5 @@ MonoBehaviour:
   enemyEntries:
   - instanceId: Test_Enemy1
     initDataKey: Test_Enemy1
+  - instanceId: Test_Enemy2
+    initDataKey: Test_Enemy1

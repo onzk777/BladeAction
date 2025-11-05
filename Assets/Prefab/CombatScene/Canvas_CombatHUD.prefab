@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 3597601569085728722}
   - component: {fileID: 9051187054440344350}
   m_Layer: 5
-  m_Name: Panel
+  m_Name: ActionSelectionUIPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -277,7 +277,7 @@ Canvas:
   m_GameObject: {fileID: 3696157577044447830}
   m_Enabled: 1
   serializedVersion: 3
-  m_RenderMode: 1
+  m_RenderMode: 0
   m_Camera: {fileID: 0}
   m_PlaneDistance: 10
   m_PixelPerfect: 0
