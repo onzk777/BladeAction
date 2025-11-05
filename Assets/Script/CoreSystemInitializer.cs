@@ -1,6 +1,9 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// CoreSystemScene 초기화 및 Scene 로딩 관리
@@ -9,14 +12,37 @@ using System.Collections;
 public class CoreSystemInitializer : MonoBehaviour
 {
     [Header("Scene 설정")]
-    [Tooltip("PersistentUI Scene 이름")]
+    [Tooltip("공통 UI Scene (항상 로드됨)")]
+#if UNITY_EDITOR
+    [SerializeField] private SceneAsset persistentUISceneAsset;
+#endif
+    [HideInInspector]
     [SerializeField] private string persistentUISceneName = "02.PersistentUIScene";
     
-    [Tooltip("초기 로드할 Content Scene 이름 (비워두면 로드 안함)")]
-    [SerializeField] private string initialContentSceneName = "";
+    [Tooltip("게임 시작 시 처음 보여줄 Scene (TitleScene=정식, TestScene=개발용, null=빈화면)")]
+#if UNITY_EDITOR
+    [SerializeField] private SceneAsset initialContentSceneAsset;
+#endif
+    [HideInInspector]
+    [SerializeField] private string initialContentSceneName = "05.TitleScene";
     
     [Header("디버그")]
+    [Tooltip("디버그 로그 활성화")]
     [SerializeField] private bool enableDebugLog = true;
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        // SceneAsset이 변경되면 자동으로 Scene 이름 업데이트
+        if (persistentUISceneAsset != null)
+            persistentUISceneName = persistentUISceneAsset.name;
+        
+        if (initialContentSceneAsset != null)
+            initialContentSceneName = initialContentSceneAsset.name;
+        else
+            initialContentSceneName = ""; // null이면 빈 문자열
+    }
+#endif
 
     private void Start()
     {

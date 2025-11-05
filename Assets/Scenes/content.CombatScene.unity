@@ -644,29 +644,9 @@ PrefabInstance:
       propertyPath: m_Camera
       value: 
       objectReference: {fileID: 389252508}
-    - target: {fileID: 410278202160604123, guid: 9a129cf2b757462408fc4793cf5027ba, type: 3}
-      propertyPath: m_SortingLayerID
-      value: -255827911
-      objectReference: {fileID: 0}
-    - target: {fileID: 1960564920338804958, guid: 9a129cf2b757462408fc4793cf5027ba, type: 3}
-      propertyPath: m_Enabled
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1960564920338804958, guid: 9a129cf2b757462408fc4793cf5027ba, type: 3}
-      propertyPath: m_Interactable
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 1960564920338804958, guid: 9a129cf2b757462408fc4793cf5027ba, type: 3}
-      propertyPath: m_BlocksRaycasts
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 3696157577044447830, guid: 9a129cf2b757462408fc4793cf5027ba, type: 3}
       propertyPath: m_Name
       value: Canvas_CombatHUD
-      objectReference: {fileID: 0}
-    - target: {fileID: 3696157577044447830, guid: 9a129cf2b757462408fc4793cf5027ba, type: 3}
-      propertyPath: m_IsActive
-      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3742979941349681512, guid: 9a129cf2b757462408fc4793cf5027ba, type: 3}
       propertyPath: m_Pivot.x

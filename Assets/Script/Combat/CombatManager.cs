@@ -1943,6 +1943,9 @@ public class CombatManager : MonoBehaviour
         OnBattleEnded?.Invoke(battleResult);
         
         Debug.Log($"[CombatManager] 전투 종료 - 사유: {reason}, 승리자: {winnerName}, 결과: {resultMessage}");
+        
+        // 전투 결과를 ResultScene에 전달하고 Scene 전환
+        TransitionToResultScene();
     }
     
     /// <summary>
@@ -2088,5 +2091,36 @@ public class CombatManager : MonoBehaviour
     public EnemyController GetEnemyController()
     {
         return enemyController;
+    }
+    
+    /// <summary>
+    /// 전투 종료 후 ResultScene으로 전환
+    /// </summary>
+    private void TransitionToResultScene()
+    {
+        // BattleResult를 ResultSceneManager에 전달
+        ResultSceneManager.LastBattleResult = battleResult;
+        
+        // 약간의 지연 후 Scene 전환 (결과 확인 시간)
+        StartCoroutine(DelayedSceneTransition());
+    }
+    
+    /// <summary>
+    /// 지연된 Scene 전환 Coroutine
+    /// </summary>
+    private System.Collections.IEnumerator DelayedSceneTransition()
+    {
+        // 2초 대기 (플레이어가 전투 종료 결과를 확인할 시간)
+        yield return new WaitForSeconds(2f);
+        
+        if (SceneTransitionManager.Instance != null)
+        {
+            Debug.Log("[CombatManager] ResultScene으로 전환합니다.");
+            SceneTransitionManager.Instance.TransitionToScene("07.ResultScene");
+        }
+        else
+        {
+            Debug.LogError("[CombatManager] SceneTransitionManager를 찾을 수 없습니다!");
+        }
     }
 }

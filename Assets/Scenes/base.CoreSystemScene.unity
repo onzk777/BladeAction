@@ -237,6 +237,59 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 70a953ce384ddae4f9c1ec6b2a86916c, type: 3}
+--- !u!1 &596039331
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 596039333}
+  - component: {fileID: 596039332}
+  m_Layer: 0
+  m_Name: SceneFlowController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &596039332
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 596039331}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f6344b587d450a84184be6d4d3f81e91, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneFlowController
+  combatSceneAsset: {fileID: 102900000, guid: 9e38b081a3aca6c41ae286c3645b1c98, type: 3}
+  titleSceneAsset: {fileID: 102900000, guid: b8225dd6389549e4a83519fa43794394, type: 3}
+  testSceneAsset: {fileID: 102900000, guid: 7a4ae8fd65e80154ab559dd1d695af6f, type: 3}
+  combatSceneName: content.CombatScene
+  titleSceneName: content.TitleScene
+  testSceneName: test.TestScene
+  defaultPlayerId: Player
+  defaultEnemyId: Test_Enemy1
+  enableDebugLog: 1
+--- !u!4 &596039333
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 596039331}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 541.4416, y: 299.7973, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1258551776
 GameObject:
   m_ObjectHideFlags: 0
@@ -345,8 +398,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c6c86aca9a632c44b683fb758150787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CoreSystemInitializer
-  persistentUISceneName: 02.PersistentUIScene
-  initialContentSceneName: 03.CombatScene
+  persistentUISceneAsset: {fileID: 102900000, guid: 15cce0e2d9c9d184c9eec9bb1cd8d446, type: 3}
+  persistentUISceneName: base.PersistentUIScene
+  initialContentSceneAsset: {fileID: 102900000, guid: 7a4ae8fd65e80154ab559dd1d695af6f, type: 3}
+  initialContentSceneName: test.TestScene
   enableDebugLog: 1
 --- !u!4 &1722422237
 Transform:
@@ -477,6 +532,55 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3d519f8d9f6bdc0459069d99a6101e5b, type: 3}
+--- !u!1 &2064034673
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2064034675}
+  - component: {fileID: 2064034674}
+  m_Layer: 0
+  m_Name: SceneTransitionManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2064034674
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2064034673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30ada33792b567a40b4d4be8fd3ceeff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneTransitionManager
+  currentContentScene: 
+  isTransitioning: 0
+  defaultFadeOutDuration: 0.5
+  defaultFadeInDuration: 0.5
+  enableDebugLog: 1
+--- !u!4 &2064034675
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2064034673}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 392.39948, y: 232.15363, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -487,3 +591,5 @@ SceneRoots:
   - {fileID: 2019651269}
   - {fileID: 1904852457}
   - {fileID: 1722422237}
+  - {fileID: 596039333}
+  - {fileID: 2064034675}
