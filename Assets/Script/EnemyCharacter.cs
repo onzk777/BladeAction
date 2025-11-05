@@ -98,7 +98,7 @@ public class EnemyCharacter : Character
         // 검술 리스트 사전 검증
         if (AvailableCommands == null || AvailableCommands.Count == 0)
         {
-            Debug.LogError($"[EnemyCharacter] {Name}에게 장착된 검술이 없습니다! CharacterData의 initialEquipment에서 검술을 장착해주세요.");
+            Debug.LogError($"[EnemyCharacter] {Name}에게 장착된 검술이 없습니다! CharacterInitData의 장착 검술 슬롯(equippedActionSlot1~4)을 설정해주세요.");
             return new CommandSelection { selectedIndex = 0 };
         }
         

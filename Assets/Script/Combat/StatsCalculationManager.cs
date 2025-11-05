@@ -123,18 +123,8 @@ namespace BladeAction.Combat
 
         private CombatStats ConvertToCombatStats(CharacterInitData data)
         {
-            CombatStats s = new CombatStats();
-            s.attack = data.ATK;
-            s.defenseDR = data.DR;
-            s.maxHP = data.MaxHP;
-            s.maxPoise = data.MaxPoise;
-            s.parryPoiseDamage = data.ParryPoiseDamage;
-            s.critChance = data.CritChance;              // 0~1
-            s.critMultiplier = data.CritMultiplier;      // multiplier
-            s.guardDamageReduction = data.baseStats.guardDamageReduction; // 0~1
-            s.guardDRBonus = data.baseStats.guardDRBonus;
-            // 나머지는 0 기본
-            return s;
+            // CharacterInitData의 baseStats를 그대로 복사 (구조체이므로 값 복사)
+            return data.baseStats;
         }
 
         private CombatStats CalculateEquipmentDelta(Character character)

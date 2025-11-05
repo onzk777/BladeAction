@@ -38,34 +38,36 @@ MonoBehaviour:
   maxAccessorySlots: 5
   initialItems:
   - itemId: 'itm_armor_test1 '
-    quantity: 10
+    quantity: 3
   - itemId: 'itm_weapon_test1 '
-    quantity: 10
+    quantity: 3
   - itemId: itm_weapon_test2
-    quantity: 10
+    quantity: 3
   - itemId: 'itm_accessory_ring_test1 '
-    quantity: 10
+    quantity: 3
   - itemId: 'itm_accessory_ring_test2 '
-    quantity: 10
+    quantity: 3
   - itemId: 'itm_accessory_nec_test1 '
-    quantity: 10
+    quantity: 3
   - itemId: 'itm_accessory_braclet_test1 '
-    quantity: 10
+    quantity: 3
   - itemId: 'itm_accessory_ring_test3 '
-    quantity: 10
+    quantity: 3
   - itemId: 'itm_accessory_special_test1 '
-    quantity: 10
+    quantity: 3
   - itemId: 'itm_accessory_special_test1 '
-    quantity: 10
+    quantity: 1
   - itemId: 'itm_swordartstyle_imperial '
-    quantity: 10
+    quantity: 1
   - itemId: 'itm_swordartstyle_street '
-    quantity: 10
-  initialEquipment:
-  - slotType: 1
-    itemId: 'itm_weapon_test1 '
-  - slotType: 2
-    itemId: 'itm_armor_test1 '
+    quantity: 1
+  weaponSlot: 'itm_weapon_test1 '
+  armorSlot: 'itm_armor_test1 '
+  swordArtStyleSlot: 
+  accessorySlots:
+  - 'itm_accessory_nec_test1 '
+  - 'itm_accessory_ring_test3 '
+  - 'itm_accessory_special_test1 '
   initialAcquiredActions: []
   equippedActionSlot1: imperial_vertical
   equippedActionSlot2: imperial_horizontal
@@ -77,4 +79,5 @@ MonoBehaviour:
     guardAttemptRate: 0
     parryWhileGuarding: 0
     parryWhileGuardingRate: 0
-  behaviorTrees: []
+  behaviorTrees:
+  - {fileID: 11400000, guid: 99ad250825a248a4c9ef2e587909837a, type: 2}

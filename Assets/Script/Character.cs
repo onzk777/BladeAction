@@ -116,13 +116,14 @@ public abstract class Character
     }
     
     /// <summary>
-    /// 공격 턴 시작 시 Poise 회복
+    /// 공격 턴 시작 시 Poise 회복 (poiseGain 비율만큼)
     /// </summary>
     public void ResetPoise()
     {
         float oldPoise = stats.currentPoise;
-        stats.currentPoise = stats.maxPoise;
-        Debug.Log($"[Character] {Name} Poise 회복: {oldPoise} → {stats.currentPoise}");
+        float recoveryAmount = stats.maxPoise * stats.poiseGain;
+        stats.currentPoise = Mathf.Min(stats.currentPoise + recoveryAmount, stats.maxPoise);
+        Debug.Log($"[Character] {Name} Poise 회복: {oldPoise} → {stats.currentPoise} (회복량: {recoveryAmount:F1}, 회복률: {stats.poiseGain * 100:F0}%)");
         OnPoiseChanged?.Invoke((int)oldPoise, (int)stats.currentPoise);
         OnStatsChanged?.Invoke(this);
     }

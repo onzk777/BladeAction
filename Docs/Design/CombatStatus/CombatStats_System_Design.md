@@ -12,8 +12,8 @@
 
 ### 3. 데이터 모델
 - `CombatStats` 구조체(표준 내부 표현)
-  - 정수 스탯(내부 float 계산 → 커밋 시 정수 반영): `attack`, `defenseDR`, `maxHP`, `maxPoise`, `parryPoiseDamage`, `blockPoiseConsumption`, `parryPoiseConsumption`, `parryPoiseAttackPower`, `poiseGain`
-  - 비율/확률(내부 0.0~1.0): `critChance`, `guardDamageReduction`, `damageReduction`, `blockEfficiency`, `parryEfficiency`
+  - 정수 스탯(내부 float 계산 → 커밋 시 정수 반영): `attack`, `defenseDR`, `maxHP`, `maxPoise`, `parryPoiseDamage`, `blockPoiseConsumption`, `parryPoiseConsumption`, `parryPoiseAttackPower`
+  - 비율/확률(내부 0.0~1.0): `critChance`, `guardDamageReduction`, `damageReduction`, `blockEfficiency`, `parryEfficiency`, `poiseGain`
   - 배율(곱셈용 multiplier): `critMultiplier` (예: 1.5)
 
 예시 제안 스켈레톤(참고용):
@@ -29,9 +29,9 @@ public struct CombatStats
     public float blockPoiseConsumption;
     public float parryPoiseConsumption;
     public float parryPoiseAttackPower;
-    public float poiseGain;
 
     // 비율(0~1)
+    public float poiseGain;              // Poise 회복률 (0~1, 1.0 = 100% 회복)
     public float critChance;              // 0~1
     public float guardDamageReduction;    // 0~1
     public float damageReduction;         // 0~1 (즉시 전환)

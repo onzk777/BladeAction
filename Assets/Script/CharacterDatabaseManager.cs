@@ -263,21 +263,45 @@ public class CharacterDatabaseManager : MonoBehaviour
             }
         }
         
-        // 초기 장비 장착
-        if (initData.initialEquipment != null && initData.initialEquipment.Count > 0)
+        // 초기 장비 장착 (슬롯별)
+        EquipItemIfValid(inventory, initData.weaponSlot, BladeAction.Item.EquipmentSlotType.Weapon, "무기", character.Name);
+        EquipItemIfValid(inventory, initData.armorSlot, BladeAction.Item.EquipmentSlotType.Armor, "갑옷", character.Name);
+        EquipItemIfValid(inventory, initData.swordArtStyleSlot, BladeAction.Item.EquipmentSlotType.SwordArtStyle, "유파", character.Name);
+        
+        // 장신구 슬롯 (개수는 initialAccessorySlots 값만큼)
+        string[] accessories = initData.GetAccessorySlots();
+        for (int i = 0; i < accessories.Length; i++)
         {
-            foreach (var equipEntry in initData.initialEquipment)
+            if (!string.IsNullOrEmpty(accessories[i]))
             {
-                if (!string.IsNullOrEmpty(equipEntry.itemId))
-                {
-                    if (!inventory.HasItem(equipEntry.itemId))
-                    {
-                        inventory.AddItem(equipEntry.itemId, 1);
-                    }
-                    
-                    inventory.EquipItem(equipEntry.itemId, equipEntry.slotType);
-                }
+                EquipItemIfValid(inventory, accessories[i], BladeAction.Item.EquipmentSlotType.Accessory, $"장신구 {i + 1}", character.Name);
             }
+        }
+    }
+    
+    /// <summary>
+    /// 아이템 ID가 유효하면 인벤토리에 추가 및 장착
+    /// </summary>
+    private void EquipItemIfValid(BladeAction.Item.CharacterInventory inventory, string itemId, BladeAction.Item.EquipmentSlotType slotType, string slotName, string characterName)
+    {
+        if (string.IsNullOrEmpty(itemId))
+            return;
+        
+        // 아이템이 인벤토리에 없으면 자동 추가
+        if (!inventory.HasItem(itemId))
+        {
+            inventory.AddItem(itemId, 1);
+        }
+        
+        // 장착
+        bool equipped = inventory.EquipItem(itemId, slotType);
+        if (equipped)
+        {
+            Debug.Log($"[CharacterDatabaseManager] {characterName} 초기 장비 장착: {itemId} → {slotName} ({slotType})");
+        }
+        else
+        {
+            Debug.LogWarning($"[CharacterDatabaseManager] {characterName} 초기 장비 장착 실패: {itemId} → {slotName}");
         }
     }
     

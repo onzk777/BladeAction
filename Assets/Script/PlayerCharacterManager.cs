@@ -138,34 +138,48 @@ public class PlayerCharacterManager : MonoBehaviour
             }
         }
         
-        // 초기 장비 장착
-        if (initData.initialEquipment != null && initData.initialEquipment.Count > 0)
+        // 초기 장비 장착 (슬롯별)
+        EquipItemIfValid(inventory, initData.weaponSlot, EquipmentSlotType.Weapon, "무기");
+        EquipItemIfValid(inventory, initData.armorSlot, EquipmentSlotType.Armor, "갑옷");
+        EquipItemIfValid(inventory, initData.swordArtStyleSlot, EquipmentSlotType.SwordArtStyle, "유파");
+        
+        // 장신구 슬롯 (개수는 initialAccessorySlots 값만큼)
+        string[] accessories = initData.GetAccessorySlots();
+        for (int i = 0; i < accessories.Length; i++)
         {
-            foreach (var equipEntry in initData.initialEquipment)
+            if (!string.IsNullOrEmpty(accessories[i]))
             {
-                if (!string.IsNullOrEmpty(equipEntry.itemId))
-                {
-                    // 아이템이 인벤토리에 없으면 자동 추가
-                    if (!inventory.HasItem(equipEntry.itemId))
-                    {
-                        inventory.AddItem(equipEntry.itemId, 1);
-                    }
-                    
-                    // 장착
-                    bool equipped = inventory.EquipItem(equipEntry.itemId, equipEntry.slotType);
-                    if (equipped)
-                    {
-                        Debug.Log($"[PlayerCharacterManager] 초기 장비 장착: {equipEntry.itemId} → {equipEntry.slotType}");
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"[PlayerCharacterManager] 초기 장비 장착 실패: {equipEntry.itemId}");
-                    }
-                }
+                EquipItemIfValid(inventory, accessories[i], EquipmentSlotType.Accessory, $"장신구 {i + 1}");
             }
         }
         
         Debug.Log($"[PlayerCharacterManager] 인벤토리 초기화 완료 - {inventory.GetDebugInfo()}");
+    }
+    
+    /// <summary>
+    /// 아이템 ID가 유효하면 인벤토리에 추가 및 장착
+    /// </summary>
+    private void EquipItemIfValid(CharacterInventory inventory, string itemId, EquipmentSlotType slotType, string slotName)
+    {
+        if (string.IsNullOrEmpty(itemId))
+            return;
+        
+        // 아이템이 인벤토리에 없으면 자동 추가
+        if (!inventory.HasItem(itemId))
+        {
+            inventory.AddItem(itemId, 1);
+        }
+        
+        // 장착
+        bool equipped = inventory.EquipItem(itemId, slotType);
+        if (equipped)
+        {
+            Debug.Log($"[PlayerCharacterManager] 초기 장비 장착: {itemId} → {slotName} ({slotType})");
+        }
+        else
+        {
+            Debug.LogWarning($"[PlayerCharacterManager] 초기 장비 장착 실패: {itemId} → {slotName}");
+        }
     }
     
     /// <summary>

@@ -1,8 +1,8 @@
 # 개발 일지 - 2025년 11월 5일
 
-**작업 주제**: Scene 전환 시스템 구현  
+**작업 주제**: Scene 전환 시스템 구현 + Character 관리 구조 재설계  
 **작업 시간**: 전일  
-**상태**: 진행 중 (ResultScene 작업 중)
+**상태**: ✅ **완료 및 검증 완료**
 
 ---
 
@@ -391,15 +391,507 @@ TestScene (복귀)
 
 ---
 
-## 🔗 관련 문서
-- `Docs/Design/Scene/Scene_계층_구조_설계.md` (설계 문서)
-- `Docs/Design/Scene/Scene_계층_구조_구현_계획.md` (구현 계획)
-- `Docs/Design/Scene/Scene_전환_시스템_Unity_설정_가이드.md` (Unity 설정 가이드)
+## 🔧 추가 작업: Character 관리 구조 재설계
+
+### 문제 인식
+
+**ActionCommandEquipUI 버그 원인:**
+- TestScene과 CombatScene에서 Character 접근 경로가 달랐음
+- CombatScene: `CombatCharacterManager.PlayerCharacter`
+- TestScene: `PlayerController.Character` (없음!)
+
+**근본 문제:**
+- Character 인스턴스가 전투마다 새로 생성됨
+- 영속 데이터와 임시 데이터가 혼재
+- Single Source of Truth 부재
 
 ---
 
-**작업 중단 시점**: ResultScene 작업 중 (UI 구성 단계)  
-**재개 시 할 일**: ResultScene UI 배치 완료 → 통합 테스트
+### 해결: Character 관리 아키텍처 재설계
+
+#### 1. NonPlayerCharacterManager 생성 ⭐
+
+**파일**: `Assets/Script/NonPlayerCharacterManager.cs` (신규)
+
+**역할:**
+- 모든 NPC/Enemy의 영속 인스턴스 관리
+- Instance ID로 Character 조회
+- Lazy 생성 방식 (메모리 효율)
+
+**핵심 메서드:**
+```csharp
+public Character GetCharacter(string instanceId)
+{
+    // 캐시 확인 → 있으면 반환
+    // 없으면 CharacterDatabaseManager.CreateCharacter() 호출 → 캐시에 저장
+}
+```
+
+---
+
+#### 2. PlayerCharacterManager 수정
+
+**변경 사항:**
+- `CharacterInventory Inventory` 제거
+- `PlayerCharacter PlayerCharacter` 추가 (영속 인스턴스)
+- `CreatePlayerCharacterForBattle()` 제거
+- 게임 시작 시 1회 생성, 이후 재사용
+
+---
+
+#### 3. CharacterDatabaseManager 수정
+
+**Factory 역할 추가:**
+```csharp
+public Character CreateCharacter(string instanceId)
+{
+    // Entry 조회 → InitData 로드 → Character 생성 → 반환
+    // 관리는 안 함 (호출자가 관리)
+}
+```
+
+---
+
+#### 4. CombatCharacterManager 수정
+
+**Before:**
+```csharp
+public PlayerCharacter PlayerCharacter { get; private set; }
+public EnemyCharacter CurrentEnemy { get; private set; }
+
+// 전투 시작 시 생성
+private PlayerCharacter CreatePlayer(...) { ... }
+private EnemyCharacter CreateEnemy(...) { ... }
+```
+
+**After:**
+```csharp
+// 참조만 보관 (소유 안 함)
+public PlayerCharacter PlayerCharacter 
+    => PlayerCharacterManager.Instance?.PlayerCharacter;
+
+public List<EnemyCharacter> EnemyCharacters
+{
+    get
+    {
+        // NonPlayerCharacterManager에서 가져오기
+    }
+}
+
+// 생성 로직 제거, ID만 저장
+public void InitializeBattle(string playerId, params string[] enemyIds)
+{
+    PlayerInstanceId = playerId;
+    EnemyInstanceIds = new List<string>(enemyIds);
+}
+```
+
+---
+
+#### 5. Controller 수정
+
+**PlayerController.cs:**
+```csharp
+// Before
+public Character Character => CombatCharacterManager.Instance?.PlayerCharacter;
+
+// After
+public Character Character => PlayerCharacterManager.Instance?.PlayerCharacter;
+```
+
+**변경 이유:** 모든 Scene에서 통일된 접근
+
+---
+
+#### 6. UI 수정
+
+**ActionCommandEquipUI.cs, InventoryUI.cs:**
+```csharp
+// Before: Scene별로 다른 접근
+if (CombatScene) → CombatCharacterManager.PlayerCharacter
+if (TestScene)   → PlayerController.Character (없음!)
+
+// After: 모든 Scene에서 동일
+PlayerCharacterManager.Instance.PlayerCharacter
+```
+
+---
+
+### 결과: Single Source of Truth 달성 ✅
+
+```
+모든 Scene에서:
+- Player: PlayerCharacterManager.Instance.PlayerCharacter
+- NPC/Enemy: NonPlayerCharacterManager.Instance.GetCharacter(id)
+
+→ 통일된 접근 경로
+→ 영속성 보장
+→ TestScene의 ActionCommandEquipUI 정상 동작!
+```
+
+---
+
+## 🎯 Scene 전환 시스템 최종 개선
+
+### SceneFlowController 역할 명확화
+
+**Flow 관리자로 확정:**
+- `GoToTitle()`: Scene 전환만
+- `GoToTestScene()`: Scene 전환만
+- `StartCombatFlow(playerId, enemyId)`: 데이터 전달 + Scene 전환 + 전투 트리거
+- `ShowResultFlow(result)`: 데이터 전달 + Scene 전환
+
+**설계 철학:**
+- 각 Scene 진입 시 필요한 데이터 전달
+- Scene 로드 후 초기화 트리거
+- 일관된 인터페이스 제공
+
+---
+
+### TestScene Enemy 선택 기능 추가
+
+**파일**: `Assets/Script/Scene/TestSceneManager.cs`
+
+**추가 기능:**
+- Enemy 선택 Dropdown
+- CharacterDatabaseManager에서 Enemy 목록 자동 로드
+- 선택한 Enemy로 전투 시작
+
+**Unity 설정:**
+```
+TestScene
+└─ EnemySelectionDropdown (TMP_Dropdown)
+   └─ TestSceneManager에 연결
+```
+
+---
+
+## ✅ 최종 검증
+
+### Scene 전환 Flow 테스트
+
+```
+TitleScene
+  ↓ "게임 시작"
+TestScene
+  ↓ Enemy 선택 + "전투 시작"
+CombatScene (선택한 Enemy와 전투)
+  ↓ 전투 종료
+ResultScene (결과 표시)
+  ↓ "계속하기"
+TestScene (복귀)
+
+✅ 모든 전환 정상 동작
+✅ Fade In/Out 효과 정상
+✅ Character 데이터 유지 확인
+```
+
+---
+
+### Character 영속성 테스트
+
+```
+1. TestScene: 검술 장착
+   → PlayerCharacterManager.PlayerCharacter.EquipAction()
+   
+2. CombatScene 전환
+   → 장착된 검술 정상 표시 ✅
+   
+3. 전투 중 HP 감소
+   → PlayerCharacterManager.PlayerCharacter.CurrentHP 변경
+   
+4. ResultScene → TestScene 복귀
+   → HP 변경사항 유지 ✅
+
+✅ Single Source of Truth 동작 확인
+```
+
+---
+
+## 📚 생성된 문서
+
+### Scene 전환 시스템 관련
+
+1. `Docs/Design/Scene/Scene_전환_시스템_Unity_설정_가이드.md` (업데이트)
+   - NonPlayerCharacterManager 추가 가이드
+   - Enemy 선택 Dropdown 추가 가이드
+
+2. `Docs/TroubleShoot/Scene_전환_시스템_TroubleShooting.md`
+   - 디버깅 과정 및 해결책 문서화
+
+---
+
+### 전투 세션 시스템 (신규 기획)
+
+**폴더**: `Docs/CombatSessionSystem/`
+
+1. **전투_세션_시스템_디자인.md**
+   - 다대다 전투 비전
+   - 시나리오 기반 설계
+   - 감정적 설계 (긴장감, 성취감)
+   - "재밌겠다! 만들고 싶다!" 느낌
+
+2. **전투_세션_시스템_구현_명세서.md**
+   - CombatSessionManager 클래스 명세
+   - Battle 클래스 명세
+   - BattleExecutor 클래스 명세
+   - 매칭 알고리즘 상세
+
+3. **전투_세션_시스템_구현_계획서.md**
+   - 4단계 구현 로드맵
+   - 일정 계획 (4.5-5.5일 예상)
+   - 마일스톤 정의
+
+---
+
+## 🔗 관련 문서
+- `Docs/Design/Scene/Scene_계층_구조_설계.md` (설계 문서)
+- `Docs/Design/Scene/Scene_계층_구조_구현_계획.md` (구현 계획 - 완료 상태 업데이트됨)
+- `Docs/Design/Scene/Scene_전환_시스템_Unity_설정_가이드.md` (Unity 설정 가이드)
+- `Docs/TroubleShoot/Scene_전환_시스템_TroubleShooting.md` (문제 해결 문서)
+- `Docs/CombatSessionSystem/` (신규 - 다대다 전투 시스템 문서)
+
+---
+
+## 📊 오늘의 성과
+
+### 1. Scene 전환 시스템 완성 ✅
+
+- 6개 Scene 구현 및 연동 완료
+- Fade 효과와 함께 부드러운 전환
+- 데이터 전달 및 초기화 Flow 완성
+
+---
+
+### 2. Character 관리 아키텍처 확립 ✅
+
+- Single Source of Truth 달성
+- 모든 Scene에서 통일된 Character 접근
+- 영속 데이터와 임시 데이터 명확히 분리
+
+---
+
+### 3. 다음 개발 방향 수립 ✅
+
+- 다대다 전투 시스템 기획 완료
+- 3개 문서 작성으로 구현 준비 완료
+- 4.5일 로드맵 수립
+
+---
+
+## 🔧 추가 작업: CharacterInitData 개선
+
+### Initial Equipment 구조 변경
+
+**문제:**
+- 기존: List<InitialEquipmentEntry> (동적 추가/삭제 가능)
+- 문제점: 슬롯은 고정인데 List로 관리 (불필요한 유연성)
+
+**해결:**
+```csharp
+// Before
+public List<InitialEquipmentEntry> initialEquipment;
+// 슬롯 타입과 아이템 ID를 Entry로 관리
+
+// After
+public string weaponSlot;           // 무기 슬롯
+public string armorSlot;            // 갑옷 슬롯
+public string swordArtStyleSlot;    // 유파 슬롯
+public string[] accessorySlots;     // 장신구 슬롯 (가변)
+```
+
+**장신구 슬롯 자동 조정:**
+```csharp
+#if UNITY_EDITOR
+private void OnValidate()
+{
+    // initialAccessorySlots 값 변경 시 배열 크기 자동 조정
+    if (accessorySlots.Length != initialAccessorySlots)
+    {
+        Array.Resize(ref accessorySlots, initialAccessorySlots);
+    }
+}
+#endif
+```
+
+**효과:**
+- Inspector에서 Initial Accessory Slots 값 변경 → 배열 크기 자동 조정
+- 슬롯별로 명확한 필드명
+- 코드 가독성 향상
+
+---
+
+### 관련 코드 수정
+
+**파일 수정:**
+1. `CharacterInitData.cs`
+   - InitialEquipmentEntry 구조체 제거
+   - 슬롯별 필드 추가
+   - OnValidate() 추가 (배열 자동 조정)
+
+2. `PlayerCharacterManager.cs`
+   - InitializeInventory() 수정 (슬롯 방식으로)
+   - EquipItemIfValid() 헬퍼 메서드 추가
+
+3. `CharacterDatabaseManager.cs`
+   - InitializeInventory() 수정 (슬롯 방식으로)
+   - EquipItemIfValid() 헬퍼 메서드 추가
+
+4. `EnemyCharacter.cs`
+   - 에러 메시지 업데이트
+
+---
+
+## 📚 문서 작업 완료
+
+### 전투 세션 시스템 문서 3종 작성 완료
+
+**폴더**: `Docs/CombatSessionSystem/`
+
+#### 1. 전투_세션_시스템_디자인.md (764줄)
+
+**내용:**
+- 비전: "살아있는 전장"
+- 게임플레이 시나리오 (숲 속의 매복 등)
+- 감정적 설계 (긴장감, 성취감, 몰입감)
+- 승패 판정 규칙 (선두 전투 불능 시 즉시 종료)
+- 엔트리 순서 규칙 (플레이어/보스 고정)
+- Reserve 패시브 능력 (향후 확장)
+
+**목표:** "재밌겠다! 만들고 싶다!" 느낌
+
+---
+
+#### 2. 전투_세션_시스템_구현_명세서.md (750줄)
+
+**내용:**
+- 시스템 구성 요소 사양 (CombatSessionManager, Battle, BattleExecutor)
+- 데이터 구조 사양 (SessionResult, BattleResult, Enum)
+- 동작 원리 (흐름 다이어그램)
+- 승패 판정 알고리즘 (즉시 종료 로직)
+- 매칭 알고리즘 (엔트리 순서 기반)
+- 구현 고려사항 (주의사항, 권장사항)
+- Reserve 패시브 구현 명세 (향후)
+
+**특징:**
+- 코드 최소화, 구조와 사양 중심
+- 전자 제품 사양서 같은 느낌
+- 구현 가이드라인 제공
+
+---
+
+#### 3. 전투_세션_시스템_구현_계획서.md (527줄)
+
+**내용:**
+- 4단계 구현 로드맵
+  - 1단계: 1:1 일반화 (NPC vs NPC) - 1일
+  - 2단계: Battle 클래스 분리 - 1일
+  - 3단계: CombatSessionManager (다대다 + 승패 규칙) - 1일
+  - 4단계: View 시스템 - 1일
+- 일정 계획 (Day 1~5)
+- 마일스톤 및 검증 조건
+- 테스트 시나리오 (즉시 승패 판정 포함)
+- 위험 요소 및 대응
+
+**예상 총 기간:** 4.5-5.5일
+
+---
+
+## 💡 내일 작업
+
+**전투 세션 시스템 구현 시작**
+- 1단계: 1:1 일반화 (NPC vs NPC 지원)
+- CombatCharacterManager 수정
+- AIController 생성
+- 테스트 및 검증
+
+---
+
+## 🎯 오늘의 최종 성과
+
+### 1. Scene 전환 시스템 완성 ✅
+- 6개 Scene 구현 및 연동
+- Fade 효과, 데이터 전달, 초기화 Flow
+- 통합 테스트 완료
+
+### 2. Character 아키텍처 확립 ✅
+- NonPlayerCharacterManager 추가
+- Single Source of Truth 달성
+- 모든 Scene 통일된 접근
+
+### 3. SceneFlowController 역할 명확화 ✅
+- Flow 관리자로 확정
+- 데이터 전달 + Scene 전환 + 트리거
+
+### 4. 다대다 전투 시스템 기획 ✅
+- 3개 문서 작성 (디자인, 명세서, 계획서)
+- 승패 판정 규칙 정의
+- 4.5일 로드맵 수립
+
+### 5. CharacterInitData 개선 ✅
+- Initial Equipment List → 슬롯 필드
+- 장신구 배열 자동 조정 (OnValidate)
+- 코드 간결화
+
+### 6. poiseGain 스탯 구현 및 Poise 회복 시스템 개선 ✅
+
+#### 문제 인식
+- `poiseGain` 스탯이 `CombatStats`에 정의되어 있었으나 **실제로 사용되지 않음**
+- Poise 회복이 무조건 100% 완전 회복으로 고정되어 전략적 다양성 부족
+
+#### 구현 내용
+
+**1. poiseGain 스탯 정의 변경**
+- 기존: 정수 스탯 (0~200 범위, 미사용)
+- 변경: **비율 스탯 (0~1 범위)** - Poise 회복률을 나타냄
+
+**관련 파일:**
+- `Assets/Script/Combat/CombatStats.cs`
+  - Tooltip 추가: "Poise 회복률 (0~1, 1.0 = 100% 회복)"
+  - Range(0f, 1f) 속성 추가
+- `Assets/Resources/Data/StatLimitRules.asset`
+  - poiseGain 범위: 0~200 → 0~1 변경
+
+**2. Poise 회복 로직 수정**
+- `Assets/Script/Character.cs` - `ResetPoise()` 메서드
+- **기존**: `currentPoise = maxPoise` (무조건 100% 회복)
+- **변경**: `currentPoise = min(currentPoise + maxPoise * poiseGain, maxPoise)` (비율 회복)
+- 디버그 로그 개선: 회복량 및 회복률 표시
+
+**3. StatsCalculationManager 버그 수정 및 개선**
+- `Assets/Script/Combat/StatsCalculationManager.cs` - `ConvertToCombatStats()` 메서드
+- **문제**: 수동으로 필드를 하나씩 복사하여 `poiseGain` 누락 → 런타임에 항상 0
+- **개선**: `data.baseStats`를 직접 반환 (구조체 값 복사)
+  - 14줄 → 3줄로 간소화
+  - 신규 필드 추가 시 자동 반영
+  - 누락 오류 방지
+
+**4. 문서 업데이트**
+- `Docs/Design/CombatStatus/CombatStats_System_Design.md`
+  - `poiseGain`을 정수 스탯에서 **비율 스탯(0~1)**으로 재분류
+  - 주석 추가: "Poise 회복률 (0~1, 1.0 = 100% 회복)"
+
+#### 실제 효과
+
+**캐릭터별 Poise 회복률 차별화:**
+- Player (poiseGain: 0.0): 회복 없음 (하드 모드)
+- Test_Enemy1 (poiseGain: 0.5): 매 턴 50% 회복
+- Test_Enemy2 (poiseGain: 1.0): 매 턴 100% 완전 회복
+
+**전략적 의미:**
+- 장비/버프로 `poiseGain` 조절 가능
+- 캐릭터마다 다른 Poise 관리 전략 필요
+- 전투 난이도 조절 수단
+
+#### 기술적 개선점
+1. **코드 품질**: 수동 복사 제거로 유지보수성 향상
+2. **자동 완전성**: 신규 필드 추가 시 자동 반영
+3. **가독성**: 의도가 명확한 간결한 코드
+4. **확장성**: 비율 기반으로 다양한 밸런싱 가능
+
+---
+
+**작업 완료**: 2025-11-05 오후
 
 
 

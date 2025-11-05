@@ -23,18 +23,6 @@ public class InitialItemEntry
     public int quantity = 1;
 }
 
-/// <summary>
-/// 초기 장착 장비 항목
-/// </summary>
-[System.Serializable]
-public class InitialEquipmentEntry
-{
-    [Tooltip("장비 슬롯")]
-    public EquipmentSlotType slotType;
-    
-    [Tooltip("아이템 ID")]
-    public string itemId;
-}
 
 /// <summary>
 /// 초기 습득 검술 항목
@@ -78,7 +66,8 @@ public class CharacterInitData : ScriptableObject
         blockEfficiency = 0.5f,
         blockPoiseConsumption = 10f,
         parryEfficiency = 0.9f,
-        parryPoiseConsumption = 5f
+        parryPoiseConsumption = 5f,
+        poiseGain = 1.0f
     };
     
     [Header("장신구 슬롯 설정")]
@@ -94,8 +83,54 @@ public class CharacterInitData : ScriptableObject
     [Tooltip("캐릭터 생성 시 보유할 아이템 목록")]
     public List<InitialItemEntry> initialItems = new List<InitialItemEntry>();
     
-    [Tooltip("캐릭터 생성 시 장착할 장비 (슬롯별)")]
-    public List<InitialEquipmentEntry> initialEquipment = new List<InitialEquipmentEntry>();
+    [Header("초기 장비 (슬롯별)")]
+    [Tooltip("무기 슬롯 초기 장비 (Item ID)")]
+    public string weaponSlot = "";
+    
+    [Tooltip("갑옷 슬롯 초기 장비 (Item ID)")]
+    public string armorSlot = "";
+    
+    [Tooltip("검술 유파 슬롯 초기 장비 (Item ID)")]
+    public string swordArtStyleSlot = "";
+    
+    [Tooltip("장신구 슬롯 초기 장비 (Item ID 배열, Initial Accessory Slots 값에 따라 자동 조정)")]
+    public string[] accessorySlots = new string[3]; // 기본값: 3개
+    
+#if UNITY_EDITOR
+    /// <summary>
+    /// Inspector에서 값 변경 시 호출 (Editor 전용)
+    /// initialAccessorySlots 값에 맞춰 accessorySlots 배열 크기 자동 조정
+    /// </summary>
+    private void OnValidate()
+    {
+        // accessorySlots 배열 크기를 initialAccessorySlots 값에 맞춤
+        if (accessorySlots == null || accessorySlots.Length != initialAccessorySlots)
+        {
+            int oldSize = accessorySlots?.Length ?? 0;
+            int newSize = Mathf.Clamp(initialAccessorySlots, 1, maxAccessorySlots);
+            
+            // 배열 크기 변경
+            System.Array.Resize(ref accessorySlots, newSize);
+            
+            // 새로 추가된 슬롯은 빈 문자열로 초기화
+            for (int i = oldSize; i < newSize; i++)
+            {
+                if (accessorySlots[i] == null)
+                    accessorySlots[i] = "";
+            }
+            
+            Debug.Log($"[CharacterInitData] {characterName} - 장신구 슬롯 크기 조정: {oldSize} → {newSize}");
+        }
+    }
+#endif
+    
+    /// <summary>
+    /// 실제 사용할 장신구 슬롯 (배열 그대로 반환)
+    /// </summary>
+    public string[] GetAccessorySlots()
+    {
+        return accessorySlots ?? new string[0];
+    }
     
     [Header("초기 검술")]
     [Tooltip("캐릭터 생성 시 습득한 검술 목록")]

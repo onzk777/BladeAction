@@ -43,6 +43,8 @@ namespace BladeAction.Combat
         
         // ===== 기타 =====
         [Header("기타")]
+        [Tooltip("Poise 회복률 (0~1, 1.0 = 100% 회복)")]
+        [Range(0f, 1f)]
         public float poiseGain;
 
         public static CombatStats operator +(CombatStats a, CombatStats b)

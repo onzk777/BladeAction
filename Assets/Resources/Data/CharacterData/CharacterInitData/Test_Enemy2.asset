@@ -33,15 +33,24 @@ MonoBehaviour:
     parryPoiseConsumption: 5
     parryPoiseAttackPower: 0
     parryPoiseDamage: 25
-    poiseGain: 0
+    poiseGain: 1
   initialAccessorySlots: 3
   maxAccessorySlots: 5
   initialItems: []
-  initialEquipment:
-  - slotType: 1
-    itemId: 'itm_weapon_test2 '
-  - slotType: 2
-    itemId: 'itm_armor_test1 '
+  weaponSlot: itm_weapon_test2
+  armorSlot: 'itm_armor_test1 '
+  swordArtStyleSlot: 
+  accessorySlots:
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
   initialAcquiredActions: []
   equippedActionSlot1: street_vertical
   equippedActionSlot2: 

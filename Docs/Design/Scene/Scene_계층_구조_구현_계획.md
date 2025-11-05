@@ -1,9 +1,11 @@
 # Scene 계층 구조 구현 계획
 
 **작성일**: 2025-11-03  
-**작업 시작 예정일**: 2025-11-04  
+**작업 시작일**: 2025-11-04  
+**작업 완료일**: 2025-11-05 ✅  
 **목적**: Scene_계층_구조_설계.md의 설계를 실제로 구현  
-**범위**: 최소 Scene 구조부터 점진적 확장
+**범위**: 최소 Scene 구조부터 점진적 확장  
+**상태**: ✅ **완료 및 검증 완료**
 
 ---
 
@@ -18,46 +20,91 @@
 
 ---
 
-## 현재 상태
+## ✅ 구현 완료 상태 (2025-11-05)
 
-### ✅ 완료된 작업
+### 완료된 시스템
 
-**설계:**
-- `Scene_계층_구조_설계.md` 작성 완료 (996줄)
-- 3-Layer Scene 구조 설계
-- Scene별 역할 및 생명주기 정의
-- 매니저 아키텍처 정의
+**1. Scene 계층 구조**
+- ✅ CoreSystemScene: 영속 매니저 배치 완료
+- ✅ PersistentUIScene: 공통 UI 분리 완료
+- ✅ TitleScene: 게임 시작 화면 구현
+- ✅ TestScene: 테스트/Lobby 기능 구현
+- ✅ CombatScene: 전투 시스템 정리
+- ✅ ResultScene: 전투 결과 표시 구현
 
-**코드:**
-- CharacterManager 리팩토링 완료
-- 매니저 3개 분리 (PlayerCharacterManager, CharacterDatabaseManager, CombatCharacterManager)
-- 모든 전투 시스템 정상 동작
+**2. Scene 전환 시스템**
+- ✅ SceneTransitionManager: Additive 로딩, Fade In/Out
+- ✅ SceneFlowController: Scene Flow 관리
+- ✅ FadeController: 화면 전환 효과
 
-**Unity 에셋:**
-- CharacterDatabase.asset 생성
-- CharacterInitData 에셋 설정
-- ProtoType Scene에 새 매니저들 배치 완료
+**3. Character 관리 아키텍처**
+- ✅ PlayerCharacterManager: 영속 PlayerCharacter 인스턴스 관리
+- ✅ NonPlayerCharacterManager: 영속 NPC/Enemy 인스턴스 관리 (신규)
+- ✅ CharacterDatabaseManager: Character Factory 역할
+- ✅ CombatCharacterManager: 전투 참가자 참조 관리
+
+**4. 전투 시작 Flow**
+- ✅ TestScene에서 Enemy 선택 (Dropdown)
+- ✅ 선택한 Enemy로 전투 시작
+- ✅ CombatScene 로드 및 전투 진행
+- ✅ ResultScene 전환 및 결과 표시
+- ✅ TestScene 복귀
+
+### 테스트 및 검증
+
+**✅ Scene 전환 Flow 검증 완료**
+```
+TitleScene → TestScene → CombatScene → ResultScene → TestScene/TitleScene
+```
+
+**✅ Character 영속성 검증 완료**
+- TestScene에서 검술/아이템 변경 → 전투 중 반영 확인
+- 전투 중 HP 변경 → TestScene 복귀 시 유지 확인
+- Single Source of Truth 달성 확인
+
+**✅ 모든 Scene에서 통일된 Character 접근 확인**
+- PlayerCharacterManager.Instance.PlayerCharacter (모든 Scene에서 동일)
+- NonPlayerCharacterManager.Instance.GetCharacter(id) (모든 Scene에서 동일)
 
 ---
 
-### 🔄 현재 Scene 상태
+## 구현된 Scene 상태
 
 ```
 Assets/Scenes/
-├─ ProtoType.unity
-│  ├─ 모든 시스템이 여기 포함됨 (영속 + UI + 전투)
-│  ├─ CharacterDatabaseManager ✅
-│  ├─ PlayerCharacterManager ✅
-│  ├─ CombatCharacterManager ✅
-│  └─ CombatManager, Controllers, UI 등 모두 포함
+├─ 01.CoreSystemScene.unity ✅
+│  ├─ CoreSystemInitializer
+│  ├─ SceneTransitionManager
+│  ├─ SceneFlowController
+│  ├─ PlayerCharacterManager
+│  ├─ NonPlayerCharacterManager (신규)
+│  └─ CharacterDatabaseManager
 │
-└─ SampleScene.unity (미사용)
+├─ 02.PersistentUIScene.unity ✅
+│  ├─ Main Camera (2D, Orthographic)
+│  ├─ FadeCanvas (Sort Order: 900)
+│  │  └─ FadeController
+│  └─ MainMenuManager (UI)
+│
+├─ 05.TitleScene.unity ✅
+│  ├─ TitleSceneManager
+│  └─ Title UI
+│
+├─ 00.TestScene.unity ✅
+│  ├─ TestSceneManager
+│  ├─ Enemy Selection Dropdown (신규)
+│  └─ ActionCommandEquipUI, InventoryUI
+│
+├─ 04.CombatScene.unity ✅
+│  ├─ CombatCharacterManager
+│  ├─ CombatManager
+│  ├─ PlayerController / EnemyController
+│  └─ Combat UI
+│
+└─ 07.ResultScene.unity ✅
+   ├─ ResultSceneManager
+   └─ Result UI
 ```
-
-**문제점:**
-- 영속 매니저와 전투 시스템이 하나의 Scene에 혼재
-- Scene 전환 불가 (모든 것이 ProtoType Scene에 있음)
-- 전투 종료 개념 없음 (Scene이 계속 유지됨)
 
 ---
 
@@ -866,13 +913,8 @@ A: 불필요. Resources.Load로 충분. GameObject 제거.
 - `Docs/Design/Scene/Scene_계층_구조_구현_계획.md` (이 문서)
 - `Docs/Design/CharacterManager_분리_구현_계획서.md` (리팩토링 문서)
 
----
 
-## 다음 일지 작성 시 확인할 사항
-- [ ] CoreSystemScene 생성 완료 여부
-- [ ] TestScene 생성 완료 여부
-- [ ] Scene 전환 플로우 동작 여부
-- [ ] 발생한 문제 및 해결 방법
+
 
 
 
