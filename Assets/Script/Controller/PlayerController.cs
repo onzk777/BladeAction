@@ -126,9 +126,9 @@ public class PlayerController : MonoBehaviour, ICombatController
             
             // ActionCommandSelectionManager를 통해 UI 접근 (Scene 분리 대비)
             if (ActionCommandSelectionManager.Instance != null && 
-                ActionCommandSelectionManager.Instance.playerActionSelectUI != null)
+                ActionCommandSelectionManager.Instance.teamAActionSelectUI != null)
             {
-                ActionCommandSelectionManager.Instance.playerActionSelectUI.RefreshButtons();
+                ActionCommandSelectionManager.Instance.teamAActionSelectUI.RefreshButtons();
             }
         }
     }
@@ -253,7 +253,7 @@ public class PlayerController : MonoBehaviour, ICombatController
     /// - TestMode = false: Combatant.ChooseCommand() 호출 (현재는 UI 기반, 향후 BT 지원 가능)
     /// 
     /// 중요:
-    /// - EnemyController와 동일한 구조로 설계
+    /// - AIController와 동일한 구조로 설계
     /// - 향후 자동 전투 시스템 추가 시 BT 지원 가능
     /// </summary>
     public int GetSelectedCommandIndex()

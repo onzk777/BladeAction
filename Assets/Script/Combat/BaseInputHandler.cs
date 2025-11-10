@@ -8,6 +8,8 @@ public abstract class BaseInputHandler : MonoBehaviour
     protected InputAction perfectAction; // PerfectInput 액션
     protected bool isListening = false; // 입력 리스닝 상태
     public bool IsPlayer { get; private set; } = false; // 기본값 false
+    protected CombatCharacterManager.CombatantSlot boundSlot;
+    public CombatCharacterManager.CombatantSlot BoundSlot => boundSlot;
     protected List<PerfectTimingWindow> loadedTimings = new List<PerfectTimingWindow>(); // 로드된 타이밍 윈도우 목록
     protected List<PerfectTimingWindow> currentTimings; // 현재 턴의 타이밍 윈도우 목록
 
@@ -289,11 +291,26 @@ public abstract class BaseInputHandler : MonoBehaviour
         lastInputTime = null;
         aiInputIsPerfect = null; // AI 입력 완벽 입력 여부도 초기화
     }
-    public void SetIsPlayer(bool isPlayer)
+    public virtual void BindToSlot(CombatCharacterManager.CombatantSlot slot)
+    {
+        boundSlot = slot;
+        bool isPlayer = slot != null && slot.Character is PlayerCharacter;
+        UpdateIsPlayerFlag(isPlayer);
+    }
+
+    protected void UpdateIsPlayerFlag(bool isPlayer)
     {
         IsPlayer = isPlayer;
-        Debug.Log($"[InputTrace][SetIsPlayer] handler:{GetType().Name} IsPlayer->{IsPlayer}");
+        Debug.Log($"[InputTrace][SetIsPlayer] handler:{GetType().Name} IsPlayer->{IsPlayer} slot:{boundSlot}");
     }
+
+#pragma warning disable CS0809
+    [System.Obsolete("TurnContext를 사용하여 BindToSlot을 호출하세요.")]
+    public void SetIsPlayer(bool isPlayer)
+    {
+        UpdateIsPlayerFlag(isPlayer);
+    }
+#pragma warning restore CS0809
 
     public void ResetCooldown()
     {

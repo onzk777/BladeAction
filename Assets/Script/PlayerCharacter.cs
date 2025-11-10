@@ -70,15 +70,17 @@ public class PlayerCharacter : Character
         
         // ActionCommandSelectionManager를 통해 UI 접근 (Scene 분리 대비)
         int idx = 0;
-        if (ActionCommandSelectionManager.Instance != null && 
-            ActionCommandSelectionManager.Instance.playerActionSelectUI != null)
+        var selectionManager = ActionCommandSelectionManager.Instance;
+        var teamActionUI = selectionManager?.GetTeamActionUI(CombatCharacterManager.CombatTeam.TeamA);
+
+        if (teamActionUI != null)
         {
-            idx = ActionCommandSelectionManager.Instance.playerActionSelectUI.GetCurrentSelectedButtonIndex();
+            idx = teamActionUI.GetCurrentSelectedButtonIndex();
             Debug.Log($"[PlayerCharacter] UI에서 선택된 인덱스: {idx}");
         }
         else
         {
-            Debug.LogWarning("[PlayerCharacter] ActionCommandSelectionManager 또는 PlayerActionSelectUI를 찾을 수 없음 - 기본값 0 사용");
+            Debug.LogWarning("[PlayerCharacter] TeamA ActionSelectUI를 찾을 수 없음 - 기본값 0 사용");
             idx = 0;
         }
         

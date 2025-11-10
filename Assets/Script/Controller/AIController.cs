@@ -1,9 +1,10 @@
 ﻿using UnityEngine;
 using Spine.Unity;
 
-public class EnemyController : MonoBehaviour, ICombatController
+public class AIController : MonoBehaviour, ICombatController
 {
-    public Character Character => CombatCharacterManager.Instance?.CurrentEnemy;
+    private CombatCharacterManager.CombatantSlot combatantSlot;
+    public Character Character => combatantSlot?.Character;
 
     [Header("테스트 모드 설정")]
     [Tooltip("테스트 모드 ON/OFF")]
@@ -43,6 +44,11 @@ public class EnemyController : MonoBehaviour, ICombatController
             return styleData;
         } 
     }
+
+    public void BindCombatantSlot(CombatCharacterManager.CombatantSlot slot)
+    {
+        combatantSlot = slot;
+    }
     
     /// <summary>
     /// CombatAnimation 오브젝트에 접근하기 위한 프로퍼티
@@ -62,7 +68,7 @@ public class EnemyController : MonoBehaviour, ICombatController
     {
         if (Character?.AvailableCommands == null || commandIndex < 0 || commandIndex >= Character.AvailableCommands.Count)
         {
-            Debug.LogError($"[EnemyController] 유효하지 않은 커맨드 인덱스: {commandIndex} (사용 가능한 검술 수: {Character?.AvailableCommands?.Count ?? 0})");
+        Debug.LogError($"[AIController] 유효하지 않은 커맨드 인덱스: {commandIndex} (사용 가능한 검술 수: {Character?.AvailableCommands?.Count ?? 0})");
             return null;
         }
         return Character.AvailableCommands[commandIndex];
@@ -77,7 +83,7 @@ public class EnemyController : MonoBehaviour, ICombatController
     public void SetSelectedCommandIndex(int commandIndex)
     {
         currentCommandIndex = commandIndex;
-        Debug.Log($"[EnemyController] 선택된 검술 인덱스: {commandIndex}");
+        Debug.Log($"[AIController] 선택된 검술 인덱스: {commandIndex}");
     }
 
     void Awake()
@@ -88,8 +94,8 @@ public class EnemyController : MonoBehaviour, ICombatController
 
     private System.Collections.IEnumerator WaitForCharacterManagerAndSetup()
     {
-        // CombatCharacterManager가 초기화될 때까지 대기
-        while (CombatCharacterManager.Instance == null || CombatCharacterManager.Instance.CurrentEnemy == null)
+        // Combatant 슬롯이 연결될 때까지 대기
+        while (combatantSlot == null)
         {
             yield return null;
         }
@@ -115,12 +121,12 @@ public class EnemyController : MonoBehaviour, ICombatController
     /// </summary>
     private void SetupSkeletonMecanim()
     {
-        Debug.Log("[EnemyController] SetupSkeletonMecanim 시작");
+        Debug.Log("[AIController] SetupSkeletonMecanim 시작");
         
         // Inspector에서 연결된 CombatAnimation 오브젝트 확인
         if (combatAnimationObject == null)
         {
-            Debug.LogWarning("[EnemyController] CombatAnimation 오브젝트가 Inspector에서 연결되지 않았습니다. EnemyController의 Combat Animation Object 필드에 연결해주세요.");
+            Debug.LogWarning("[AIController] CombatAnimation 오브젝트가 Inspector에서 연결되지 않았습니다. AIController의 Combat Animation Object 필드에 연결해주세요.");
             return;
         }
         
@@ -128,7 +134,7 @@ public class EnemyController : MonoBehaviour, ICombatController
         var skeletonMecanim = combatAnimationObject.GetComponent<SkeletonMecanim>();
         if (skeletonMecanim == null)
         {
-            Debug.LogWarning("[EnemyController] SkeletonMecanim 컴포넌트를 찾을 수 없습니다. CombatAnimation 오브젝트에 SkeletonMecanim 컴포넌트를 추가해주세요.");
+            Debug.LogWarning("[AIController] SkeletonMecanim 컴포넌트를 찾을 수 없습니다. CombatAnimation 오브젝트에 SkeletonMecanim 컴포넌트를 추가해주세요.");
             return;
         }
         
@@ -155,22 +161,22 @@ public class EnemyController : MonoBehaviour, ICombatController
         
         if (styleData == null)
         {
-            Debug.LogError($"[EnemyController] 유파 아이템 '{equippedStyleItem.itemName}'에 SwordArtStyleData를 찾을 수 없습니다. (Key: {equippedStyleItem.swordArtStyleKey})");
+            Debug.LogError($"[AIController] 유파 아이템 '{equippedStyleItem.itemName}'에 SwordArtStyleData를 찾을 수 없습니다. (Key: {equippedStyleItem.swordArtStyleKey})");
             return;
         }
         
-        Debug.Log($"[EnemyController] 유파 정보: {styleData.styleName}");
+        Debug.Log($"[AIController] 유파 정보: {styleData.styleName}");
         
         var spineAsset = styleData.SpineAnimationAsset;
         if (spineAsset == null)
         {
-            Debug.LogWarning($"[EnemyController] 유파 '{styleData.styleName}'에 Spine 애니메이션 애셋이 설정되지 않았습니다.");
+            Debug.LogWarning($"[AIController] 유파 '{styleData.styleName}'에 Spine 애니메이션 애셋이 설정되지 않았습니다.");
             return;
         }
         
         // SkeletonMecanim에 Spine 애니메이션 애셋 연결
         skeletonMecanim.skeletonDataAsset = spineAsset;
-        Debug.Log($"[EnemyController] Spine 애니메이션 애셋 연결 완료: {spineAsset.name} (유파: {styleData.styleName})");
+        Debug.Log($"[AIController] Spine 애니메이션 애셋 연결 완료: {spineAsset.name} (유파: {styleData.styleName})");
     }
 
     // (AI 로직에서 호출) 현재 커맨드를 반환
@@ -225,7 +231,7 @@ public class EnemyController : MonoBehaviour, ICombatController
                 if (len == 0) 
                 {
                     selectedIndex = 0;
-                    Debug.LogWarning("[EnemyController] 사용 가능한 검술이 없습니다. 인덱스 0 반환");
+                    Debug.LogWarning("[AIController] 사용 가능한 검술이 없습니다. 인덱스 0 반환");
                 }
                 else
                 {
@@ -297,19 +303,19 @@ public class EnemyController : MonoBehaviour, ICombatController
     /// </summary>
     public void OnPlayActionCommand()
     {
-        Debug.Log("[EnemyController] OnPlayActionCommand 호출됨");
+        Debug.Log("[AIController] OnPlayActionCommand 호출됨");
         
         // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
         if (combatAnimationObject == null)
         {
-            Debug.LogError("[EnemyController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
+            Debug.LogError("[AIController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
             return;
         }
         
         var animator = combatAnimationObject.GetComponent<Animator>();
         if (animator == null)
         {
-            Debug.LogError("[EnemyController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
+            Debug.LogError("[AIController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
             return;
         }
         
@@ -317,27 +323,27 @@ public class EnemyController : MonoBehaviour, ICombatController
         var currentCommand = GetSelectedCommand();
         if (currentCommand == null)
         {
-            Debug.LogError("[EnemyController] 현재 선택된 커맨드가 없습니다.");
+            Debug.LogError("[AIController] 현재 선택된 커맨드가 없습니다.");
             return;
         }
         
         string animationName = currentCommand.animationName;
         if (string.IsNullOrEmpty(animationName))
         {
-            Debug.LogWarning("[EnemyController] 현재 커맨드에 애니메이션 이름이 설정되지 않았습니다.");
+            Debug.LogWarning("[AIController] 현재 커맨드에 애니메이션 이름이 설정되지 않았습니다.");
             return;
         }
         
         // 현재 애니메이션 상태가 같은 액션이면 추가 실행 무시
         if (animator.GetCurrentAnimatorStateInfo(0).IsName(animationName))
         {
-            Debug.Log($"[EnemyController] 이미 {animationName} 애니메이션 재생 중입니다.");
+            Debug.Log($"[AIController] 이미 {animationName} 애니메이션 재생 중입니다.");
             return;
         }
         
         // Skeleton Mecanim을 통한 검술 액션 애니메이션 재생
         animator.SetTrigger(animationName);
-        Debug.Log($"[EnemyController] {animationName} 애니메이션 시작 (Skeleton Mecanim)");
+        Debug.Log($"[AIController] {animationName} 애니메이션 시작 (Skeleton Mecanim)");
     }
     
     /// <summary>
@@ -348,20 +354,20 @@ public class EnemyController : MonoBehaviour, ICombatController
         // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
         if (combatAnimationObject == null)
         {
-            Debug.LogError("[EnemyController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
+            Debug.LogError("[AIController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
             return;
         }
         
         var animator = combatAnimationObject.GetComponent<Animator>();
         if (animator == null)
         {
-            Debug.LogError("[EnemyController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
+            Debug.LogError("[AIController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
             return;
         }
         
         // Skeleton Mecanim을 통한 중단 애니메이션 재생
         animator.SetTrigger("interrupted");
-        Debug.Log("[EnemyController] 중단 애니메이션 재생 (Skeleton Mecanim)");
+        Debug.Log("[AIController] 중단 애니메이션 재생 (Skeleton Mecanim)");
     }
     
     /// <summary>
@@ -369,25 +375,25 @@ public class EnemyController : MonoBehaviour, ICombatController
     /// </summary>
     public void OnSuccessParry()
     {
-        Debug.Log("[EnemyController] AI 쳐내기 성공 애니메이션");
+        Debug.Log("[AIController] AI 쳐내기 성공 애니메이션");
         
         // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
         if (combatAnimationObject == null)
         {
-            Debug.LogError("[EnemyController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
+            Debug.LogError("[AIController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
             return;
         }
         
         var animator = combatAnimationObject.GetComponent<Animator>();
         if (animator == null)
         {
-            Debug.LogError("[EnemyController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
+            Debug.LogError("[AIController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
             return;
         }
         
         // Skeleton Mecanim을 통한 쳐내기 성공 애니메이션 재생
         animator.SetTrigger("parry");
-        Debug.Log("[EnemyController] 쳐내기 성공 애니메이션 시작 (Skeleton Mecanim)");
+        Debug.Log("[AIController] 쳐내기 성공 애니메이션 시작 (Skeleton Mecanim)");
     }
     
     /// <summary>
@@ -395,25 +401,25 @@ public class EnemyController : MonoBehaviour, ICombatController
     /// </summary>
     public void OnBeHitted()
     {
-        Debug.Log("[EnemyController] AI 피격 애니메이션");
+        Debug.Log("[AIController] AI 피격 애니메이션");
         
         // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
         if (combatAnimationObject == null)
         {
-            Debug.LogError("[EnemyController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
+            Debug.LogError("[AIController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
             return;
         }
         
         var animator = combatAnimationObject.GetComponent<Animator>();
         if (animator == null)
         {
-            Debug.LogError("[EnemyController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
+            Debug.LogError("[AIController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
             return;
         }
         
         // Skeleton Mecanim을 통한 피격 애니메이션 재생
         animator.SetTrigger("hit");
-        Debug.Log("[EnemyController] 피격 애니메이션 시작 (Skeleton Mecanim)");
+        Debug.Log("[AIController] 피격 애니메이션 시작 (Skeleton Mecanim)");
     }
     
     /// <summary>
@@ -421,33 +427,33 @@ public class EnemyController : MonoBehaviour, ICombatController
     /// </summary>
     public void OnPlayDefence()
     {
-        Debug.Log("[EnemyController] 🆕 OnPlayDefence 호출됨");
+        Debug.Log("[AIController] 🆕 OnPlayDefence 호출됨");
         
         // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
         if (combatAnimationObject == null)
         {
-            Debug.LogError("[EnemyController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
+            Debug.LogError("[AIController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
             return;
         }
         
         var animator = combatAnimationObject.GetComponent<Animator>();
         if (animator == null)
         {
-            Debug.LogError("[EnemyController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
+            Debug.LogError("[AIController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
             return;
         }
         
         // 🆕 현재 isGuarding 상태 확인
         bool currentIsGuarding = animator.GetBool("isGuarding");
-        Debug.Log($"[EnemyController] 🆕 현재 isGuarding 상태: {currentIsGuarding}");
+        Debug.Log($"[AIController] 🆕 현재 isGuarding 상태: {currentIsGuarding}");
         
         // 🆕 Bool 파라미터로 막기 상태 지속 (Trigger 대신)
         animator.SetBool("isGuarding", true);
         
         // 🆕 설정 후 상태 확인
         bool newIsGuarding = animator.GetBool("isGuarding");
-        Debug.Log($"[EnemyController] 🆕 isGuarding 설정 후 상태: {newIsGuarding}");
-        Debug.Log("[EnemyController] 🆕 막기 애니메이션 지속 시작 (Bool 파라미터)");
+        Debug.Log($"[AIController] 🆕 isGuarding 설정 후 상태: {newIsGuarding}");
+        Debug.Log("[AIController] 🆕 막기 애니메이션 지속 시작 (Bool 파라미터)");
     }
     
     /// <summary>
@@ -455,32 +461,32 @@ public class EnemyController : MonoBehaviour, ICombatController
     /// </summary>
     public void OnStopDefence()
     {
-        Debug.Log("[EnemyController] 🆕 OnStopDefence 호출됨");
+        Debug.Log("[AIController] 🆕 OnStopDefence 호출됨");
         
         // CombatAnimation 오브젝트에서 Animator 컴포넌트 찾기
         if (combatAnimationObject == null)
         {
-            Debug.LogError("[EnemyController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
+            Debug.LogError("[AIController] CombatAnimation 오브젝트가 연결되지 않았습니다.");
             return;
         }
         
         var animator = combatAnimationObject.GetComponent<Animator>();
         if (animator == null)
         {
-            Debug.LogError("[EnemyController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
+            Debug.LogError("[AIController] CombatAnimation 오브젝트에서 Animator 컴포넌트를 찾을 수 없습니다.");
             return;
         }
         
         // 🆕 현재 isGuarding 상태 확인
         bool currentIsGuarding = animator.GetBool("isGuarding");
-        Debug.Log($"[EnemyController] 🆕 현재 isGuarding 상태: {currentIsGuarding}");
+        Debug.Log($"[AIController] 🆕 현재 isGuarding 상태: {currentIsGuarding}");
         
         // 🆕 Bool 파라미터로 막기 상태 해제
         animator.SetBool("isGuarding", false);
         
         // 🆕 설정 후 상태 확인
         bool newIsGuarding = animator.GetBool("isGuarding");
-        Debug.Log($"[EnemyController] 🆕 isGuarding 설정 후 상태: {newIsGuarding}");
-        Debug.Log("[EnemyController] 🆕 막기 애니메이션 중단 (Bool 파라미터)");
+        Debug.Log($"[AIController] 🆕 isGuarding 설정 후 상태: {newIsGuarding}");
+        Debug.Log("[AIController] 🆕 막기 애니메이션 중단 (Bool 파라미터)");
     }
 }

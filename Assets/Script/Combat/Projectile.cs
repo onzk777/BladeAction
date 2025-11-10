@@ -132,7 +132,7 @@ public class Projectile : MonoBehaviour
                 Debug.Log($"[Projectile] 플레이어 발사체가 플레이어 계층과 충돌 - 무시");
                 return;
             }
-            if (!isFromPlayer && current.GetComponent<EnemyController>() != null)
+            if (!isFromPlayer && current.GetComponent<AIController>() != null)
             {
                 Debug.Log($"[Projectile] 적 발사체가 적 계층과 충돌 - 무시");
                 return;

@@ -709,15 +709,15 @@ public class DefenderInputHandler : BaseInputHandler
             }
             else
             {
-                var enemyController = CombatManager.Instance.GetEnemyController();
-            if (enemyController != null)
+                var aiController = CombatManager.Instance.GetNonPlayerController();
+            if (aiController != null)
             {
-                enemyController.OnPlayDefence();
-                Debug.Log("[DefenderInputHandler] 적 막기 애니메이션 재생");
+                aiController.OnPlayDefence();
+                Debug.Log("[DefenderInputHandler] AI 막기 애니메이션 재생");
             }
             else
             {
-                Debug.LogError("[DefenderInputHandler] EnemyController가 null입니다!");
+                Debug.LogError("[DefenderInputHandler] AIController가 null입니다!");
             }
         }
     }
@@ -757,16 +757,16 @@ public class DefenderInputHandler : BaseInputHandler
             }
             else
             {
-                var enemyController = CombatManager.Instance.GetEnemyController();
-            if (enemyController != null)
+                var aiController = CombatManager.Instance.GetNonPlayerController();
+            if (aiController != null)
             {
-                Debug.Log("[DefenderInputHandler] 🆕 EnemyController.OnStopDefence() 호출 시작");
-                enemyController.OnStopDefence();
-                Debug.Log("[DefenderInputHandler] 🆕 EnemyController.OnStopDefence() 호출 완료");
+                Debug.Log("[DefenderInputHandler] 🆕 AIController.OnStopDefence() 호출 시작");
+                aiController.OnStopDefence();
+                Debug.Log("[DefenderInputHandler] 🆕 AIController.OnStopDefence() 호출 완료");
             }
             else
             {
-                Debug.LogError("[DefenderInputHandler] EnemyController가 null입니다!");
+                Debug.LogError("[DefenderInputHandler] AIController가 null입니다!");
             }
         }
     }
@@ -1089,10 +1089,10 @@ public class DefenderInputHandler : BaseInputHandler
         else
         {
             // 적 DefenderInputHandler는 적의 Animator만 제어해야 함
-            var enemyController = CombatManager.Instance.GetEnemyController();
-            if (enemyController == null)
+            var aiController = CombatManager.Instance.GetNonPlayerController();
+            if (aiController == null)
             {
-                Debug.LogError("[DefenderInputHandler] EnemyController가 null입니다!");
+                Debug.LogError("[DefenderInputHandler] AIController가 null입니다!");
                 return false;
             }
             

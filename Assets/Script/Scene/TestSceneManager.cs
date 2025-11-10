@@ -15,14 +15,22 @@ public class TestSceneManager : MonoBehaviour
     [Tooltip("타이틀로 복귀 버튼")]
     [SerializeField] private Button returnToTitleButton;
     
-    [Header("Enemy 선택")]
-    [Tooltip("Enemy 선택 Dropdown")]
+    [Header("TeamA 설정")]
+    [Tooltip("TeamA 선두를 플레이어로 고정할지 여부")]
+    [SerializeField] private Toggle teamAUsePlayerToggle;
+    [Tooltip("TeamA NonPlayer 선택 Dropdown")]
+    [SerializeField] private TMP_Dropdown teamASelectionDropdown;
+
+    [Header("TeamB 선택")]
+    [Tooltip("TeamB NonPlayer 선택 Dropdown")]
     [SerializeField] private TMP_Dropdown enemySelectionDropdown;
     
     [Header("디버그")]
     [Tooltip("디버그 로그 활성화")]
     [SerializeField] private bool enableDebugLog = true;
     
+    private string selectedTeamAId;
+    private List<string> teamAIds = new List<string>();
     // 선택된 Enemy ID
     private string selectedEnemyId;
     // Enemy ID 목록 (Dropdown 인덱스 매핑)
@@ -30,9 +38,48 @@ public class TestSceneManager : MonoBehaviour
 
     private void Start()
     {
-        InitializeEnemyDropdown();
+        StartCoroutine(InitializeDropdownsCoroutine());
         InitializeButtons();
         Log("TestScene 초기화 완료");
+    }
+
+    private System.Collections.IEnumerator InitializeDropdownsCoroutine()
+    {
+        while (CharacterDatabaseManager.Instance == null)
+        {
+            yield return null;
+        }
+
+        yield return null;
+
+        InitializeTeamAControls();
+        InitializeEnemyDropdown();
+    }
+
+    private void InitializeTeamAControls()
+    {
+        if (teamAUsePlayerToggle != null)
+        {
+            teamAUsePlayerToggle.onValueChanged.AddListener(OnTeamAUsePlayerToggleChanged);
+        }
+        else
+        {
+            Debug.LogWarning("[TestSceneManager] TeamA Use Player Toggle이 할당되지 않았습니다!");
+        }
+
+        PopulateDropdownWithNonPlayers(teamASelectionDropdown, teamAIds, out selectedTeamAId);
+
+        if (teamASelectionDropdown != null)
+        {
+            teamASelectionDropdown.onValueChanged.AddListener(OnTeamASelectionChanged);
+        }
+
+        OnTeamAUsePlayerToggleChanged(teamAUsePlayerToggle == null || teamAUsePlayerToggle.isOn);
+    }
+
+    private void InitializeTeamADropdown()
+    {
+        PopulateDropdownWithNonPlayers(teamASelectionDropdown, teamAIds, out selectedTeamAId);
     }
 
     /// <summary>
@@ -40,56 +87,60 @@ public class TestSceneManager : MonoBehaviour
     /// </summary>
     private void InitializeEnemyDropdown()
     {
-        if (enemySelectionDropdown == null)
+        PopulateDropdownWithNonPlayers(enemySelectionDropdown, enemyIds, out selectedEnemyId);
+        if (enemySelectionDropdown != null)
         {
-            Debug.LogWarning("[TestSceneManager] Enemy Selection Dropdown이 할당되지 않았습니다!");
+            enemySelectionDropdown.onValueChanged.AddListener(OnEnemySelectionChanged);
+        }
+    }
+    
+    private void PopulateDropdownWithNonPlayers(TMP_Dropdown dropdown, List<string> idList, out string selectedId)
+    {
+        selectedId = null;
+
+        if (dropdown == null)
+        {
+            Debug.LogWarning("[TestSceneManager] Dropdown이 할당되지 않았습니다!");
             return;
         }
-        
-        // CharacterDatabaseManager에서 Enemy 목록 가져오기
+
+        dropdown.ClearOptions();
+        idList.Clear();
+
         if (CharacterDatabaseManager.Instance == null)
         {
             Debug.LogError("[TestSceneManager] CharacterDatabaseManager.Instance가 null입니다!");
             return;
         }
-        
+
         var entries = CharacterDatabaseManager.Instance.GetAllEnemyEntries();
-        
+
         if (entries == null || entries.Count == 0)
         {
-            Debug.LogWarning("[TestSceneManager] 등록된 Enemy가 없습니다!");
+            Debug.LogWarning("[TestSceneManager] 등록된 NonPlayer가 없습니다!");
             return;
         }
-        
-        // Dropdown 옵션 생성
-        enemySelectionDropdown.ClearOptions();
+
         List<string> options = new List<string>();
-        
+
         foreach (var entry in entries)
         {
             if (entry != null && !string.IsNullOrEmpty(entry.instanceId))
             {
-                enemyIds.Add(entry.instanceId);
-                
-                // 옵션 텍스트: "ID (템플릿 이름)"
-                string optionText = $"{entry.instanceId}";
-                options.Add(optionText);
+                idList.Add(entry.instanceId);
+                options.Add(entry.instanceId);
             }
         }
-        
-        enemySelectionDropdown.AddOptions(options);
-        
-        // 첫 번째 Enemy를 기본 선택
-        if (enemyIds.Count > 0)
+
+        dropdown.AddOptions(options);
+
+        if (idList.Count > 0)
         {
-            selectedEnemyId = enemyIds[0];
-            Log($"Enemy Dropdown 초기화 완료: {enemyIds.Count}개 ({selectedEnemyId} 선택됨)");
+            selectedId = idList[0];
+            Log($"Dropdown 초기화 완료 ({dropdown.name}): {idList.Count}개 ({selectedId} 선택됨)");
         }
-        
-        // Dropdown 변경 이벤트 연결
-        enemySelectionDropdown.onValueChanged.AddListener(OnEnemySelectionChanged);
     }
-    
+
     /// <summary>
     /// Enemy 선택 변경 시
     /// </summary>
@@ -102,6 +153,23 @@ public class TestSceneManager : MonoBehaviour
         }
     }
     
+    private void OnTeamASelectionChanged(int index)
+    {
+        if (index >= 0 && index < teamAIds.Count)
+        {
+            selectedTeamAId = teamAIds[index];
+            Log($"TeamA NonPlayer 선택 변경: {selectedTeamAId}");
+        }
+    }
+
+    private void OnTeamAUsePlayerToggleChanged(bool isOn)
+    {
+        if (teamASelectionDropdown != null)
+        {
+            teamASelectionDropdown.interactable = !isOn;
+        }
+    }
+
     private void InitializeButtons()
     {
         // 버튼 이벤트 연결
@@ -135,18 +203,40 @@ public class TestSceneManager : MonoBehaviour
             Debug.LogWarning("[TestSceneManager] 선택된 Enemy가 없습니다!");
             return;
         }
+
+        bool usePlayer = teamAUsePlayerToggle == null || teamAUsePlayerToggle.isOn;
+        if (!usePlayer && string.IsNullOrEmpty(selectedTeamAId))
+        {
+            Debug.LogWarning("[TestSceneManager] 선택된 TeamA NonPlayer가 없습니다!");
+            return;
+        }
         
-        Log($"전투 시작 버튼 클릭: vs {selectedEnemyId}");
+        Log($"전투 시작 버튼 클릭: TeamA {(usePlayer ? "Player" : selectedTeamAId)} vs TeamB {selectedEnemyId}");
 
         // SceneFlowController에게 전투 시작 Flow 요청
         if (SceneFlowController.Instance != null)
         {
-            SceneFlowController.Instance.StartCombatFlow("Player", selectedEnemyId);
+        IList<string> teamAList = BuildTeamAIds();
+            IList<string> teamBList = new List<string> { selectedEnemyId };
+            SceneFlowController.Instance.StartCombatFlow(teamAList, teamBList);
         }
         else
         {
             Debug.LogError("[TestSceneManager] SceneFlowController를 찾을 수 없습니다!");
         }
+    }
+
+    private IList<string> BuildTeamAIds()
+    {
+        bool usePlayer = teamAUsePlayerToggle == null || teamAUsePlayerToggle.isOn;
+
+        if (usePlayer)
+        {
+            string playerId = PlayerCharacterManager.Instance?.PlayerCharacter?.InstanceId ?? "Player";
+            return new List<string> { playerId };
+        }
+
+        return new List<string> { selectedTeamAId };
     }
 
     /// <summary>

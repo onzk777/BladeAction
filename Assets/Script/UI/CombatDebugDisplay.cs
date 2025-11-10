@@ -225,7 +225,7 @@ public class CombatDebugDisplay : MonoBehaviour
     {
         if (CombatManager.Instance == null) return $"ATK: {combatant.ATK}";
         
-        ICombatController controller = isPlayer ? CombatManager.Instance.PlayerController : CombatManager.Instance.EnemyController;
+        ICombatController controller = isPlayer ? CombatManager.Instance.PlayerController : CombatManager.Instance.NonPlayerController;
         if (controller?.Character?.AvailableCommands == null || controller.Character.AvailableCommands.Count == 0)
         {
             int baseAtkOnly = BladeAction.Combat.StatsCalculationManager.Instance != null 

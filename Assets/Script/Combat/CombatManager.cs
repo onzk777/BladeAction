@@ -12,8 +12,10 @@ public class CombatManager : MonoBehaviour
     public static CombatManager Instance { get; private set; } // CombatManager의 싱글톤 인스턴스
     
     // === 다음 전투 설정 (Scene 전환 전 저장) ===
-    private static string pendingPlayerId = "Player"; // 기본값
-    private static string pendingEnemyId = "Test_Enemy1"; // 기본값
+    private static List<string> pendingTeamAIds = new List<string> { "Player" };
+    private static List<string> pendingTeamBIds = new List<string> { "Test_Enemy1" };
+    private static string pendingPlayerId = "Player"; // 기본값 (역호환용)
+    private static string pendingEnemyId = "Test_Enemy1"; // 기본값 (역호환용)
     
     /// <summary>
     /// 다음 전투의 참가자를 설정합니다 (Scene 전환 전 호출)
@@ -21,26 +23,74 @@ public class CombatManager : MonoBehaviour
     /// </summary>
     public static void SetupNextBattle(string playerId, string enemyId)
     {
-        pendingPlayerId = playerId;
-        pendingEnemyId = enemyId;
-        Debug.Log($"[CombatManager-Static] 다음 전투 설정: {playerId} vs {enemyId}");
+        SetupNextBattle(new[] { playerId }, new[] { enemyId });
     }
 
-    [Header("컨트롤러")]
-    [SerializeField] private PlayerController playerController; // 플레이어 컨트롤러
-    [SerializeField] private EnemyController enemyController; // 적 컨트롤러
+    public static void SetupNextBattle(IList<string> teamAIds, IList<string> teamBIds)
+    {
+        pendingTeamAIds = teamAIds != null ? new List<string>(teamAIds) : new List<string>();
+        pendingTeamBIds = teamBIds != null ? new List<string>(teamBIds) : new List<string>();
+
+        pendingPlayerId = pendingTeamAIds.Count > 0 ? pendingTeamAIds[0] : "Player";
+        pendingEnemyId = pendingTeamBIds.Count > 0 ? pendingTeamBIds[0] : "Test_Enemy1";
+
+        Debug.Log($"[CombatManager-Static] 다음 전투 설정: TeamA[{string.Join(", ", pendingTeamAIds)}] vs TeamB[{string.Join(", ", pendingTeamBIds)}]");
+    }
+
+[Header("Actor Prefabs & Spawn Points")]
+[SerializeField] private GameObject playerActorPrefab;
+[SerializeField] private GameObject npcActorPrefab;
+[SerializeField] private Transform teamASpawnPoint;
+[SerializeField] private Transform teamBSpawnPoint;
+[SerializeField] private Transform actorsRoot;
+[SerializeField] private bool flipTeamBActors = true;
+
+    private PlayerController playerController;
+    private AIController teamANonPlayerControllerInstance;
+    private AIController enemyController; // TeamB NonPlayer 컨트롤러 인스턴스
+    private readonly List<GameObject> spawnedActors = new List<GameObject>();
+    private readonly Dictionary<CombatCharacterManager.CombatantSlot, GameObject> spawnedActorMap = new Dictionary<CombatCharacterManager.CombatantSlot, GameObject>();
     
     // UI에서 접근할 수 있도록 public 프로퍼티 추가
-    public PlayerController PlayerController => playerController;
-    public EnemyController EnemyController => enemyController;
+    public PlayerController PlayerController
+    {
+        get
+        {
+            var slot = CombatCharacterManager.Instance?.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamA);
+            if (slot?.Controller is PlayerController playerSlotController)
+            {
+                return playerSlotController;
+            }
+            return playerController;
+        }
+    }
+    public AIController NonPlayerController
+    {
+        get
+        {
+            var slot = CombatCharacterManager.Instance?.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamB);
+            if (slot?.Controller is AIController aiSlotController)
+            {
+                return aiSlotController;
+            }
+            return enemyController;
+        }
+    }
     public CharacterHitSystem GetCharacterHitSystemForDefender()
     {
         return defenderInputHandler != null ? defenderInputHandler.CharacterHitSystem : null;
     }
     
-    [SerializeField] private AttackerInputHandler attackerInputHandler; // 공격자 타이밍 입력 핸들러
-    [SerializeField] private DefenderInputHandler defenderInputHandler; // 방어자 타이밍 입력 핸들러
+    private AttackerInputHandler attackerInputHandler; // 공격자 타이밍 입력 핸들러
+    private DefenderInputHandler defenderInputHandler; // 방어자 타이밍 입력 핸들러
     private bool isPlayerAttacker; // 현재 턴이 플레이어인지 여부
+    private CombatCharacterManager.CombatantSlot currentAttackerSlot;
+    private CombatCharacterManager.CombatantSlot currentDefenderSlot;
+    private CombatTurnContext currentTurnContext;
+    private ICombatController currentAttackerController;
+    private ICombatController currentDefenderController;
+    private bool currentAttackerIsPlayer;
+    private bool currentDefenderIsPlayer;
     private bool? attackerPerfectInput = null;
     private bool? defenderPerfectInput = null;
     private float? attackerInputTime;
@@ -131,6 +181,7 @@ public class CombatManager : MonoBehaviour
         else
         {
             Destroy(gameObject); // 이미 인스턴스가 존재하면 중복 생성 방지
+            return;
         }
     }
 
@@ -167,7 +218,7 @@ public class CombatManager : MonoBehaviour
     /// </summary>
     public void StartBattle()
     {
-        StartBattle(pendingPlayerId, pendingEnemyId);
+        StartBattle(pendingTeamAIds, pendingTeamBIds);
     }
     
     /// <summary>
@@ -178,32 +229,415 @@ public class CombatManager : MonoBehaviour
     /// <param name="enemyInstanceIds">적 Instance ID 배열</param>
     public void StartBattle(string playerInstanceId, params string[] enemyInstanceIds)
     {
-        Debug.Log($"[CombatManager] === 전투 시작 명령 수신 ===");
-        Debug.Log($"[CombatManager] 전투원: {playerInstanceId} vs [{string.Join(", ", enemyInstanceIds)}]");
-        
-        // CombatCharacterManager에 전투 초기화 지시
-        CombatCharacterManager.Instance.InitializeBattle(playerInstanceId, enemyInstanceIds);
+        var teamAIds = new List<string> { playerInstanceId };
+        var teamBIds = new List<string>(enemyInstanceIds ?? System.Array.Empty<string>());
+        StartBattle(teamAIds, teamBIds);
+    }
 
-        // Controller 연결
+    public void StartBattle(IList<string> teamAIds, IList<string> teamBIds)
+    {
+        Debug.Log($"[CombatManager] === 전투 시작 명령 수신 ===");
+        Debug.Log($"[CombatManager] 전투원: TeamA[{string.Join(", ", teamAIds ?? new List<string>())}] vs TeamB[{string.Join(", ", teamBIds ?? new List<string>())}]");
+
+        CombatCharacterManager.Instance.InitializeBattle(teamAIds, teamBIds);
+
+        SpawnTeamActors();
+
         ConnectControllers();
-        
-        // 전투 진행 시작
+
         StartCoroutine(RunCombat());
     }
 
     private void ConnectControllers() // Controller 연결
     {
-        // CombatCharacterManager를 통해 Controller 연결
-        if (CombatCharacterManager.Instance != null)
+        var manager = CombatCharacterManager.Instance;
+        if (manager == null)
         {
-            CombatCharacterManager.Instance.ConnectController(CharacterType.Player, playerController);
-            CombatCharacterManager.Instance.ConnectController(CharacterType.Enemy, enemyController);
-            Debug.Log("[CombatManager] Controller 연결 완료");
+            Debug.LogError("[CombatManager] CombatCharacterManager.Instance가 null입니다!");
+            return;
+        }
+
+        ConnectLeaderController(manager, CombatCharacterManager.CombatTeam.TeamA);
+        ConnectLeaderController(manager, CombatCharacterManager.CombatTeam.TeamB);
+
+        Debug.Log("[CombatManager] Controller 연결 완료 (슬롯 기반)");
+    }
+
+    private void SpawnTeamActors()
+    {
+        CleanupSpawnedActors();
+
+        var manager = CombatCharacterManager.Instance;
+        if (manager == null)
+        {
+            Debug.LogError("[CombatManager] CombatCharacterManager.Instance가 null입니다!");
+            return;
+        }
+
+        SpawnActorForSlot(CombatCharacterManager.CombatTeam.TeamA, manager.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamA));
+        SpawnActorForSlot(CombatCharacterManager.CombatTeam.TeamB, manager.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamB));
+    }
+
+    private void CleanupSpawnedActors()
+    {
+        foreach (var actor in spawnedActors)
+        {
+            if (actor != null)
+            {
+                Destroy(actor);
+            }
+        }
+
+        spawnedActors.Clear();
+        spawnedActorMap.Clear();
+        playerController = null;
+        teamANonPlayerControllerInstance = null;
+        enemyController = null;
+        attackerInputHandler = null;
+        defenderInputHandler = null;
+    }
+
+    private void SpawnActorForSlot(CombatCharacterManager.CombatTeam team, CombatCharacterManager.CombatantSlot slot)
+    {
+        if (slot == null || slot.Character == null)
+        {
+            if (team == CombatCharacterManager.CombatTeam.TeamA)
+            {
+                teamANonPlayerControllerInstance = null;
+            }
+            else
+            {
+                enemyController = null;
+            }
+            return;
+        }
+
+        bool isTeamB = team == CombatCharacterManager.CombatTeam.TeamB;
+        bool flip = flipTeamBActors && isTeamB;
+        Transform spawnPoint = GetSpawnPoint(team);
+        Transform parent = actorsRoot != null ? actorsRoot : transform;
+
+        if (spawnedActorMap.TryGetValue(slot, out var existingActor) && existingActor != null)
+        {
+            Destroy(existingActor);
+            spawnedActorMap.Remove(slot);
+        }
+
+        if (slot.Character is PlayerCharacter)
+        {
+            var actor = InstantiateActor(playerActorPrefab, spawnPoint, parent, flip);
+            if (actor == null)
+            {
+                return;
+            }
+
+            var controller = actor.GetComponentInChildren<PlayerController>(true);
+            if (controller == null)
+            {
+                Debug.LogError("[CombatManager] PlayerActorPrefab에 PlayerController가 포함되어 있지 않습니다.");
+            }
+            else
+            {
+                playerController = controller;
+                slot.BindController(controller);
+            }
+
+            if (attackerInputHandler == null)
+            {
+                attackerInputHandler = actor.GetComponentInChildren<AttackerInputHandler>(true);
+            }
+
+            if (defenderInputHandler == null)
+            {
+                defenderInputHandler = actor.GetComponentInChildren<DefenderInputHandler>(true);
+            }
+
+            if (attackerInputHandler == null || defenderInputHandler == null)
+            {
+                Debug.LogError("[CombatManager] Player Actor에서 Attacker/DefenderInputHandler를 찾지 못했습니다. Player 프리팹에 핸들러 컴포넌트가 포함되어 있는지 확인하세요.");
+            }
+
+            if (team == CombatCharacterManager.CombatTeam.TeamA)
+            {
+                teamANonPlayerControllerInstance = null;
+            }
+            else
+            {
+                enemyController = null;
+            }
+
+            spawnedActorMap[slot] = actor;
         }
         else
         {
-            Debug.LogError("[CombatManager] CombatCharacterManager.Instance가 null입니다!");
+            var actor = InstantiateActor(npcActorPrefab, spawnPoint, parent, flip);
+            if (actor == null)
+            {
+                return;
+            }
+
+            var controller = actor.GetComponentInChildren<AIController>(true);
+            if (controller == null)
+            {
+                Debug.LogError("[CombatManager] NPCActorPrefab에 AIController가 포함되어 있지 않습니다.");
+                return;
+            }
+
+            if (team == CombatCharacterManager.CombatTeam.TeamA)
+            {
+                teamANonPlayerControllerInstance = controller;
+            }
+            else
+            {
+                enemyController = controller;
+            }
+
+            slot.BindController(controller);
+
+            spawnedActorMap[slot] = actor;
         }
+    }
+
+    private GameObject InstantiateActor(GameObject prefab, Transform spawnPoint, Transform parent, bool flip)
+    {
+        if (prefab == null)
+        {
+            Debug.LogError("[CombatManager] Actor Prefab이 설정되지 않았습니다.");
+            return null;
+        }
+
+        Vector3 position = spawnPoint != null ? spawnPoint.position : parent.position;
+        Quaternion rotation = spawnPoint != null ? spawnPoint.rotation : parent.rotation;
+
+        var instance = Instantiate(prefab, position, rotation, parent);
+        spawnedActors.Add(instance);
+
+        if (flip)
+        {
+            FlipActor(instance.transform);
+        }
+
+        return instance;
+    }
+
+    public GameObject GetSpawnedActor(CombatCharacterManager.CombatantSlot slot)
+    {
+        if (slot == null)
+        {
+            return null;
+        }
+
+        return spawnedActorMap.TryGetValue(slot, out var actor) ? actor : null;
+    }
+
+    private Transform GetSpawnPoint(CombatCharacterManager.CombatTeam team)
+    {
+        if (team == CombatCharacterManager.CombatTeam.TeamA)
+        {
+            if (teamASpawnPoint != null)
+                return teamASpawnPoint;
+        }
+        else
+        {
+            if (teamBSpawnPoint != null)
+                return teamBSpawnPoint;
+        }
+
+        Debug.LogWarning($"[CombatManager] {team} SpawnPoint가 설정되지 않아 CombatManager 위치를 사용합니다.");
+        return transform;
+    }
+
+    private void FlipActor(Transform target)
+    {
+        if (target == null)
+            return;
+
+        var scale = target.localScale;
+        scale.x = -Mathf.Abs(scale.x);
+        target.localScale = scale;
+    }
+
+    private ICombatController GetControllerForCharacter(Character character, CombatCharacterManager.CombatantSlot slot)
+    {
+        if (character == null)
+        {
+            return null;
+        }
+
+        var manager = CombatCharacterManager.Instance;
+        var resolvedSlot = slot ?? manager?.FindSlotByCharacter(character);
+
+        if (resolvedSlot?.Controller != null)
+        {
+            return resolvedSlot.Controller;
+        }
+
+        if (character is PlayerCharacter && playerController != null)
+        {
+            return playerController;
+        }
+
+        return null;
+    }
+
+    private Transform GetActorTransform(ICombatController controller)
+    {
+        switch (controller)
+        {
+            case PlayerController playerCtrl:
+                return playerCtrl.transform;
+            case AIController aiController:
+                return aiController.transform;
+            default:
+                return null;
+        }
+    }
+
+    private AIController GetCurrentAttackerAI()
+    {
+        if (currentAttackerController is AIController ai)
+        {
+            return ai;
+        }
+
+        if (currentAttackerSlot?.Controller is AIController slotAi)
+        {
+            return slotAi;
+        }
+
+        var manager = CombatCharacterManager.Instance;
+        var slot = currentTurnContext?.AttackerSlot ?? manager?.FindSlotByCharacter(currentTurnContext?.AttackerCharacter ?? currentAttackerSlot?.Character);
+        if (slot?.Controller is AIController resolvedAi)
+        {
+            return resolvedAi;
+        }
+
+        return null;
+    }
+
+    private AIController GetCurrentDefenderAI()
+    {
+        if (currentDefenderController is AIController ai)
+        {
+            return ai;
+        }
+
+        if (currentDefenderSlot?.Controller is AIController slotAi)
+        {
+            return slotAi;
+        }
+
+        var manager = CombatCharacterManager.Instance;
+        var slot = currentTurnContext?.DefenderSlot ?? manager?.FindSlotByCharacter(currentTurnContext?.DefenderCharacter ?? currentDefenderSlot?.Character);
+        if (slot?.Controller is AIController resolvedAi)
+        {
+            return resolvedAi;
+        }
+
+        return null;
+    }
+
+    private Transform GetCurrentAttackerTransform()
+    {
+        var transform = GetActorTransform(currentAttackerController);
+        if (transform != null)
+        {
+            return transform;
+        }
+
+        if (currentAttackerIsPlayer)
+        {
+            return playerController != null ? playerController.transform : null;
+        }
+
+        var ai = GetCurrentAttackerAI();
+        return ai != null ? ai.transform : null;
+    }
+
+    private Transform GetCurrentDefenderTransform()
+    {
+        var transform = GetActorTransform(currentDefenderController);
+        if (transform != null)
+        {
+            return transform;
+        }
+
+        if (currentDefenderIsPlayer)
+        {
+            return playerController != null ? playerController.transform : null;
+        }
+
+        var ai = GetCurrentDefenderAI();
+        return ai != null ? ai.transform : null;
+    }
+
+    private void InitializeInputHandlers()
+    {
+        if (attackerInputHandler == null)
+        {
+            attackerInputHandler = GetComponentInChildren<AttackerInputHandler>(true);
+        }
+
+        if (defenderInputHandler == null)
+        {
+            defenderInputHandler = GetComponentInChildren<DefenderInputHandler>(true);
+        }
+
+        if (attackerInputHandler == null || defenderInputHandler == null)
+        {
+            Debug.LogError("[CombatManager] Attacker/DefenderInputHandler를 찾을 수 없습니다. Player Prefab 을 확인해주세요.");
+        }
+    }
+
+    private void ConnectLeaderController(CombatCharacterManager manager, CombatCharacterManager.CombatTeam team)
+    {
+        var slot = manager.GetLeaderSlot(team);
+        if (slot == null)
+        {
+            Debug.LogWarning($"[CombatManager] {team} 리더 슬롯을 찾을 수 없습니다.");
+            return;
+        }
+
+        if (slot.Character == null)
+        {
+            Debug.LogWarning($"[CombatManager] {team} 리더 캐릭터가 null입니다.");
+            return;
+        }
+
+        ICombatController controllerToUse = slot.Controller;
+
+        if (controllerToUse == null && slot.Character is PlayerCharacter)
+        {
+            controllerToUse = playerController;
+        }
+
+        if (controllerToUse == null)
+        {
+            var actor = GetSpawnedActor(slot);
+            if (actor != null)
+            {
+                var playerCtrl = actor.GetComponentInChildren<PlayerController>(true);
+                if (playerCtrl != null)
+                {
+                    controllerToUse = playerCtrl;
+                }
+                else
+                {
+                    var aiCtrl = actor.GetComponentInChildren<AIController>(true);
+                    controllerToUse = aiCtrl;
+                }
+            }
+        }
+
+        if (controllerToUse == null)
+        {
+            Debug.LogError($"[CombatManager] {team} 리더 컨트롤러를 찾을 수 없습니다.");
+            return;
+        }
+
+        manager.ConnectController(team, 0, controllerToUse);
+
+        ActionCommandSelectionManager.Instance?.GetTeamActionUI(team)?.AssignController(controllerToUse);
     }
     
     /// <summary>
@@ -254,7 +688,14 @@ public class CombatManager : MonoBehaviour
         yield return new WaitForSeconds(totalWaitTime);
         
         // 다음 턴 시작
-        yield return StartCoroutine(PerformTurn(nextController));
+        var manager = CombatCharacterManager.Instance;
+        var slot = manager?.FindSlotByController(nextController);
+        var team = slot != null ? slot.Team : CombatCharacterManager.CombatTeam.TeamB;
+        var context = BuildTurnContext(team);
+        if (context != null)
+        {
+            yield return StartCoroutine(PerformTurn(context));
+        }
     }
 
 
@@ -262,8 +703,15 @@ public class CombatManager : MonoBehaviour
     {
         /////////////////////// 점검용 디버그 로그 ///////////////////////
         Debug.Log($"[RunCombat] CombatStartTime 세팅됨: {CombatStartTime}");
-        Debug.Log($"[RunCombat] HandlerInstance: {attackerInputHandler.GetInstanceID()}");
-        Debug.Log($"[RunCombat] timingInputHandler InstanceID: {attackerInputHandler.GetInstanceID()}");
+        if (attackerInputHandler != null)
+        {
+            Debug.Log($"[RunCombat] HandlerInstance: {attackerInputHandler.GetInstanceID()}");
+            Debug.Log($"[RunCombat] timingInputHandler InstanceID: {attackerInputHandler.GetInstanceID()}");
+        }
+        else
+        {
+            Debug.LogWarning("[RunCombat] attackerInputHandler가 null입니다 (NPC vs NPC 시나리오일 수 있습니다)");
+        }
         ////////////////////////////////////////////////////////////////
 
         // 🆕 전투 시작 시 CombatStartDelay 적용
@@ -279,47 +727,55 @@ public class CombatManager : MonoBehaviour
         //     yield break;
         // }
         
-        // 전투 시작 시 첫 번째 검술 버튼에 포커스 설정
-        var playerActionSelectUI = FindFirstObjectByType<PlayerActionSelectUI>();
-        if (playerActionSelectUI != null)
+        // 전투 시작 시 팀 기반 액션 선택 UI 준비
+        var selectionManager = ActionCommandSelectionManager.Instance;
+        var teamAActionUI = selectionManager?.GetTeamActionUI(CombatCharacterManager.CombatTeam.TeamA);
+        if (teamAActionUI != null)
         {
-            Debug.Log("[CombatManager] PlayerActionSelectUI 찾음 - 초기화 후 포커스 설정 시도");
-            playerActionSelectUI.Initialize(); // 먼저 초기화 (내부에서 코루틴으로 포커스 설정됨)
+            Debug.Log("[CombatManager] TeamA ActionSelectUI 초기화 요청");
+            teamAActionUI.RefreshButtons();
         }
         else
         {
-            Debug.LogWarning("[CombatManager] PlayerActionSelectUI를 찾을 수 없습니다!");
+            Debug.LogWarning("[CombatManager] TeamA ActionSelectUI를 찾을 수 없습니다!");
         }
 
         while (!isBattleEnded)
         {
-            // 전투 종료 조건 체크
             if (isBattleEnded)
             {
                 Debug.Log("[RunCombat] 전투가 종료되어 루프를 중단합니다.");
                 break;
             }
-            
-            // 플레이어 턴
+
+            var teamAContext = BuildTurnContext(CombatCharacterManager.CombatTeam.TeamA);
+            if (teamAContext == null || !teamAContext.IsValid)
+            {
+                Debug.LogError("[RunCombat] TeamA 턴 컨텍스트 생성 실패로 전투를 종료합니다.");
+                yield break;
+            }
+
             CombatStartTime = Time.time;
-            CurrentTurnNumber++; // 턴 번호 증가
-            Debug.Log($"[RunCombat] 턴 {CurrentTurnNumber} 시작 - 플레이어 턴");
-            // ❌ 제거: CombatStartDelay는 전투 시작 시에만 적용되어야 함
-            // yield return new WaitForSeconds(GlobalConfig.Instance.CombatStartDelay); // 전투 시작 후 대기 시간
-            yield return StartCoroutine(PerformTurn(playerController));
-            
-            // 플레이어 턴 후 전투 종료 체크
+            CurrentTurnNumber++;
+            Debug.Log($"[RunCombat] 턴 {CurrentTurnNumber} 시작 - TeamA 리더 턴 ({teamAContext.AttackerCharacter?.Name} vs {teamAContext.DefenderCharacter?.Name})");
+            yield return StartCoroutine(PerformTurn(teamAContext));
+
             if (isBattleEnded)
             {
-                Debug.Log("[RunCombat] 플레이어 턴 후 전투 종료 감지");
+                Debug.Log("[RunCombat] TeamA 턴 후 전투 종료 감지");
                 break;
             }
-            
-            // 적 턴 (애니메이션 대기 없이 즉시 시작)
-            Debug.Log($"[RunCombat] 턴 {CurrentTurnNumber} 계속 - 적 턴");
-            yield return StartCoroutine(PerformTurn(enemyController));
-            
-            // 적 턴 종료 후 NPC 확률 리셋 (BT 효과 제거)
+
+            var teamBContext = BuildTurnContext(CombatCharacterManager.CombatTeam.TeamB);
+            if (teamBContext == null || !teamBContext.IsValid)
+            {
+                Debug.LogError("[RunCombat] TeamB 턴 컨텍스트 생성 실패로 전투를 종료합니다.");
+                yield break;
+            }
+
+            Debug.Log($"[RunCombat] 턴 {CurrentTurnNumber} 계속 - TeamB 리더 턴 ({teamBContext.AttackerCharacter?.Name} vs {teamBContext.DefenderCharacter?.Name})");
+            yield return StartCoroutine(PerformTurn(teamBContext));
+
             ResetNPCProbabilities();
             
             // 적 턴 종료 후 선택 캐시 초기화 (PerformTurn 시작 시에도 리셋하므로 이중 안전장치)
@@ -414,14 +870,74 @@ public class CombatManager : MonoBehaviour
         }
     }
 
-    private IEnumerator PerformTurn(ICombatController controller)
+    private IEnumerator PerformTurn(CombatTurnContext turnContext)
     {
+        if (turnContext == null)
+        {
+            Debug.LogError("[CombatManager] PerformTurn 호출 시 turnContext가 null입니다.");
+            yield break;
+        }
+
+        if (!turnContext.IsValid)
+        {
+            Debug.LogError($"[CombatManager] PerformTurn - turnContext가 유효하지 않습니다. {turnContext}");
+            yield break;
+        }
+
         Debug.Log($"[턴 시작] PerformTurn 호출, currentCommandIndex 초기화");
-        
-        // 초기화 (순서 중요! isPlayerAttacker를 먼저 계산해야 defender가 올바름)
-        Character actor = controller.Character; // 현재 턴을 수행하는 Character (공격자)
-        isPlayerAttacker = (controller.Character == CombatCharacterManager.Instance?.PlayerCharacter) ? true : false; // 플레이어 여부 (먼저 계산!)
-        Character defender = isPlayerAttacker ? CombatCharacterManager.Instance.CurrentEnemy : CombatCharacterManager.Instance.PlayerCharacter; // 피격자 (isPlayerAttacker 사용)
+        var characterManager = CombatCharacterManager.Instance;
+        var actorSlot = turnContext.AttackerSlot ?? characterManager?.FindSlotByController(turnContext.AttackerController);
+        var defenderSlot = turnContext.DefenderSlot ?? characterManager?.GetOpponentLeaderSlot(actorSlot != null ? actorSlot.Team : CombatCharacterManager.CombatTeam.TeamB);
+        var controller = turnContext.AttackerController;
+
+        currentTurnContext = turnContext;
+        currentAttackerSlot = actorSlot;
+        currentDefenderSlot = defenderSlot;
+        currentAttackerController = controller;
+        currentDefenderController = turnContext.DefenderController ?? defenderSlot?.Controller;
+
+        Character actor = turnContext.AttackerCharacter ?? actorSlot?.Character ?? controller?.Character;
+        Character defender = turnContext.DefenderCharacter ?? defenderSlot?.Character;
+
+        if (defender == null && actorSlot != null)
+        {
+            defender = characterManager?.GetOpponentLeaderSlot(actorSlot.Team)?.Character;
+        }
+
+        if (currentDefenderController == null && defenderSlot?.Controller != null)
+        {
+            currentDefenderController = defenderSlot.Controller;
+        }
+
+        if (currentDefenderController == null && defender != null)
+        {
+            var manager = CombatCharacterManager.Instance;
+            var resolvedSlot = manager?.FindSlotByCharacter(defender);
+            if (resolvedSlot?.Controller != null)
+            {
+                currentDefenderController = resolvedSlot.Controller;
+            }
+            else if (defender is PlayerCharacter && playerController != null)
+            {
+                currentDefenderController = playerController;
+            }
+        }
+
+        if (actor == null || defender == null)
+        {
+            Debug.LogError("[CombatManager] 공격자 또는 방어자 정보를 찾지 못했습니다.");
+            yield break;
+        }
+
+        bool actorBelongsToTeamA = actorSlot != null
+            ? actorSlot.Team == CombatCharacterManager.CombatTeam.TeamA
+            : actor == characterManager?.PlayerCharacter;
+        bool actorIsPlayerCharacter = actor is PlayerCharacter;
+        bool defenderIsPlayerCharacter = defender is PlayerCharacter;
+
+        isPlayerAttacker = actorIsPlayerCharacter;
+        currentAttackerIsPlayer = actorIsPlayerCharacter;
+        currentDefenderIsPlayer = defenderIsPlayerCharacter;
         
         // 🆕 BT 평가 (공격자 + 방어자 모두!)
         // 왜 필요한가?
@@ -459,7 +975,7 @@ public class CombatManager : MonoBehaviour
         }
         
         // 3. Enemy 공격 턴이면 선택 캐시 리셋
-        if (controller is EnemyController enemyCtrl)
+        if (controller is AIController enemyCtrl)
         {
             enemyCtrl.ResetSelectionCache();
         }
@@ -483,19 +999,25 @@ public class CombatManager : MonoBehaviour
         ActionCommandData command = actor.AvailableCommands[selectedCommandIndex];
         
         // Enemy 턴일 때 UI 업데이트 (선택된 검술 표시)
-        if (!isPlayerAttacker)
+        if (!actorIsPlayerCharacter)
         {
-            var enemyUI = FindFirstObjectByType<EnemyActionSelectUI>();
-            if (enemyUI != null)
+            var teamBActionUI = ActionCommandSelectionManager.Instance?.GetTeamActionUI(CombatCharacterManager.CombatTeam.TeamB);
+            if (teamBActionUI != null)
             {
-                enemyUI.SetSelectedButton(selectedCommandIndex);
-                Debug.Log($"[CombatManager] Enemy UI 업데이트 - 선택된 검술: {selectedCommandIndex}번");
+                teamBActionUI.SetSelectedButton(selectedCommandIndex);
+                Debug.Log($"[CombatManager] TeamB ActionSelectUI 업데이트 - 선택된 커맨드 인덱스: {selectedCommandIndex}");
             }
-        }      
+        }
         CharacterCommandResult result = new CharacterCommandResult(command); // 커맨드 결과 객체 생성
-        attackerInputHandler.SetIsPlayer(isPlayerAttacker); // 공격자 입력 핸들러 설정
-        defenderInputHandler.SetIsPlayer(!isPlayerAttacker); // 방어자 입력 핸들러 설정
-        Debug.Log($"[InputTrace][Turn] SetIsPlayer - attacker:{attackerInputHandler.IsPlayer} defender:{defenderInputHandler.IsPlayer} (isPlayerAttacker:{isPlayerAttacker}) Time:{Time.time:F4} Frame:{Time.frameCount}");
+        if (attackerInputHandler != null)
+        {
+            attackerInputHandler.BindToSlot(actorSlot);
+        }
+        if (defenderInputHandler != null)
+        {
+            defenderInputHandler.BindToSlot(defenderSlot);
+        }
+        Debug.Log($"[InputTrace][Turn] BindToSlot - attacker:{attackerInputHandler?.BoundSlot} defender:{defenderInputHandler?.BoundSlot} (isPlayerAttacker:{isPlayerAttacker}) Time:{Time.time:F4} Frame:{Time.frameCount}");
         TurnTimer.Reset(); // 턴 시작 시각 초기화        
         float turnDuration = CalculateTurnDuration(command); // 검술 기반 턴 지속 시간 계산
         CurrentTurnDuration = turnDuration; // 전역 접근 가능하도록 설정
@@ -509,8 +1031,8 @@ public class CombatManager : MonoBehaviour
         CurrentClashResultShown = false; // 현재 타격 판정 결과 표시 여부 초기화
         windowPrompted = false; // 히트 윈도우가 열렸는지 여부 초기화
         floatingTextShown = false; // 공격자 FloatingText 생성 여부 초기화
-        attackerInputHandler.ResetCooldown(); // 공격자 입력 핸들러 쿨다운 초기화
-        defenderInputHandler.ResetCooldown(); // 방어자 입력 핸들러 쿨다운 초기화
+        attackerInputHandler?.ResetCooldown(); // 공격자 입력 핸들러 쿨다운 초기화
+        defenderInputHandler?.ResetCooldown(); // 방어자 입력 핸들러 쿨다운 초기화
         CurrentHit = 0; // 현재 히트 인덱스 초기화
         CurrentController = controller; // 현재 컨트롤러 설정
         CurrentResult = result; // 현재 커맨드 결과 설정
@@ -528,21 +1050,17 @@ public class CombatManager : MonoBehaviour
         // 디버그 패널 초기화
         CombatDebugDisplay.Instance?.ClearDebugResults(); // 디버그 결과 표시 초기화
 
-        if (isPlayerAttacker)
+        if (actorIsPlayerCharacter && attackerInputHandler != null)
         {
             attackerInputHandler.EnableInput(); // 공격자 입력 리스닝 시작
             Debug.Log("[CombatManager] 공격자 입력 허용됨");
-        }            
-        else 
+        }
+
+        if (defender != null && defenderInputHandler != null)
         {
-            defenderInputHandler.EnableInput(); // 방어자 입력 리스닝 시작
+            defenderInputHandler.EnableInput();
             Debug.Log("[CombatManager] 방어자 입력 허용됨");
         }
-        
-        // 🆕 방어자 입력도 항상 활성화 (AI 막기 시스템을 위해)
-        // BaseInputHandler의 isListening 상태를 확인하기 위해 EnableInput을 다시 호출
-        defenderInputHandler.EnableInput();
-        Debug.Log("[CombatManager] 🆕 방어자 입력 추가 활성화 (AI 막기 시스템)");
 
         // 1.1. 커맨드 유효성 확인
         if (selectedCommandIndex < 0 || selectedCommandIndex >= actor.AvailableCommands.Count)
@@ -563,17 +1081,10 @@ public class CombatManager : MonoBehaviour
         // isWaitingForTurnEnd = false;
         
         // Spine 애니메이션 연동: 공격 턴 시작 시 애니메이션 재생
-        if (isPlayerAttacker && playerController != null)
-        {
-            playerController.OnPlayActionCommand();
-        }
-        else if (!isPlayerAttacker && enemyController != null)
-        {
-            enemyController.OnPlayActionCommand();
-        }
+        controller?.OnPlayActionCommand();
         
         // 타이밍 윈도우 등록 및 입력 수신 시작
-        attackerInputHandler.LoadTimingWindows(command.perfectTimings); // 커맨드의 완벽 타이밍 윈도우를 로드        
+        attackerInputHandler?.LoadTimingWindows(command.perfectTimings); // 커맨드의 완벽 타이밍 윈도우를 로드        
         // ❌ 제거: 발사체 기반 시스템에서는 방어자가 공격자 커맨드 데이터를 로드할 필요 없음
         // defenderInputHandler.LoadFromOpponentCommand(command);
         
@@ -671,12 +1182,12 @@ public class CombatManager : MonoBehaviour
                     CurrentAttackResultShown = false;
                     CurrentDefenseResultShown = false;
                     CurrentClashResultShown = false;
-                    attackerInputHandler.ResetInputState(); // 👈 히트마다 입력 기록 초기화
-                    defenderInputHandler.ResetInputState(); // 👈 히트마다 입력 기록 초기화
+                    attackerInputHandler?.ResetInputState(); // 👈 히트마다 입력 기록 초기화
+                    defenderInputHandler?.ResetInputState(); // 👈 히트마다 입력 기록 초기화
                     CombatDebugDisplay.Instance?.ShowInputPrompt("입력 가능!");
                     CurrentController = controller;
                     CurrentResult = result;
-                    attackerInputHandler.RegisterHitTiming(perfectWindow);
+                    attackerInputHandler?.RegisterHitTiming(perfectWindow);
                     // ❌ 제거: 발사체 기반 시스템에서는 방어자 타이밍 윈도우 등록 불필요
                     // defenderInputHandler.RegisterHitTiming(perfectWindow);
                 }
@@ -696,7 +1207,8 @@ public class CombatManager : MonoBehaviour
                 
                 if (!CurrentAttackResultShown && elapsed >= perfectWindowStart) // 공격자 입력 처리
                 {
-                    if (attackerInputHandler.IsPlayer)
+                    bool attackerHandlerIsPlayer = attackerInputHandler != null && attackerInputHandler.IsPlayer;
+                    if (attackerHandlerIsPlayer)
                     {
                         // 플레이어 입력 대기 UI 표시
                         if (elapsed < perfectWindowEnd)
@@ -707,23 +1219,32 @@ public class CombatManager : MonoBehaviour
                         else if (elapsed >= perfectWindowEnd)
                         {
                             Debug.Log($"[PerformTurn] 히트 {CurrentHit} fallback");
-                            attackerInputHandler.NotifyWindowClosed(true); // 공격자 입력 실패 처리
+                            attackerInputHandler?.NotifyWindowClosed(true); // 공격자 입력 실패 처리
                             // 🆕 플레이어 공격자 실패 시에도 ResolveInput 호출
-                            ResolveInput(attackerInputHandler, false);
+                            if (attackerInputHandler != null)
+                            {
+                                ResolveInput(attackerInputHandler, false);
+                            }
                         }
                     }
                     else // AI 공격자 처리
                     {
                         if (elapsed >= aiInputTime)
                         {
-                            attackerInputHandler.RecordAIInput(aiInputTime, aiAttackSuccess); // AI 입력 기록
+                            attackerInputHandler?.RecordAIInput(aiInputTime, aiAttackSuccess); // AI 입력 기록
                             // 🆕 AI 공격자 성공 시 ResolveInput 호출
-                            ResolveInput(attackerInputHandler, aiAttackSuccess);
+                            if (attackerInputHandler != null)
+                            {
+                                ResolveInput(attackerInputHandler, aiAttackSuccess);
+                            }
                         }
                         else if (elapsed >= perfectWindowEnd)
                         {
                             // 🆕 AI 공격자 실패 시 ResolveInput 호출
-                            ResolveInput(attackerInputHandler, false);
+                            if (attackerInputHandler != null)
+                            {
+                                ResolveInput(attackerInputHandler, false);
+                            }
                         }
                     }
                 }
@@ -963,8 +1484,8 @@ public class CombatManager : MonoBehaviour
         Debug.Log($"[CombatManager] 애니메이션 완료 대기 시작 - 공격자: {attacker.Name}, 피격자: {target.Name}");
         
         // 공격자와 피격자의 컨트롤러 가져오기
-        ICombatController attackerController = isPlayerAttacker ? playerController : enemyController;
-        ICombatController defenderController = isPlayerAttacker ? enemyController : playerController;
+        ICombatController attackerController = currentAttackerController ?? GetControllerForCharacter(attacker, currentAttackerSlot);
+        ICombatController defenderController = currentDefenderController ?? GetControllerForCharacter(target, currentDefenderSlot);
         
         // 최대 대기 시간 (안전장치)
         float maxWaitTime = 10f;
@@ -1078,7 +1599,7 @@ public class CombatManager : MonoBehaviour
         {
             return playerCtrl.CombatAnimationObject?.GetComponent<Animator>();
         }
-        else if (controller is EnemyController enemyCtrl)
+        else if (controller is AIController enemyCtrl)
         {
             return enemyCtrl.CombatAnimationObject?.GetComponent<Animator>();
         }
@@ -1093,39 +1614,42 @@ public class CombatManager : MonoBehaviour
     /// <returns>FloatingText가 표시될 월드 위치</returns>
     private Vector3 GetFloatingTextPosition(bool isPlayerAttacker)
     {
-        Vector3 basePosition;
-        
-        // 1. 캐릭터 위치를 기준으로 설정
-        if (isPlayerAttacker)
+        Transform referenceTransform = GetActorTransform(currentTurnContext?.AttackerController ?? currentAttackerController);
+
+        if (referenceTransform == null)
         {
-            // 플레이어가 공격자인 경우: 플레이어 위치 근처
-            if (playerController != null)
+            var attackerSlot = currentTurnContext?.AttackerSlot ?? currentAttackerSlot;
+            if (attackerSlot?.Controller != null)
             {
-                basePosition = playerController.transform.position;
-                Debug.Log($"[FloatingText 위치] 플레이어 공격자 기준 위치: {basePosition}");
-            }
-            else
-            {
-                basePosition = Vector3.zero;
-                Debug.LogWarning("[FloatingText 위치] playerController가 null입니다!");
+                referenceTransform = GetActorTransform(attackerSlot.Controller);
             }
         }
-        else
+
+        if (referenceTransform == null)
         {
-            // AI가 공격자인 경우: AI 위치 근처
-            if (enemyController != null)
+            if (currentTurnContext?.AttackerController is PlayerController playerCtrl)
             {
-                basePosition = enemyController.transform.position;
-                Debug.Log($"[FloatingText 위치] AI 공격자 기준 위치: {basePosition}");
+                referenceTransform = playerCtrl.transform;
             }
-            else
+            else if (currentTurnContext?.AttackerController is AIController aiCtrl)
             {
-                // AI 컨트롤러가 null인 경우 대체 방법 시도
-                basePosition = GetAIPositionFallback();
-                Debug.LogWarning("[FloatingText 위치] enemyController가 null입니다! 대체 위치 사용: " + basePosition);
+                referenceTransform = aiCtrl.transform;
+            }
+            else if (isPlayerAttacker && playerController != null)
+            {
+                referenceTransform = playerController.transform;
             }
         }
-        
+
+        if (referenceTransform == null)
+        {
+            Debug.LogWarning("[FloatingText 위치] 참조 컨트롤러를 찾을 수 없어 CombatManager 위치를 사용합니다.");
+            referenceTransform = transform;
+        }
+
+        Vector3 basePosition = referenceTransform.position;
+        Debug.Log($"[FloatingText 위치] 기준 위치: {basePosition}");
+
         // 2. 캐릭터 위쪽에 오프셋 추가 (기존 2f에서 1.5f로 감소)
         Vector3 finalPosition = basePosition + Vector3.up * 1.5f;
         Debug.Log($"[FloatingText 위치] 오프셋 적용 후: {finalPosition}");
@@ -1155,14 +1679,19 @@ public class CombatManager : MonoBehaviour
     /// <returns>AI의 대략적인 위치</returns>
     private Vector3 GetAIPositionFallback()
     {
-        // 1. CombatManager가 이미 참조하고 있는 enemyController 사용 (Scene 분리 대비)
-        if (enemyController != null)
+        var attackerSlot = currentTurnContext?.AttackerSlot ?? currentAttackerSlot;
+        if (attackerSlot?.Controller is AIController slotAi && slotAi != null)
         {
-            Debug.Log($"[FloatingText 위치] enemyController 참조로 AI 위치 찾음: {enemyController.transform.position}");
-            return enemyController.transform.position;
+            Debug.Log($"[FloatingText 위치] AI 슬롯 컨트롤러 위치 사용: {slotAi.transform.position}");
+            return slotAi.transform.position;
+        }
+
+        if (currentTurnContext?.AttackerController is AIController aiController && aiController != null)
+        {
+            Debug.Log($"[FloatingText 위치] AI 컨트롤러 위치 사용: {aiController.transform.position}");
+            return aiController.transform.position;
         }
         
-        // 2. 플레이어 반대편에 대략적인 위치 설정
         if (playerController != null)
         {
             Vector3 playerPos = playerController.transform.position;
@@ -1247,7 +1776,11 @@ public class CombatManager : MonoBehaviour
             }
             else // 공격자 : AI
             {
-                enemyController.OnHitResult(CurrentHit, isPerfect);
+                var aiController = GetCurrentAttackerAI();
+                if (aiController != null)
+                {
+                    aiController.OnHitResult(CurrentHit, isPerfect);
+                }
             }
 
             CurrentAttackResultShown = true; // 히트 결과가 표시되었음을 설정
@@ -1276,7 +1809,13 @@ public class CombatManager : MonoBehaviour
             if (defenderInputHandler.IsPlayer)
                 playerController.OnHitResult(CurrentHit, isPerfect);
             else
-                enemyController.OnHitResult(CurrentHit, isPerfect);
+            {
+                var aiController = GetCurrentDefenderAI();
+                if (aiController != null)
+                {
+                    aiController.OnHitResult(CurrentHit, isPerfect);
+                }
+            }
 
             CurrentDefenseResultShown = true; // 방어자 결과가 표시되었음을 설정 
         }
@@ -1303,8 +1842,28 @@ public class CombatManager : MonoBehaviour
         Debug.Log($"[CombatManager] 판정 결과: {resultVersus} (공격자 완벽: {atkPerfect}, 방어자 완벽: {defPerfect}, 막기: {guard}) - 히트 {hitIndex}");
 
         // 현재 공격자와 방어자 Character 찾기
-        Character attacker = isPlayerAttacker ? CombatCharacterManager.Instance.PlayerCharacter : CombatCharacterManager.Instance.CurrentEnemy;
-        Character defender = isPlayerAttacker ? CombatCharacterManager.Instance.CurrentEnemy : CombatCharacterManager.Instance.PlayerCharacter;
+        Character attacker = currentTurnContext?.AttackerCharacter ?? currentAttackerSlot?.Character;
+        Character defender = currentTurnContext?.DefenderCharacter ?? currentDefenderSlot?.Character;
+
+        if (attacker == null || defender == null)
+        {
+            if (isPlayerAttacker)
+            {
+                attacker ??= CombatCharacterManager.Instance?.PlayerCharacter;
+                defender ??= CombatCharacterManager.Instance?.CurrentEnemy;
+            }
+            else
+            {
+                attacker ??= CombatCharacterManager.Instance?.CurrentEnemy;
+                defender ??= CombatCharacterManager.Instance?.PlayerCharacter;
+            }
+        }
+
+        if (attacker == null || defender == null)
+        {
+            Debug.LogError("[CombatManager] EvaluateClashResult에서 공격자 또는 방어자가 null입니다.");
+            return;
+        }
         
         // 현재 사용된 검술 커맨드 가져오기
         var currentCommand = CurrentResult?.Command;
@@ -1367,13 +1926,26 @@ public class CombatManager : MonoBehaviour
         isInterrupted = true;
         
         // 중단 애니메이션 재생
-        if (isPlayerAttacker && playerController != null)
+        var attackerController = currentTurnContext?.AttackerController ?? currentAttackerController;
+        switch (attackerController)
         {
-            playerController.OnInterrupted();
-        }
-        else if (!isPlayerAttacker && enemyController != null)
-        {
-            enemyController.OnInterrupted();
+            case PlayerController playerCtrl:
+                playerCtrl.OnInterrupted();
+                break;
+            case AIController aiCtrl:
+                aiCtrl.OnInterrupted();
+                break;
+            default:
+                if (isPlayerAttacker && playerController != null)
+                {
+                    playerController.OnInterrupted();
+                }
+                else
+                {
+                    var fallbackAi = GetCurrentAttackerAI();
+                    fallbackAi?.OnInterrupted();
+                }
+                break;
         }
         
         Debug.LogWarning("[CombatManager] 중단 발생! 턴이 조기 종료됩니다.");
@@ -1398,32 +1970,28 @@ public class CombatManager : MonoBehaviour
         
         // 🆕 완벽 입력 여부에 따른 발사체 프리팹 선택
         Debug.Log($"[PROJECTILE] 조건 확인: isPerfect={isPerfect}, perfectProjectilePrefab={command.perfectProjectilePrefab != null}");
-        
-        GameObject projectilePrefab;
+
+        GameObject projectilePrefab = null;
         if (isPerfect && command.perfectProjectilePrefab != null)
         {
             projectilePrefab = command.perfectProjectilePrefab;
             Debug.Log($"[PROJECTILE] ✅ Perfect 발사체 선택: {projectilePrefab.name}");
         }
-        else
+
+        if (projectilePrefab == null)
         {
             projectilePrefab = command.normalProjectilePrefab;
-            Debug.Log($"[PROJECTILE] ❌ 일반 발사체 선택: {projectilePrefab.name}");
+            if (projectilePrefab != null)
+            {
+                Debug.Log($"[PROJECTILE] ❌ 일반 발사체 선택: {projectilePrefab.name}");
+            }
         }
-        
+
         if (projectilePrefab == null)
         {
             Debug.LogError($"[CombatManager] {command.commandName}에 발사체 프리팹이 설정되지 않았습니다!");
             return;
         }
-        
-        // ❌ 제거: 발사체 카운팅 초기화 (시간 기반 턴 종료로 변경)
-        // if (CurrentHit == 0)
-        // {
-        //     completedProjectiles = 0;
-        //     totalProjectiles = command.hitCount;
-        //     Debug.Log($"[CombatManager] 발사체 카운팅 초기화: 총 {totalProjectiles}개");
-        // }
         
         // 🆕 ProjectileManager 싱글톤을 통해 발사체 가져오기
         if (ProjectileManager.Instance == null)
@@ -1439,18 +2007,11 @@ public class CombatManager : MonoBehaviour
         // projectile.hitIndex = CurrentHit;
         
         // Controller 기반으로 위치 가져오기
-        Vector3 attackerPos, defenderPos;
-        
-        if (isPlayerAttacker)
-        {
-            attackerPos = playerController.transform.position;
-            defenderPos = enemyController.transform.position;
-        }
-        else
-        {
-            attackerPos = enemyController.transform.position;
-            defenderPos = playerController.transform.position;
-        }
+        Transform attackerTransform = GetCurrentAttackerTransform();
+        Transform defenderTransform = GetCurrentDefenderTransform();
+
+        Vector3 attackerPos = attackerTransform != null ? attackerTransform.position : transform.position;
+        Vector3 defenderPos = defenderTransform != null ? defenderTransform.position : transform.position;
         
         // 🆕 ProjectileManager를 통해 발사체 생성 위치 계산
         Vector3 spawnPosition = ProjectileManager.Instance.CalculateSpawnPosition(attackerPos, defenderPos);
@@ -1589,74 +2150,43 @@ public class CombatManager : MonoBehaviour
     /// <param name="resultType">판정 결과 타입</param>
     private void HandleClashResultAnimation(InputVersusResult.ResultType resultType)
     {
+        var defenderAI = GetCurrentDefenderAI();
+
         switch (resultType)
         {
             case InputVersusResult.ResultType.Hit:
             case InputVersusResult.ResultType.PerfectAttack:
             case InputVersusResult.ResultType.GuardBreak:
-                // 방어자가 피격된 경우 - 방어자에게 OnBeHitted 호출
-                if (isPlayerAttacker)
+                if (currentDefenderIsPlayer)
                 {
-                    // 플레이어가 공격자, AI가 방어자인 경우
-                    if (enemyController != null)
-                    {
-                        enemyController.OnBeHitted();
-                        Debug.Log("[CombatManager] AI 방어자 피격 애니메이션 호출");
-                    }
+                    playerController?.OnBeHitted();
                 }
                 else
                 {
-                    // AI가 공격자, 플레이어가 방어자인 경우
-                    if (playerController != null)
-                    {
-                        playerController.OnBeHitted();
-                        Debug.Log("[CombatManager] 플레이어 방어자 피격 애니메이션 호출");
-                    }
+                    defenderAI?.OnBeHitted();
                 }
                 break;
                 
             case InputVersusResult.ResultType.Parry:
             case InputVersusResult.ResultType.HalfParry:
-                // 방어자가 쳐내기 성공한 경우 - 방어자에게 OnSuccessParry 호출
-                if (isPlayerAttacker)
+                if (currentDefenderIsPlayer)
                 {
-                    // 플레이어가 공격자, AI가 방어자인 경우
-                    if (enemyController != null)
-                    {
-                        enemyController.OnSuccessParry();
-                        Debug.Log("[CombatManager] AI 방어자 쳐내기 성공 애니메이션 호출");
-                    }
+                    playerController?.OnSuccessParry();
                 }
                 else
                 {
-                    // AI가 공격자, 플레이어가 방어자인 경우
-                    if (playerController != null)
-                    {
-                        playerController.OnSuccessParry();
-                        Debug.Log("[CombatManager] 플레이어 방어자 쳐내기 성공 애니메이션 호출");
-                    }
+                    defenderAI?.OnSuccessParry();
                 }
                 break;
                 
             case InputVersusResult.ResultType.Guard:
-                // 방어자가 막아낸 경우 - 방어자에게 OnPlayDefence 호출
-                if (isPlayerAttacker)
+                if (currentDefenderIsPlayer)
                 {
-                    // 플레이어가 공격자, AI가 방어자인 경우
-                    if (enemyController != null)
-                    {
-                        enemyController.OnPlayDefence();
-                        Debug.Log("[CombatManager] AI 방어자 방어 애니메이션 호출");
-                    }
+                    playerController?.OnPlayDefence();
                 }
                 else
                 {
-                    // AI가 공격자, 플레이어가 방어자인 경우
-                    if (playerController != null)
-                    {
-                        playerController.OnPlayDefence();
-                        Debug.Log("[CombatManager] 플레이어 방어자 방어 애니메이션 호출");
-                    }
+                    defenderAI?.OnPlayDefence();
                 }
                 break;
         }
@@ -1923,18 +2453,14 @@ public class CombatManager : MonoBehaviour
     private void DisableCharacters()
     {
         // 플레이어 Controller 비활성화
-        if (playerController != null)
+        foreach (var actor in spawnedActors)
         {
-            playerController.gameObject.SetActive(false);
-            Debug.Log("[CombatManager] 플레이어 캐릭터 비활성화");
+            if (actor != null)
+            {
+                actor.SetActive(false);
+            }
         }
-        
-        // 적 Controller 비활성화
-        if (enemyController != null)
-        {
-            enemyController.gameObject.SetActive(false);
-            Debug.Log("[CombatManager] 적 캐릭터 비활성화");
-        }
+        Debug.Log("[CombatManager] 모든 전투 Actor 비활성화");
         
         // 입력 핸들러 비활성화
         if (attackerInputHandler != null)
@@ -1953,19 +2479,14 @@ public class CombatManager : MonoBehaviour
     /// </summary>
     private void EnableCharacters()
     {
-        // 플레이어 Controller 재활성화
-        if (playerController != null)
+        foreach (var actor in spawnedActors)
         {
-            playerController.gameObject.SetActive(true);
-            Debug.Log("[CombatManager] 플레이어 캐릭터 재활성화");
+            if (actor != null)
+            {
+                actor.SetActive(true);
+            }
         }
-        
-        // 적 Controller 재활성화
-        if (enemyController != null)
-        {
-            enemyController.gameObject.SetActive(true);
-            Debug.Log("[CombatManager] 적 캐릭터 재활성화");
-        }
+        Debug.Log("[CombatManager] 모든 전투 Actor 재활성화");
     }
     
     /// <summary>
@@ -2043,22 +2564,67 @@ public class CombatManager : MonoBehaviour
 
     public void Update()
     {
-        CombatDebugDisplay.Instance?.SetPlayerActionInputCooldown(attackerInputHandler.NextAllowedInputTime - Time.time);
+        if (attackerInputHandler != null)
+        {
+            CombatDebugDisplay.Instance?.SetPlayerActionInputCooldown(attackerInputHandler.NextAllowedInputTime - Time.time);
+        }
     }
     
+    private CombatTurnContext BuildTurnContext(CombatCharacterManager.CombatTeam attackerTeam)
+    {
+        var manager = CombatCharacterManager.Instance;
+        if (manager == null)
+        {
+            Debug.LogError("[CombatManager] BuildTurnContext 실패 - CombatCharacterManager가 없습니다.");
+            return null;
+        }
+
+        var attackerSlot = manager.GetLeaderSlot(attackerTeam);
+        if (attackerSlot == null || attackerSlot.Character == null)
+        {
+            Debug.LogError($"[CombatManager] BuildTurnContext 실패 - {attackerTeam} 공격자 슬롯이 비어 있습니다.");
+            return null;
+        }
+
+        var defenderSlot = manager.GetOpponentLeaderSlot(attackerTeam);
+        if (defenderSlot == null || defenderSlot.Character == null)
+        {
+            Debug.LogError($"[CombatManager] BuildTurnContext 실패 - {attackerTeam} 상대 슬롯이 비어 있습니다.");
+            return null;
+        }
+
+        attackerInputHandler?.BindToSlot(attackerSlot);
+        defenderInputHandler?.BindToSlot(defenderSlot);
+
+        var context = new CombatTurnContext(attackerSlot, defenderSlot, attackerInputHandler, defenderInputHandler);
+        return context;
+    }
+
     /// <summary>
     /// 플레이어 컨트롤러를 반환합니다
     /// </summary>
     public PlayerController GetPlayerController()
     {
+        var slot = CombatCharacterManager.Instance?.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamA);
+        if (slot?.Controller is PlayerController controller)
+        {
+            return controller;
+        }
+
         return playerController;
     }
     
     /// <summary>
     /// 적 컨트롤러를 반환합니다
     /// </summary>
-    public EnemyController GetEnemyController()
+    public AIController GetNonPlayerController()
     {
+        var slot = CombatCharacterManager.Instance?.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamB);
+        if (slot?.Controller is AIController aiController)
+        {
+            return aiController;
+        }
+
         return enemyController;
     }
     
@@ -2091,3 +2657,4 @@ public class CombatManager : MonoBehaviour
         }
     }
 }
+

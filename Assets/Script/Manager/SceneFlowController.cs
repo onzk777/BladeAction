@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -80,19 +81,24 @@ public class SceneFlowController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 전투 시작 (Scene 전환 + 전투 트리거)
-    /// </summary>
-    /// <param name="playerId">플레이어 Character Instance ID</param>
-    /// <param name="enemyId">적 Character Instance ID</param>
     public void StartCombatFlow(string playerId, string enemyId)
     {
-        Log($"전투 시작 Flow: {playerId} vs {enemyId}");
-        
-        // 1. CombatManager에 전투 참가자 설정 (static)
-        CombatManager.SetupNextBattle(playerId, enemyId);
-        
-        // 2. CombatScene 전환 완료 시 콜백 등록
+        StartCombatFlow(new[] { playerId }, new[] { enemyId });
+    }
+
+    /// <summary>
+    /// 전투 시작 (Scene 전환 + 전투 트리거) - 팀 단위 입력
+    /// </summary>
+    /// <param name="teamAIds">A팀 캐릭터 ID 목록 (엔트리 순서)</param>
+    /// <param name="teamBIds">B팀 캐릭터 ID 목록 (엔트리 순서)</param>
+    public void StartCombatFlow(IList<string> teamAIds, IList<string> teamBIds)
+    {
+        string teamALog = teamAIds != null ? string.Join(", ", teamAIds) : "null";
+        string teamBLog = teamBIds != null ? string.Join(", ", teamBIds) : "null";
+        Log($"전투 시작 Flow (팀): TeamA[{teamALog}] vs TeamB[{teamBLog}]");
+
+        CombatManager.SetupNextBattle(teamAIds, teamBIds);
+
         if (SceneTransitionManager.Instance != null)
         {
             SceneTransitionManager.Instance.OnSceneTransitionComplete += OnCombatSceneLoaded;

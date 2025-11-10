@@ -8,7 +8,7 @@ public class EnemyCharacter : Character
     // 필드 (Fields)
     // ========================================
     
-    private EnemyController controller; // EnemyController 참조
+    private AIController controller; // AIController 참조
     private BladeAction.BT.BehaviorTreeContext currentBTContext; // 현재 BT 컨텍스트
     
     /// <summary>
@@ -51,8 +51,8 @@ public class EnemyCharacter : Character
     /// EnemyCharacter를 생성합니다.
     /// </summary>
     /// <param name="data">캐릭터 데이터 (원본 확률 포함)</param>
-    /// <param name="controller">EnemyController 참조</param>
-    public EnemyCharacter(string instanceId, CharacterInitData initData, EnemyController controller = null) : base(instanceId, initData)
+    /// <param name="controller">AIController 참조</param>
+    public EnemyCharacter(string instanceId, CharacterInitData initData, AIController controller = null) : base(instanceId, initData)
     {
         this.controller = controller;
         
@@ -74,7 +74,7 @@ public class EnemyCharacter : Character
         Debug.Log($"[EnemyCharacter] {Name} (ID: {InstanceId}) BT 블랙보드 초기화 완료");
     }
 
-    public void SetController(EnemyController newController)
+    public void SetController(AIController newController)
     {
         controller = newController;
     }

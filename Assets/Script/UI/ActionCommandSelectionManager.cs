@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -11,13 +12,23 @@ public class ActionCommandSelectionManager : MonoBehaviour
 {
     public static ActionCommandSelectionManager Instance { get; private set; }
     
-    // UI References - 자동으로 찾아서 등록됨 (Inspector에 표시 안함)
-    [HideInInspector] [SerializeField] private PlayerActionSelectUI _playerActionSelectUI;
-    [HideInInspector] [SerializeField] private EnemyActionSelectUI _enemyActionSelectUI;
-    
-    // Public 프로퍼티로 읽기 전용 접근 제공
-    public PlayerActionSelectUI playerActionSelectUI => _playerActionSelectUI;
-    public EnemyActionSelectUI enemyActionSelectUI => _enemyActionSelectUI;
+    [SerializeField] private TeamActionSelectUI teamAUiReference;
+    [SerializeField] private TeamActionSelectUI teamBUiReference;
+
+    private readonly Dictionary<CombatCharacterManager.CombatTeam, TeamActionSelectUI> teamUiLookup = new();
+
+    public TeamActionSelectUI GetTeamActionUI(CombatCharacterManager.CombatTeam team)
+    {
+        if (teamUiLookup.TryGetValue(team, out var ui) && ui != null)
+        {
+            return ui;
+        }
+
+        return team == CombatCharacterManager.CombatTeam.TeamA ? teamAUiReference : teamBUiReference;
+    }
+
+    public TeamActionSelectUI teamAActionSelectUI => GetTeamActionUI(CombatCharacterManager.CombatTeam.TeamA);
+    public TeamActionSelectUI teamBActionSelectUI => GetTeamActionUI(CombatCharacterManager.CombatTeam.TeamB);
     
     private void Awake()
     {
@@ -36,65 +47,41 @@ public class ActionCommandSelectionManager : MonoBehaviour
     private void Start()
     {
         // Inspector에서 할당되지 않은 경우 자동 찾기 (하위 호환성)
-        if (_playerActionSelectUI == null)
-        {
-            _playerActionSelectUI = FindFirstObjectByType<PlayerActionSelectUI>();
-            if (_playerActionSelectUI != null)
-            {
-                Debug.Log($"[ActionCommandSelectionManager] PlayerActionSelectUI 자동 찾기 완료: {_playerActionSelectUI.name}");
-            }
-        }
-        
-        if (_enemyActionSelectUI == null)
-        {
-            _enemyActionSelectUI = FindFirstObjectByType<EnemyActionSelectUI>();
-            if (_enemyActionSelectUI != null)
-            {
-                Debug.Log($"[ActionCommandSelectionManager] EnemyActionSelectUI 자동 찾기 완료: {_enemyActionSelectUI.name}");
-            }
-        }
+        AutoDiscoverTeamUI(CombatCharacterManager.CombatTeam.TeamA);
+        AutoDiscoverTeamUI(CombatCharacterManager.CombatTeam.TeamB);
     }
     
-    /// <summary>
-    /// PlayerActionSelectUI를 등록합니다 (UI의 Awake/Start에서 호출)
-    /// </summary>
-    public void RegisterPlayerActionUI(PlayerActionSelectUI ui)
+    public void RegisterTeamActionUI(CombatCharacterManager.CombatTeam team, TeamActionSelectUI ui)
     {
         if (ui == null)
         {
-            Debug.LogWarning("[ActionCommandSelectionManager] RegisterPlayerActionUI: null UI");
+            Debug.LogWarning($"[ActionCommandSelectionManager] RegisterTeamActionUI: {team} UI가 null입니다.");
             return;
         }
-        
-        // 이미 다른 UI가 등록되어 있으면 경고
-        if (_playerActionSelectUI != null && _playerActionSelectUI != ui)
+
+        if (teamUiLookup.TryGetValue(team, out var existing) && existing != null && existing != ui)
         {
-            Debug.LogWarning($"[ActionCommandSelectionManager] PlayerActionSelectUI 중복 등록: 기존 {_playerActionSelectUI.name} → 새로 {ui.name}");
+            Debug.LogWarning($"[ActionCommandSelectionManager] {team} UI 재등록: 기존 {existing.name} → 새로 {ui.name}");
         }
-        
-        _playerActionSelectUI = ui;
-        Debug.Log($"[ActionCommandSelectionManager] PlayerActionSelectUI 등록 완료: {ui.name}");
-    }
-    
-    /// <summary>
-    /// EnemyActionSelectUI를 등록합니다 (UI의 Awake/Start에서 호출)
-    /// </summary>
-    public void RegisterEnemyActionUI(EnemyActionSelectUI ui)
-    {
-        if (ui == null)
+
+        if (!IsSceneInstance(ui))
         {
-            Debug.LogWarning("[ActionCommandSelectionManager] RegisterEnemyActionUI: null UI");
+            Debug.LogWarning($"[ActionCommandSelectionManager] {team} UI 등록 무시 - Scene 인스턴스가 아닙니다. ({ui.name})");
             return;
         }
-        
-        // 이미 다른 UI가 등록되어 있으면 경고
-        if (_enemyActionSelectUI != null && _enemyActionSelectUI != ui)
+
+        teamUiLookup[team] = ui;
+
+        if (team == CombatCharacterManager.CombatTeam.TeamA)
         {
-            Debug.LogWarning($"[ActionCommandSelectionManager] EnemyActionSelectUI 중복 등록: 기존 {_enemyActionSelectUI.name} → 새로 {ui.name}");
+            teamAUiReference = ui;
         }
-        
-        _enemyActionSelectUI = ui;
-        Debug.Log($"[ActionCommandSelectionManager] EnemyActionSelectUI 등록 완료: {ui.name}");
+        else
+        {
+            teamBUiReference = ui;
+        }
+
+        Debug.Log($"[ActionCommandSelectionManager] {team} UI 등록 완료: {ui.name}");
     }
     
     /// <summary>
@@ -108,5 +95,55 @@ public class ActionCommandSelectionManager : MonoBehaviour
             Instance = managerObject.AddComponent<ActionCommandSelectionManager>();
         }
         return Instance;
+    }
+
+    private void AutoDiscoverTeamUI(CombatCharacterManager.CombatTeam team)
+    {
+        if (team == CombatCharacterManager.CombatTeam.TeamA && !IsSceneInstance(teamAUiReference))
+        {
+            teamAUiReference = null;
+        }
+
+        if (team == CombatCharacterManager.CombatTeam.TeamB && !IsSceneInstance(teamBUiReference))
+        {
+            teamBUiReference = null;
+        }
+
+        if (team == CombatCharacterManager.CombatTeam.TeamA && teamAUiReference != null)
+        {
+            RegisterTeamActionUI(team, teamAUiReference);
+            return;
+        }
+
+        if (team == CombatCharacterManager.CombatTeam.TeamB && teamBUiReference != null)
+        {
+            RegisterTeamActionUI(team, teamBUiReference);
+            return;
+        }
+
+        var discovered = FindTeamUiInScene(team);
+        if (discovered != null)
+        {
+            RegisterTeamActionUI(team, discovered);
+        }
+    }
+
+    private TeamActionSelectUI FindTeamUiInScene(CombatCharacterManager.CombatTeam team)
+    {
+        var candidates = FindObjectsByType<TeamActionSelectUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (var candidate in candidates)
+        {
+            if (candidate != null && candidate.Team == team && IsSceneInstance(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private bool IsSceneInstance(Component component)
+    {
+        return component != null && component.gameObject.scene.IsValid();
     }
 }

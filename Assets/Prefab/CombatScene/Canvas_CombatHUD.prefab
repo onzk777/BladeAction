@@ -354,10 +354,10 @@ GameObject:
   - component: {fileID: 3163176570144559103}
   - component: {fileID: 8593526395810462134}
   - component: {fileID: 8879934466134049846}
-  - component: {fileID: 4591813739681844236}
   - component: {fileID: 2993303650803282556}
+  - component: {fileID: 637328517223298876}
   m_Layer: 5
-  m_Name: EnemyActionSelectUI
+  m_Name: TeamBActionSelectUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -420,21 +420,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &4591813739681844236
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3810706118161310564}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ce4505c30e6738a44bb7439354bc52fb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  actionButtonContainer: {fileID: 3163176570144559103}
-  actionButtonPrefab: {fileID: 5193987179068666628, guid: d2deed43130e61f42a6def8bbbf12ead, type: 3}
-  enemyController: {fileID: 0}
 --- !u!114 &2993303650803282556
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -461,6 +446,26 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &637328517223298876
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3810706118161310564}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdd7cf4fe85b55a41bbe3293ecbc5c67, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TeamActionSelectUI
+  actionButtonPrefab: {fileID: 5193987179068666628, guid: d2deed43130e61f42a6def8bbbf12ead, type: 3}
+  buttonContainerOverride: {fileID: 3449930422120658983, guid: d2deed43130e61f42a6def8bbbf12ead, type: 3}
+  maxButtons: 5
+  autoRegisterToManager: 1
+  autoAssignController: 1
+  maintainFocusWhenInteractive: 1
+  allowSpectatorHighlight: 1
+  team: 1
 --- !u!1 &4136863527060896162
 GameObject:
   m_ObjectHideFlags: 0
@@ -778,9 +783,9 @@ GameObject:
   - component: {fileID: 7269810031790593380}
   - component: {fileID: 5632930769749122623}
   - component: {fileID: 4554587616544346105}
-  - component: {fileID: 8719773899919394640}
+  - component: {fileID: 8438020079770649517}
   m_Layer: 5
-  m_Name: PlayerActionSelectUI
+  m_Name: TeamAActionSelectUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -869,7 +874,7 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
---- !u!114 &8719773899919394640
+--- !u!114 &8438020079770649517
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -878,13 +883,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 8020440076646312269}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: df899b6e488ac0b4cad93e3aae4311d2, type: 3}
+  m_Script: {fileID: 11500000, guid: bdd7cf4fe85b55a41bbe3293ecbc5c67, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
-  actionButtonContainer: {fileID: 8176798741335775499}
+  m_EditorClassIdentifier: Assembly-CSharp::TeamActionSelectUI
   actionButtonPrefab: {fileID: 5193987179068666628, guid: d2deed43130e61f42a6def8bbbf12ead, type: 3}
+  buttonContainerOverride: {fileID: 3449930422120658983, guid: d2deed43130e61f42a6def8bbbf12ead, type: 3}
   maxButtons: 5
-  playerController: {fileID: 0}
+  autoRegisterToManager: 1
+  autoAssignController: 1
+  maintainFocusWhenInteractive: 1
+  allowSpectatorHighlight: 1
+  team: 0
 --- !u!1 &8537965784510537405
 GameObject:
   m_ObjectHideFlags: 0
