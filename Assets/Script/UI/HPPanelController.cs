@@ -1,17 +1,20 @@
 using UnityEngine;
 using System.Collections;
+using UnityEngine.Serialization;
 
 /// <summary>
-/// HP 패널 컨트롤러 - Player와 Enemy의 HP Bar를 비율 기반으로 크기 조정
+/// HP 패널 컨트롤러 - TeamA/TeamB HP Bar를 비율 기반으로 크기 조정
 /// </summary>
 public class HPPanelController : MonoBehaviour
 {
     [Header("HP Bar References")]
-    [Tooltip("플레이어 HP 바 오브젝트")]
-    public RectTransform playerHPBar;
+    [FormerlySerializedAs("playerHPBar")]
+    [Tooltip("TeamA HP 바 오브젝트 (좌측)")]
+    public RectTransform teamAHPBar;
     
-    [Tooltip("적 HP 바 오브젝트")]
-    public RectTransform enemyHPBar;
+    [FormerlySerializedAs("enemyHPBar")]
+    [Tooltip("TeamB HP 바 오브젝트 (우측)")]
+    public RectTransform teamBHPBar;
 
     [Header("Animation Settings")]
     [Tooltip("크기 변화 애니메이션 속도")]
@@ -23,117 +26,189 @@ public class HPPanelController : MonoBehaviour
     public bool debugMode = false;
 
     // 현재 HP 값들 (캐싱용)
-    private int currentPlayerHP = 0;
-    private int currentEnemyHP = 0;
-    private int maxPlayerHP = 0;
-    private int maxEnemyHP = 0;
+    private int currentTeamAHP = 0;
+    private int currentTeamBHP = 0;
+    private int maxTeamAHP = 0;
+    private int maxTeamBHP = 0;
+
+    private Character teamACharacter;
+    private Character teamBCharacter;
+    private CombatCharacterManager.CombatantSlot teamASlot;
+    private CombatCharacterManager.CombatantSlot teamBSlot;
 
     // 애니메이션 관련
     private Coroutine sizeAnimationCoroutine;
 
     private void Awake()
     {
-        // HP Bar 참조 검증
-        if (playerHPBar == null)
+        if (teamAHPBar == null)
         {
-            Debug.LogError("[HPPanelController] PlayerHPBar가 할당되지 않았습니다!");
+            Debug.LogError("[HPPanelController] TeamA HP Bar가 할당되지 않았습니다!");
         }
-        else
+        if (teamBHPBar == null)
         {
-            Debug.Log($"[HPPanelController] PlayerHPBar 연결됨: {playerHPBar.name}");
-        }
-        
-        if (enemyHPBar == null)
-        {
-            Debug.LogError("[HPPanelController] EnemyHPBar가 할당되지 않았습니다!");
-        }
-        else
-        {
-            Debug.Log($"[HPPanelController] EnemyHPBar 연결됨: {enemyHPBar.name}");
+            Debug.LogError("[HPPanelController] TeamB HP Bar가 할당되지 않았습니다!");
         }
     }
 
     private void Start()
     {
-        // CharacterManager가 초기화될 때까지 대기
         StartCoroutine(WaitForCharacterManager());
     }
 
     private IEnumerator WaitForCharacterManager()
     {
-        // CharacterManager가 초기화될 때까지 대기
         while (CombatCharacterManager.Instance == null)
         {
             yield return null;
         }
 
-        // CharacterManager의 데이터가 준비될 때까지 대기
-        while (CombatCharacterManager.Instance.PlayerCharacter == null || CombatCharacterManager.Instance.CurrentEnemy == null)
+        var manager = CombatCharacterManager.Instance;
+        while (manager.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamA)?.Character == null ||
+               manager.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamB)?.Character == null)
         {
             yield return null;
         }
 
-        // 초기 HP 값 설정 및 이벤트 구독
-        InitializeHPValues();
+        InitializeSlotsAndEvents();
+    }
+
+    private void InitializeSlotsAndEvents()
+    {
+        BindLeaderSlots();
+        RefreshTeamAHPStats();
+        RefreshTeamBHPStats();
         SubscribeToHPEvents();
-        
-        // 초기 패널 크기 설정
+        CombatCharacterManager.OnLeaderSlotChanged += HandleLeaderSlotChanged;
         UpdatePanelSizes();
     }
 
-    private void InitializeHPValues()
+    private void BindLeaderSlots()
     {
-        if (CombatCharacterManager.Instance?.PlayerCharacter != null)
+        var manager = CombatCharacterManager.Instance;
+        teamASlot = manager?.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamA);
+        teamBSlot = manager?.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamB);
+        teamACharacter = teamASlot?.Character;
+        teamBCharacter = teamBSlot?.Character;
+    }
+
+    private void HandleLeaderSlotChanged(CombatCharacterManager.CombatTeam team, CombatCharacterManager.CombatantSlot previousSlot, CombatCharacterManager.CombatantSlot newSlot)
+    {
+        if (team == CombatCharacterManager.CombatTeam.TeamA)
         {
-            currentPlayerHP = CombatCharacterManager.Instance.PlayerCharacter.currentHP;
-            maxPlayerHP = (int)CombatCharacterManager.Instance.PlayerCharacter.MaxHP;
+            UpdateTeamCharacter(ref teamACharacter, previousSlot, newSlot, OnTeamAHPChanged);
+            teamASlot = newSlot;
+            RefreshTeamAHPStats();
+        }
+        else if (team == CombatCharacterManager.CombatTeam.TeamB)
+        {
+            UpdateTeamCharacter(ref teamBCharacter, previousSlot, newSlot, OnTeamBHPChanged);
+            teamBSlot = newSlot;
+            RefreshTeamBHPStats();
         }
 
-        if (CombatCharacterManager.Instance?.CurrentEnemy != null)
+        UpdatePanelSizes();
+    }
+
+    private void UpdateTeamCharacter(ref Character cachedCharacter, CombatCharacterManager.CombatantSlot previousSlot, CombatCharacterManager.CombatantSlot newSlot, System.Action<int, int> hpChangedHandler)
+    {
+        if (cachedCharacter != null)
         {
-            currentEnemyHP = CombatCharacterManager.Instance.CurrentEnemy.currentHP;
-            maxEnemyHP = (int)CombatCharacterManager.Instance.CurrentEnemy.MaxHP;
+            cachedCharacter.OnHPChanged -= hpChangedHandler;
         }
 
-        if (debugMode)
+        cachedCharacter = newSlot?.Character;
+
+        if (cachedCharacter != null)
         {
-            Debug.Log($"[HPPanelController] 초기 HP 설정 - Player: {currentPlayerHP}/{maxPlayerHP}, Enemy: {currentEnemyHP}/{maxEnemyHP}");
+            cachedCharacter.OnHPChanged += hpChangedHandler;
         }
     }
 
     private void SubscribeToHPEvents()
     {
-        // 플레이어 HP 이벤트 구독
-        if (CombatCharacterManager.Instance?.PlayerCharacter != null)
+        UnsubscribeFromHPEvents();
+
+        if (teamACharacter != null)
         {
-            CombatCharacterManager.Instance.PlayerCharacter.OnHPChanged += OnPlayerHPChanged;
+            teamACharacter.OnHPChanged += OnTeamAHPChanged;
         }
 
-        // 적 HP 이벤트 구독
-        if (CombatCharacterManager.Instance?.CurrentEnemy != null)
+        if (teamBCharacter != null)
         {
-            CombatCharacterManager.Instance.CurrentEnemy.OnHPChanged += OnEnemyHPChanged;
+            teamBCharacter.OnHPChanged += OnTeamBHPChanged;
         }
     }
 
-    private void OnPlayerHPChanged(int oldHP, int newHP)
+    private void UnsubscribeFromHPEvents()
     {
-        currentPlayerHP = newHP;
+        if (teamACharacter != null)
+        {
+            teamACharacter.OnHPChanged -= OnTeamAHPChanged;
+        }
+
+        if (teamBCharacter != null)
+        {
+            teamBCharacter.OnHPChanged -= OnTeamBHPChanged;
+        }
+    }
+
+    private void OnTeamAHPChanged(int oldHP, int newHP)
+    {
+        currentTeamAHP = newHP;
         if (debugMode)
         {
-            Debug.Log($"[HPPanelController] 플레이어 HP 변경: {oldHP} → {newHP}");
+            Debug.Log($"[HPPanelController] TeamA HP 변경: {oldHP} → {newHP}");
         }
         UpdatePanelSizes();
     }
 
-    private void OnEnemyHPChanged(int oldHP, int newHP)
+    private void OnTeamBHPChanged(int oldHP, int newHP)
     {
-        currentEnemyHP = newHP;
+        currentTeamBHP = newHP;
         if (debugMode)
         {
-            Debug.Log($"[HPPanelController] 적 HP 변경: {oldHP} → {newHP}");
+            Debug.Log($"[HPPanelController] TeamB HP 변경: {oldHP} → {newHP}");
         }
         UpdatePanelSizes();
+    }
+
+    private void RefreshTeamAHPStats()
+    {
+        if (teamACharacter != null)
+        {
+            currentTeamAHP = teamACharacter.currentHP;
+            maxTeamAHP = Mathf.RoundToInt(teamACharacter.MaxHP);
+        }
+        else
+        {
+            currentTeamAHP = 0;
+            maxTeamAHP = 0;
+        }
+
+        if (debugMode)
+        {
+            Debug.Log($"[HPPanelController] TeamA HP 설정 - {currentTeamAHP}/{maxTeamAHP}");
+        }
+    }
+
+    private void RefreshTeamBHPStats()
+    {
+        if (teamBCharacter != null)
+        {
+            currentTeamBHP = teamBCharacter.currentHP;
+            maxTeamBHP = Mathf.RoundToInt(teamBCharacter.MaxHP);
+        }
+        else
+        {
+            currentTeamBHP = 0;
+            maxTeamBHP = 0;
+        }
+
+        if (debugMode)
+        {
+            Debug.Log($"[HPPanelController] TeamB HP 설정 - {currentTeamBHP}/{maxTeamBHP}");
+        }
     }
 
     /// <summary>
@@ -141,59 +216,61 @@ public class HPPanelController : MonoBehaviour
     /// </summary>
     public void UpdatePanelSizes()
     {
-        if (playerHPBar == null || enemyHPBar == null)
+        if (teamAHPBar == null || teamBHPBar == null)
         {
-            Debug.LogWarning("[HPPanelController] HP Bar 참조가 없어 크기 업데이트를 건너뜁니다.");
-            Debug.LogWarning($"[HPPanelController] PlayerHPBar: {playerHPBar != null}, EnemyHPBar: {enemyHPBar != null}");
+            if (debugMode)
+            {
+                Debug.LogWarning("[HPPanelController] HP Bar 참조가 없어 크기 업데이트를 건너뜁니다.");
+            }
             return;
         }
 
-        // HP 비율 계산
-        float playerRatio = CalculatePlayerRatio();
-        float enemyRatio = CalculateEnemyRatio();
+        float teamARatio = CalculateTeamARatio();
+        float teamBRatio = CalculateTeamBRatio();
 
-        Debug.Log($"[HPPanelController] HP 비율 계산 - Player: {playerRatio:F3}, Enemy: {enemyRatio:F3}");
-        Debug.Log($"[HPPanelController] 현재 HP - Player: {currentPlayerHP}/{maxPlayerHP}, Enemy: {currentEnemyHP}/{maxEnemyHP}");
+        if (debugMode)
+        {
+            Debug.Log($"[HPPanelController] HP 비율 계산 - TeamA: {teamARatio:F3}, TeamB: {teamBRatio:F3}");
+            Debug.Log($"[HPPanelController] 현재 HP - TeamA: {currentTeamAHP}/{maxTeamAHP}, TeamB: {currentTeamBHP}/{maxTeamBHP}");
+        }
 
-        // 애니메이션으로 크기 변경
         if (sizeAnimationCoroutine != null)
         {
             StopCoroutine(sizeAnimationCoroutine);
         }
-        sizeAnimationCoroutine = StartCoroutine(AnimatePanelSizes(playerRatio, enemyRatio));
+        sizeAnimationCoroutine = StartCoroutine(AnimatePanelSizes(teamARatio, teamBRatio));
     }
 
-    private float CalculatePlayerRatio()
+    private float CalculateTeamARatio()
     {
-        int totalCurrentHP = currentPlayerHP + currentEnemyHP;
-        if (totalCurrentHP <= 0) return 0.5f; // 둘 다 현재 HP가 0이면 50:50
+        int totalCurrentHP = currentTeamAHP + currentTeamBHP;
+        if (totalCurrentHP <= 0) return 0.5f;
 
-        // 현재 HP 기준으로 상대적 비율 계산
-        float ratio = (float)currentPlayerHP / totalCurrentHP;
-        return Mathf.Clamp01(ratio); // 0~1 범위로 제한
+        float ratio = (float)currentTeamAHP / totalCurrentHP;
+        return Mathf.Clamp01(ratio);
     }
 
-    private float CalculateEnemyRatio()
+    private float CalculateTeamBRatio()
     {
-        int totalCurrentHP = currentPlayerHP + currentEnemyHP;
-        if (totalCurrentHP <= 0) return 0.5f; // 둘 다 현재 HP가 0이면 50:50
+        int totalCurrentHP = currentTeamAHP + currentTeamBHP;
+        if (totalCurrentHP <= 0) return 0.5f;
 
-        // 현재 HP 기준으로 상대적 비율 계산
-        float ratio = (float)currentEnemyHP / totalCurrentHP;
-        return Mathf.Clamp01(ratio); // 0~1 범위로 제한
+        float ratio = (float)currentTeamBHP / totalCurrentHP;
+        return Mathf.Clamp01(ratio);
     }
 
-    private IEnumerator AnimatePanelSizes(float targetPlayerRatio, float targetEnemyRatio)
+    private IEnumerator AnimatePanelSizes(float targetTeamARatio, float targetTeamBRatio)
     {
-        // 현재 Scale 가져오기
-        Vector3 currentPlayerScale = playerHPBar.localScale;
-        Vector3 currentEnemyScale = enemyHPBar.localScale;
+        Vector3 currentTeamAScale = teamAHPBar.localScale;
+        Vector3 currentTeamBScale = teamBHPBar.localScale;
 
-        // 목표 Scale 설정
-        Vector3 targetPlayerScale = new Vector3(targetPlayerRatio, currentPlayerScale.y, currentPlayerScale.z);
-        Vector3 targetEnemyScale = new Vector3(targetEnemyRatio, currentEnemyScale.y, currentEnemyScale.z);
+        Vector3 targetTeamAScale = new Vector3(targetTeamARatio, currentTeamAScale.y, currentTeamAScale.z);
+        Vector3 targetTeamBScale = new Vector3(targetTeamBRatio, currentTeamBScale.y, currentTeamBScale.z);
 
-        Debug.Log($"[HPPanelController] 애니메이션 시작 - Player Scale: {currentPlayerScale} → {targetPlayerScale}, Enemy Scale: {currentEnemyScale} → {targetEnemyScale}");
+        if (debugMode)
+        {
+            Debug.Log($"[HPPanelController] 애니메이션 시작 - TeamA Scale: {currentTeamAScale} → {targetTeamAScale}, TeamB Scale: {currentTeamBScale} → {targetTeamBScale}");
+        }
 
         float elapsedTime = 0f;
         float duration = 1f / animationSpeed;
@@ -201,23 +278,21 @@ public class HPPanelController : MonoBehaviour
         while (elapsedTime < duration)
         {
             elapsedTime += Time.deltaTime;
-            float t = elapsedTime / duration;
-            t = Mathf.SmoothStep(0f, 1f, t); // 부드러운 애니메이션
+            float t = Mathf.SmoothStep(0f, 1f, elapsedTime / duration);
 
-            // Player HP Bar 크기 조정
-            playerHPBar.localScale = Vector3.Lerp(currentPlayerScale, targetPlayerScale, t);
-            
-            // Enemy HP Bar 크기 조정
-            enemyHPBar.localScale = Vector3.Lerp(currentEnemyScale, targetEnemyScale, t);
+            teamAHPBar.localScale = Vector3.Lerp(currentTeamAScale, targetTeamAScale, t);
+            teamBHPBar.localScale = Vector3.Lerp(currentTeamBScale, targetTeamBScale, t);
 
             yield return null;
         }
 
-        // 최종 크기 설정
-        playerHPBar.localScale = targetPlayerScale;
-        enemyHPBar.localScale = targetEnemyScale;
+        teamAHPBar.localScale = targetTeamAScale;
+        teamBHPBar.localScale = targetTeamBScale;
 
-        Debug.Log($"[HPPanelController] 애니메이션 완료 - Player Scale: {playerHPBar.localScale}, Enemy Scale: {enemyHPBar.localScale}");
+        if (debugMode)
+        {
+            Debug.Log($"[HPPanelController] 애니메이션 완료 - TeamA Scale: {teamAHPBar.localScale}, TeamB Scale: {teamBHPBar.localScale}");
+        }
 
         sizeAnimationCoroutine = null;
     }
@@ -227,20 +302,17 @@ public class HPPanelController : MonoBehaviour
     /// </summary>
     public void SetPanelSizesImmediate()
     {
-        if (playerHPBar == null || enemyHPBar == null) return;
+        if (teamAHPBar == null || teamBHPBar == null) return;
 
-        float playerRatio = CalculatePlayerRatio();
-        float enemyRatio = CalculateEnemyRatio();
+        float teamARatio = CalculateTeamARatio();
+        float teamBRatio = CalculateTeamBRatio();
 
-        // Player HP Bar 설정
-        playerHPBar.localScale = new Vector3(playerRatio, playerHPBar.localScale.y, playerHPBar.localScale.z);
-        
-        // Enemy HP Bar 설정
-        enemyHPBar.localScale = new Vector3(enemyRatio, enemyHPBar.localScale.y, enemyHPBar.localScale.z);
+        teamAHPBar.localScale = new Vector3(teamARatio, teamAHPBar.localScale.y, teamAHPBar.localScale.z);
+        teamBHPBar.localScale = new Vector3(teamBRatio, teamBHPBar.localScale.y, teamBHPBar.localScale.z);
 
         if (debugMode)
         {
-            Debug.Log($"[HPPanelController] 즉시 크기 설정 완료 - Player Scale: {playerRatio:F3}, Enemy Scale: {enemyRatio:F3}");
+            Debug.Log($"[HPPanelController] 즉시 크기 설정 완료 - TeamA Scale: {teamARatio:F3}, TeamB Scale: {teamBRatio:F3}");
         }
     }
 
@@ -250,46 +322,39 @@ public class HPPanelController : MonoBehaviour
     [ContextMenu("Force Update HP Panels")]
     public void ForceUpdatePanels()
     {
-        InitializeHPValues();
+        BindLeaderSlots();
+        RefreshTeamAHPStats();
+        RefreshTeamBHPStats();
         UpdatePanelSizes();
-        Debug.Log("[HPPanelController] HP 패널 강제 업데이트 완료");
-    }
-
-    /// <summary>
-    /// 테스트용 HP 변경 (디버그용)
-    /// </summary>
-    [ContextMenu("Test Player Take Damage")]
-    public void TestPlayerTakeDamage()
-    {
-        if (CombatCharacterManager.Instance?.PlayerCharacter != null)
+        if (debugMode)
         {
-            CombatCharacterManager.Instance.PlayerCharacter.TakeDamage(10);
+            Debug.Log("[HPPanelController] HP 패널 강제 업데이트 완료");
         }
     }
 
-    [ContextMenu("Test Enemy Take Damage")]
-    public void TestEnemyTakeDamage()
+    [ContextMenu("Test TeamA Take Damage")]
+    public void TestTeamATakeDamage()
     {
-        if (CombatCharacterManager.Instance?.CurrentEnemy != null)
+        if (teamACharacter != null)
         {
-            CombatCharacterManager.Instance.CurrentEnemy.TakeDamage(10);
+            teamACharacter.TakeDamage(10);
+        }
+    }
+
+    [ContextMenu("Test TeamB Take Damage")]
+    public void TestTeamBTakeDamage()
+    {
+        if (teamBCharacter != null)
+        {
+            teamBCharacter.TakeDamage(10);
         }
     }
 
     private void OnDestroy()
     {
-        // 이벤트 구독 해제
-        if (CombatCharacterManager.Instance?.PlayerCharacter != null)
-        {
-            CombatCharacterManager.Instance.PlayerCharacter.OnHPChanged -= OnPlayerHPChanged;
-        }
+        CombatCharacterManager.OnLeaderSlotChanged -= HandleLeaderSlotChanged;
+        UnsubscribeFromHPEvents();
 
-        if (CombatCharacterManager.Instance?.CurrentEnemy != null)
-        {
-            CombatCharacterManager.Instance.CurrentEnemy.OnHPChanged -= OnEnemyHPChanged;
-        }
-
-        // 코루틴 정리
         if (sizeAnimationCoroutine != null)
         {
             StopCoroutine(sizeAnimationCoroutine);

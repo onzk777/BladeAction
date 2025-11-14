@@ -33,7 +33,7 @@ MonoBehaviour:
     parryPoiseConsumption: 5
     parryPoiseAttackPower: 0
     parryPoiseDamage: 25
-    poiseGain: 0
+    poiseGain: 0.732
   initialAccessorySlots: 3
   maxAccessorySlots: 5
   initialItems:

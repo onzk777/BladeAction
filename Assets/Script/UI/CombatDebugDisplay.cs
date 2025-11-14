@@ -13,6 +13,11 @@ using System.Collections;
 public class CombatDebugDisplay : MonoBehaviour
 {
     public static CombatDebugDisplay Instance { get; private set; }
+    
+    private CombatCharacterManager.CombatantSlot trackedTeamASlot;
+    private Character trackedTeamACharacter;
+    private CombatCharacterManager.CombatantSlot trackedTeamBSlot;
+    private Character trackedTeamBCharacter;
 
     [Header("Player Debug UI")]
     [Tooltip("플레이어 이름")]
@@ -115,9 +120,9 @@ public class CombatDebugDisplay : MonoBehaviour
         }
 
         // CharacterManager의 데이터가 준비될 때까지 대기
-        while (CombatCharacterManager.Instance.PlayerCharacter == null || 
-               CombatCharacterManager.Instance.CurrentEnemy == null)
-        {
+        while (CombatCharacterManager.Instance.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamA)?.Character == null ||
+               CombatCharacterManager.Instance.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamB)?.Character == null)
+        { 
             yield return null;
         }
 
@@ -135,16 +140,91 @@ public class CombatDebugDisplay : MonoBehaviour
 
     private void SubscribeToStatusEvents()
     {
-        // 플레이어 스테이터스 이벤트 구독
-        if (CombatCharacterManager.Instance.PlayerCharacter != null)
+        UnsubscribeFromStatusEvents();
+
+        var manager = CombatCharacterManager.Instance;
+        if (manager != null)
         {
-            CombatCharacterManager.Instance.PlayerCharacter.OnStatsChanged += OnPlayerStatsChanged;
+            var leaderA = manager.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamA);
+            var leaderB = manager.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamB);
+
+            SubscribeToLeaderCharacter(CombatCharacterManager.CombatTeam.TeamA, null, leaderA);
+            SubscribeToLeaderCharacter(CombatCharacterManager.CombatTeam.TeamB, null, leaderB);
         }
 
-        // 적 스테이터스 이벤트 구독
-        if (CombatCharacterManager.Instance.CurrentEnemy != null)
+        CombatCharacterManager.OnLeaderSlotChanged += HandleLeaderSlotChanged;
+    }
+
+    private void UnsubscribeFromStatusEvents()
+    {
+        CombatCharacterManager.OnLeaderSlotChanged -= HandleLeaderSlotChanged;
+        UnsubscribeFromLeaderCharacter(CombatCharacterManager.CombatTeam.TeamA);
+        UnsubscribeFromLeaderCharacter(CombatCharacterManager.CombatTeam.TeamB);
+    }
+
+    private void HandleLeaderSlotChanged(CombatCharacterManager.CombatTeam team, CombatCharacterManager.CombatantSlot previousSlot, CombatCharacterManager.CombatantSlot newSlot)
+    {
+        UnsubscribeFromLeaderCharacter(team);
+        SubscribeToLeaderCharacter(team, previousSlot, newSlot);
+    }
+
+    private void SubscribeToLeaderCharacter(CombatCharacterManager.CombatTeam team, CombatCharacterManager.CombatantSlot previousSlot, CombatCharacterManager.CombatantSlot slot)
+    {
+        Character target = slot?.Character;
+
+        if (team == CombatCharacterManager.CombatTeam.TeamA)
         {
-            CombatCharacterManager.Instance.CurrentEnemy.OnStatsChanged += OnEnemyStatsChanged;
+            if (previousSlot != null && trackedTeamASlot == previousSlot && trackedTeamACharacter != null)
+            {
+                trackedTeamACharacter.OnStatsChanged -= OnPlayerStatsChanged;
+            }
+
+            trackedTeamASlot = slot;
+            trackedTeamACharacter = target;
+            if (trackedTeamACharacter != null)
+            {
+                trackedTeamACharacter.OnStatsChanged += OnPlayerStatsChanged;
+            }
+
+            UpdatePlayerStatus();
+        }
+        else if (team == CombatCharacterManager.CombatTeam.TeamB)
+        {
+            if (previousSlot != null && trackedTeamBSlot == previousSlot && trackedTeamBCharacter != null)
+            {
+                trackedTeamBCharacter.OnStatsChanged -= OnEnemyStatsChanged;
+            }
+
+            trackedTeamBSlot = slot;
+            trackedTeamBCharacter = target;
+            if (trackedTeamBCharacter != null)
+            {
+                trackedTeamBCharacter.OnStatsChanged += OnEnemyStatsChanged;
+            }
+
+            UpdateEnemyStatus();
+        }
+    }
+
+    private void UnsubscribeFromLeaderCharacter(CombatCharacterManager.CombatTeam team)
+    {
+        if (team == CombatCharacterManager.CombatTeam.TeamA)
+        {
+            if (trackedTeamACharacter != null)
+            {
+                trackedTeamACharacter.OnStatsChanged -= OnPlayerStatsChanged;
+                trackedTeamACharacter = null;
+            }
+            trackedTeamASlot = null;
+        }
+        else if (team == CombatCharacterManager.CombatTeam.TeamB)
+        {
+            if (trackedTeamBCharacter != null)
+            {
+                trackedTeamBCharacter.OnStatsChanged -= OnEnemyStatsChanged;
+                trackedTeamBCharacter = null;
+            }
+            trackedTeamBSlot = null;
         }
     }
 
@@ -498,16 +578,7 @@ public class CombatDebugDisplay : MonoBehaviour
     /// </summary>
     private void OnDestroy()
     {
-        // 이벤트 구독 해제
-        if (CombatCharacterManager.Instance?.PlayerCharacter != null)
-        {
-            CombatCharacterManager.Instance.PlayerCharacter.OnStatsChanged -= OnPlayerStatsChanged;
-        }
-
-        if (CombatCharacterManager.Instance?.CurrentEnemy != null)
-        {
-            CombatCharacterManager.Instance.CurrentEnemy.OnStatsChanged -= OnEnemyStatsChanged;
-        }
+        UnsubscribeFromStatusEvents();
     }
 }
 

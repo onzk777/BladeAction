@@ -5,9 +5,13 @@ using BladeAction.Combat;
 using BladeAction.Item;
 
 /// <summary>
-/// 캐릭터 타입 구분
+/// 캐릭터 제어 주체 구분
 /// </summary>
-public enum CharacterType { Player, Enemy }
+public enum ControlType
+{
+    Player,
+    AI
+}
 
 /// <summary>
 /// 초기 인벤토리 아이템 항목

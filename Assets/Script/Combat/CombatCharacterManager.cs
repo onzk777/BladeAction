@@ -12,6 +12,8 @@ public class CombatCharacterManager : MonoBehaviour
 {
     public static CombatCharacterManager Instance { get; private set; }
     
+    public static event System.Action<CombatTeam, CombatantSlot, CombatantSlot> OnLeaderSlotChanged;
+    
     // === 전투 참가자 정보 (누가 싸우는가) ===
     public string PlayerInstanceId { get; private set; }
     public List<string> EnemyInstanceIds { get; private set; }
@@ -60,17 +62,17 @@ public class CombatCharacterManager : MonoBehaviour
         public CombatTeam Team { get; }
         public bool HasController => Controller != null;
         public bool HasCharacter => Character != null;
-        public CharacterType? SlotCharacterType
+        public ControlType? SlotControlType
         {
             get
             {
-                if (Character is PlayerCharacter) return CharacterType.Player;
-                if (Character is EnemyCharacter) return CharacterType.Enemy;
+                if (Character is PlayerCharacter) return ControlType.Player;
+                if (Character is EnemyCharacter) return ControlType.AI;
                 return null;
             }
         }
-        public bool IsPlayerSlot => SlotCharacterType == CharacterType.Player;
-        public bool IsEnemySlot => SlotCharacterType == CharacterType.Enemy;
+        public bool IsPlayerControlledSlot => SlotControlType == ControlType.Player;
+        public bool IsAIControlledSlot => SlotControlType == ControlType.AI;
 
         public CombatantSlot(string instanceId, CombatTeam team, bool isLeader)
         {
@@ -213,6 +215,8 @@ public class CombatCharacterManager : MonoBehaviour
             teamBSlots.Add(slot);
         }
 
+        NotifyInitialLeaderState();
+
         if (teamASlots.Count > 0 && teamBSlots.Count > 0)
         {
             var leaderA = teamASlots[0].Character?.Name ?? "Unknown";
@@ -266,13 +270,13 @@ public class CombatCharacterManager : MonoBehaviour
     /// </summary>
     /// <param name="type">캐릭터 타입 (Player/Enemy)</param>
     /// <param name="controller">연결할 Controller</param>
-    public void ConnectController(CharacterType type, ICombatController controller)
+    public void ConnectController(ControlType type, ICombatController controller)
     {
-        if (type == CharacterType.Player)
+        if (type == ControlType.Player)
         {
             ConnectController(CombatTeam.TeamA, 0, controller);
         }
-        else if (type == CharacterType.Enemy)
+        else if (type == ControlType.AI)
         {
             ConnectController(CombatTeam.TeamB, 0, controller);
         }
@@ -291,6 +295,8 @@ public class CombatCharacterManager : MonoBehaviour
         }
 
         var slot = slots[slotIndex];
+        var previousController = slot.HasController ? slot.Controller : null;
+        var previousCharacter = slot.HasCharacter ? slot.Character : null;
         slot.BindController(controller);
 
         if (slot.Character is PlayerCharacter playerChar && controller is PlayerController playerController)
@@ -307,6 +313,17 @@ public class CombatCharacterManager : MonoBehaviour
         else if (slot.Character != null)
         {
             Debug.LogWarning($"[CombatCharacterManager] Controller 연결 - 타입 매칭이 필요합니다. Character: {slot.Character.GetType().Name}, Controller: {controller?.GetType().Name}");
+        }
+        
+        CombatantSlot previousSnapshot = null;
+        if (slot.IsLeader)
+        {
+            previousSnapshot = CreateSlotSnapshot(slot, previousCharacter, previousController);
+        }
+
+        if (slot.IsLeader && (previousController != slot.Controller || previousCharacter != slot.Character))
+        {
+            NotifyLeaderSlotChanged(team, previousSnapshot, slot);
         }
     }
 
@@ -408,6 +425,45 @@ public class CombatCharacterManager : MonoBehaviour
     public Character GetCombatantCharacter(CombatTeam team, int slotIndex)
     {
         return GetCombatantSlot(team, slotIndex)?.Character;
+    }
+
+    private CombatantSlot CreateSlotSnapshot(CombatantSlot sourceSlot, Character character, ICombatController controller)
+    {
+        if (sourceSlot == null)
+        {
+            return null;
+        }
+
+        var snapshot = new CombatantSlot(sourceSlot.InstanceId, sourceSlot.Team, sourceSlot.IsLeader);
+        if (character != null)
+        {
+            snapshot.BindCharacter(character);
+        }
+        if (controller != null)
+        {
+            snapshot.BindController(controller);
+        }
+        return snapshot;
+    }
+
+    private void NotifyLeaderSlotChanged(CombatTeam team, CombatantSlot previousSlot, CombatantSlot newSlot)
+    {
+        OnLeaderSlotChanged?.Invoke(team, previousSlot, newSlot);
+    }
+
+    private void NotifyInitialLeaderState()
+    {
+        var leaderA = GetLeaderSlot(CombatTeam.TeamA);
+        if (leaderA != null)
+        {
+            NotifyLeaderSlotChanged(CombatTeam.TeamA, null, leaderA);
+        }
+
+        var leaderB = GetLeaderSlot(CombatTeam.TeamB);
+        if (leaderB != null)
+        {
+            NotifyLeaderSlotChanged(CombatTeam.TeamB, null, leaderB);
+        }
     }
 
     private List<CombatantSlot> GetTeamSlots(CombatTeam team)

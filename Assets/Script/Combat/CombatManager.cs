@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Timers;
@@ -47,6 +48,10 @@ public class CombatManager : MonoBehaviour
     private AIController enemyController; // TeamB NonPlayer 컨트롤러 인스턴스
     private readonly List<GameObject> spawnedActors = new List<GameObject>();
     private readonly Dictionary<CombatCharacterManager.CombatantSlot, GameObject> spawnedActorMap = new Dictionary<CombatCharacterManager.CombatantSlot, GameObject>();
+    private BattleState battle;
+    private BattleExecutor battleExecutor;
+
+    private BattleState ActiveBattle => battle ?? throw new InvalidOperationException("[CombatManager] Battle is not initialized.");
     
     // UI에서 접근할 수 있도록 public 프로퍼티 추가
     public PlayerController PlayerController
@@ -80,15 +85,51 @@ public class CombatManager : MonoBehaviour
     
     private AttackerInputHandler attackerInputHandler; // 공격자 타이밍 입력 핸들러
     private DefenderInputHandler defenderInputHandler; // 방어자 타이밍 입력 핸들러
-    private CombatCharacterManager.CombatantSlot currentAttackerSlot;
-    private CombatCharacterManager.CombatantSlot currentDefenderSlot;
-    private CombatTurnContext currentTurnContext;
-    private ICombatController currentAttackerController;
-    private ICombatController currentDefenderController;
-    private bool? attackerPerfectInput = null;
-    private bool? defenderPerfectInput = null;
-    private float? attackerInputTime;
-    private float? defenderInputTime;
+    private CombatCharacterManager.CombatantSlot currentAttackerSlot
+    {
+        get => ActiveBattle.CurrentAttackerSlot;
+        set => ActiveBattle.CurrentAttackerSlot = value;
+    }
+    private CombatCharacterManager.CombatantSlot currentDefenderSlot
+    {
+        get => ActiveBattle.CurrentDefenderSlot;
+        set => ActiveBattle.CurrentDefenderSlot = value;
+    }
+    private CombatTurnContext currentTurnContext
+    {
+        get => ActiveBattle.CurrentTurnContext;
+        set => ActiveBattle.CurrentTurnContext = value;
+    }
+    private ICombatController currentAttackerController
+    {
+        get => ActiveBattle.CurrentAttackerController;
+        set => ActiveBattle.CurrentAttackerController = value;
+    }
+    private ICombatController currentDefenderController
+    {
+        get => ActiveBattle.CurrentDefenderController;
+        set => ActiveBattle.CurrentDefenderController = value;
+    }
+    private bool? attackerPerfectInput
+    {
+        get => ActiveBattle.AttackerPerfectInput;
+        set => ActiveBattle.AttackerPerfectInput = value;
+    }
+    private bool? defenderPerfectInput
+    {
+        get => ActiveBattle.DefenderPerfectInput;
+        set => ActiveBattle.DefenderPerfectInput = value;
+    }
+    private float? attackerInputTime
+    {
+        get => ActiveBattle.AttackerInputTime;
+        set => ActiveBattle.AttackerInputTime = value;
+    }
+    private float? defenderInputTime
+    {
+        get => ActiveBattle.DefenderInputTime;
+        set => ActiveBattle.DefenderInputTime = value;
+    }
     public bool IsPlayerAttacker => GetCurrentAttackerCharacter() is PlayerCharacter;
     public bool AttackerPerfectInput
     {
@@ -107,13 +148,13 @@ public class CombatManager : MonoBehaviour
 
     
     // 발사체 발사 상태 추적
-    private bool[] projectileLaunched; // 각 히트별 발사 상태
+    private bool[] projectileLaunched => ActiveBattle.ProjectileLaunched; // 각 히트별 발사 상태
     
     // 🆕 히트당 판정 한 번만 발생하도록 추적
-    private bool[] hitJudgmentCompleted; // 각 히트별 판정 완료 상태
+    private bool[] hitJudgmentCompleted => ActiveBattle.HitJudgmentCompleted; // 각 히트별 판정 완료 상태
     
     // 🆕 중복 판정 추적을 위한 카운터
-    private int[] hitJudgmentCount; // 각 히트별 판정 발생 횟수
+    private int[] hitJudgmentCount => ActiveBattle.HitJudgmentCount; // 각 히트별 판정 발생 횟수
     
     // ❌ 제거: 턴 종료 플래그들 (PerformTurn에서 직접 처리)
     // private bool turnEndRequested = false;
@@ -125,10 +166,18 @@ public class CombatManager : MonoBehaviour
     // private int totalProjectiles = 0;
 
     // 현재 턴 지속 시간 (전역 접근 가능)
-    public float CurrentTurnDuration { get; private set; } = 0f;
+    public float CurrentTurnDuration
+    {
+        get => ActiveBattle.CurrentTurnDuration;
+        private set => ActiveBattle.CurrentTurnDuration = value;
+    }
     
     // 현재 턴 번호 (BT에서 사용)
-    public int CurrentTurnNumber { get; private set; } = 1;
+    public int CurrentTurnNumber
+    {
+        get => ActiveBattle.CurrentTurnNumber;
+        private set => ActiveBattle.CurrentTurnNumber = value;
+    }
     
     // 공격 턴 여부 (BT에서 사용)
     public bool IsNPCAttackTurn => GetCurrentAttackerCharacter() is EnemyCharacter;
@@ -137,24 +186,64 @@ public class CombatManager : MonoBehaviour
     // CharacterManager를 통해 Character 인스턴스 접근
 
     // 현재 히트 컨텍스트 전역화
-    public int CurrentHit { get; private set; } // 현재 히트 인덱스. (연타 공격일 경우 체크용)
-    public bool CurrentAttackResultShown { get; private set; } = false; // 히트 결과가 표시되었는지 여부
-    public bool CurrentDefenseResultShown { get; private set; } = false; // 히트 결과가 표시되었는지 여부
-    private bool CurrentClashResultShown = false; // 현재 클래시 결과가 표시되었는지 여부
-    public bool windowPrompted { get; private set; } = false; // 히트 윈도우가 열렸는지 여부
+    public int CurrentHit
+    {
+        get => ActiveBattle.CurrentHit;
+        private set => ActiveBattle.CurrentHit = value;
+    } // 현재 히트 인덱스. (연타 공격일 경우 체크용)
+    public bool CurrentAttackResultShown
+    {
+        get => ActiveBattle.CurrentAttackResultShown;
+        private set => ActiveBattle.CurrentAttackResultShown = value;
+    } // 히트 결과가 표시되었는지 여부
+    public bool CurrentDefenseResultShown
+    {
+        get => ActiveBattle.CurrentDefenseResultShown;
+        private set => ActiveBattle.CurrentDefenseResultShown = value;
+    } // 히트 결과가 표시되었는지 여부
+    private bool CurrentClashResultShown
+    {
+        get => ActiveBattle.CurrentClashResultShown;
+        set => ActiveBattle.CurrentClashResultShown = value;
+    } // 현재 클래시 결과가 표시되었는지 여부
+    public bool windowPrompted
+    {
+        get => ActiveBattle.WindowPrompted;
+        private set => ActiveBattle.WindowPrompted = value;
+    } // 히트 윈도우가 열렸는지 여부
     
     // 중단 상태 추적
-    private bool isInterrupted = false; // 현재 턴에서 중단이 발생했는지 여부
+    private bool isInterrupted
+    {
+        get => ActiveBattle.IsInterrupted;
+        set => ActiveBattle.IsInterrupted = value;
+    } // 현재 턴에서 중단이 발생했는지 여부
     
     // 전투 종료 상태 추적
-    private bool isBattleEnded = false; // 전투가 종료되었는지 여부
-    private BattleResult battleResult; // 전투 결과
+    private bool isBattleEnded
+    {
+        get => ActiveBattle.IsBattleEnded;
+        set => ActiveBattle.IsBattleEnded = value;
+    } // 전투가 종료되었는지 여부
+    private BattleResult battleResult => ActiveBattle.BattleResult; // 전투 결과
     public event System.Action<BattleResult> OnBattleEnded; // 전투 종료 이벤트
     
     // FloatingText 생성 상태 추적 (입력 처리 결과와 분리)
-    private bool floatingTextShown = false; // 공격자 FloatingText 생성 여부
-    public ICombatController CurrentController { get; private set; } // player/enemy 컨트롤러의 인터페이스
-    public CharacterCommandResult CurrentResult { get; private set; } // 현재 커맨드 결과
+    private bool floatingTextShown
+    {
+        get => ActiveBattle.FloatingTextShown;
+        set => ActiveBattle.FloatingTextShown = value;
+    } // 공격자 FloatingText 생성 여부
+    public ICombatController CurrentController
+    {
+        get => ActiveBattle.CurrentController;
+        private set => ActiveBattle.CurrentController = value;
+    } // player/enemy 컨트롤러의 인터페이스
+    public CharacterCommandResult CurrentResult
+    {
+        get => ActiveBattle.CurrentResult;
+        private set => ActiveBattle.CurrentResult = value;
+    } // 현재 커맨드 결과
     public static float CombatStartTime { get; private set; } // 전투 시작 시간 (초 단위 f.)
     public CombatCharacterManager.CombatantSlot CurrentAttackerSlot => currentTurnContext?.AttackerSlot ?? currentAttackerSlot;
     public CombatCharacterManager.CombatantSlot CurrentDefenderSlot => currentTurnContext?.DefenderSlot ?? currentDefenderSlot;
@@ -199,8 +288,9 @@ public class CombatManager : MonoBehaviour
         }
         
         // 전투 결과 초기화
-        battleResult = new BattleResult();
-        battleResult.InitializeBattle();
+        battle = new BattleState(this);
+        battle.InitializeResult();
+        battleExecutor = new BattleExecutor(this);
         
         Debug.Log($"[CombatManager] 초기화 완료. 외부에서 StartBattle() 호출 대기 중...");
     }
@@ -236,6 +326,10 @@ public class CombatManager : MonoBehaviour
         SpawnTeamActors();
         EnsureInputHandlers();
         ConnectControllers();
+
+        battle = new BattleState(this);
+        battle.InitializeResult();
+        battleExecutor = new BattleExecutor(this);
 
         StartCoroutine(RunCombat());
     }
@@ -823,105 +917,37 @@ public class CombatManager : MonoBehaviour
 
     private IEnumerator RunCombat()
     {
-        /////////////////////// 점검용 디버그 로그 ///////////////////////
-        Debug.Log($"[RunCombat] CombatStartTime 세팅됨: {CombatStartTime}");
-        if (attackerInputHandler != null)
+        if (battleExecutor == null)
         {
-            Debug.Log($"[RunCombat] HandlerInstance: {attackerInputHandler.GetInstanceID()}");
-            Debug.Log($"[RunCombat] timingInputHandler InstanceID: {attackerInputHandler.GetInstanceID()}");
-        }
-        else
-        {
-            Debug.LogWarning("[RunCombat] attackerInputHandler가 null입니다 (NPC vs NPC 시나리오일 수 있습니다)");
-        }
-        ////////////////////////////////////////////////////////////////
-
-        // 🆕 전투 시작 시 CombatStartDelay 적용
-        yield return new WaitForSeconds(GlobalConfig.Instance.CombatStartDelay);
-        
-        // 🆕 BT 상태 리셋 (새 전투 시작 시)
-        ResetBehaviorTreeStates();
-        
-        // ❌ 제거: 턴 종료 대기 중 체크 (PerformTurn에서 직접 처리)
-        // if (isWaitingForTurnEnd)
-        // {
-        //     Debug.Log("[RunCombat] 턴 종료 대기 중 - 새로운 턴 시작 차단");
-        //     yield break;
-        // }
-        
-        // 전투 시작 시 팀 기반 액션 선택 UI 준비
-        var selectionManager = ActionCommandSelectionManager.Instance;
-        var teamAActionUI = selectionManager?.GetTeamActionUI(CombatCharacterManager.CombatTeam.TeamA);
-        if (teamAActionUI != null)
-        {
-            Debug.Log("[CombatManager] TeamA ActionSelectUI 초기화 요청");
-            teamAActionUI.RefreshButtons();
-        }
-        else
-        {
-            Debug.LogWarning("[CombatManager] TeamA ActionSelectUI를 찾을 수 없습니다!");
+            battleExecutor = new BattleExecutor(this);
         }
 
-        while (!isBattleEnded)
+        yield return battleExecutor.RunBattle();
+    }
+
+    private CombatTurnContext PrepareTeamTurn(CombatCharacterManager.CombatTeam team)
+    {
+        var context = BuildTurnContext(team);
+        if (context == null || !context.IsValid)
         {
-            if (isBattleEnded)
-            {
-                Debug.Log("[RunCombat] 전투가 종료되어 루프를 중단합니다.");
+            Debug.LogError($"[RunCombat] {team} 턴 컨텍스트 생성 실패로 전투를 종료합니다.");
+            isBattleEnded = true;
+            return null;
+        }
+
+        switch (team)
+        {
+            case CombatCharacterManager.CombatTeam.TeamA:
+                CombatStartTime = Time.time;
+                CurrentTurnNumber++;
+                Debug.Log($"[RunCombat] 턴 {CurrentTurnNumber} 시작 - TeamA 리더 턴 ({context.AttackerCharacter?.Name} vs {context.DefenderCharacter?.Name})");
                 break;
-            }
-
-            var teamAContext = BuildTurnContext(CombatCharacterManager.CombatTeam.TeamA);
-            if (teamAContext == null || !teamAContext.IsValid)
-            {
-                Debug.LogError("[RunCombat] TeamA 턴 컨텍스트 생성 실패로 전투를 종료합니다.");
-                yield break;
-            }
-
-            CombatStartTime = Time.time;
-            CurrentTurnNumber++;
-            Debug.Log($"[RunCombat] 턴 {CurrentTurnNumber} 시작 - TeamA 리더 턴 ({teamAContext.AttackerCharacter?.Name} vs {teamAContext.DefenderCharacter?.Name})");
-            yield return StartCoroutine(PerformTurn(teamAContext));
-
-            if (isBattleEnded)
-            {
-                Debug.Log("[RunCombat] TeamA 턴 후 전투 종료 감지");
+            case CombatCharacterManager.CombatTeam.TeamB:
+                Debug.Log($"[RunCombat] 턴 {CurrentTurnNumber} 계속 - TeamB 리더 턴 ({context.AttackerCharacter?.Name} vs {context.DefenderCharacter?.Name})");
                 break;
-            }
-
-            var teamBContext = BuildTurnContext(CombatCharacterManager.CombatTeam.TeamB);
-            if (teamBContext == null || !teamBContext.IsValid)
-            {
-                Debug.LogError("[RunCombat] TeamB 턴 컨텍스트 생성 실패로 전투를 종료합니다.");
-                yield break;
-            }
-
-            Debug.Log($"[RunCombat] 턴 {CurrentTurnNumber} 계속 - TeamB 리더 턴 ({teamBContext.AttackerCharacter?.Name} vs {teamBContext.DefenderCharacter?.Name})");
-            yield return StartCoroutine(PerformTurn(teamBContext));
-
-            ResetNPCProbabilities();
-            
-            // 적 턴 종료 후 선택 캐시 초기화 (PerformTurn 시작 시에도 리셋하므로 이중 안전장치)
-            // if (enemyController != null)
-            // {
-            //     enemyController.ResetSelectionCache();
-            // }
-            
-            // 적 턴 후 전투 종료 체크
-            if (isBattleEnded)
-            {
-                Debug.Log("[RunCombat] 적 턴 후 전투 종료 감지");
-                break;
-            }
-            
-            // 🆕 디버그: 턴 완료 확인
-            Debug.Log($"[RunCombat] ========== 턴 {CurrentTurnNumber} 완료 - 다음 턴으로 ==========");
-            var characterManager = CombatCharacterManager.Instance;
-            int? teamALeaderHp = characterManager?.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamA)?.Character?.HP;
-            int? teamBLeaderHp = characterManager?.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamB)?.Character?.HP;
-            Debug.Log($"[RunCombat] TeamA Leader HP: {(teamALeaderHp.HasValue ? teamALeaderHp.Value.ToString() : "N/A")}, TeamB Leader HP: {(teamBLeaderHp.HasValue ? teamBLeaderHp.Value.ToString() : "N/A")}");
-            Debug.Log($"[RunCombat] isBattleEnded: {isBattleEnded}");
         }
-        Debug.Log("전투 종료!");
+
+        return context;
     }
     
     /// <summary>
@@ -1054,7 +1080,7 @@ public class CombatManager : MonoBehaviour
             yield break;
         }
 
-        bool attackerIsPlayer = actor is PlayerCharacter;
+        bool attackerIsPlayer = actorSlot != null ? actorSlot.IsPlayerControlledSlot : actor is PlayerCharacter;
         
         // 🆕 BT 평가 (공격자 + 방어자 모두!)
         // 왜 필요한가?
@@ -1199,26 +1225,11 @@ public class CombatManager : MonoBehaviour
         // ❌ 제거: 발사체 기반 시스템에서는 방어자가 공격자 커맨드 데이터를 로드할 필요 없음
         // defenderInputHandler.LoadFromOpponentCommand(command);
         
-        // 🆕 발사체 발사 상태 배열 초기화
-        projectileLaunched = new bool[command.hitCount];
-        for (int i = 0; i < projectileLaunched.Length; i++)
-        {
-            projectileLaunched[i] = false;
-        }
-        
-        // 🆕 히트 판정 완료 상태 배열 초기화
-        hitJudgmentCompleted = new bool[command.hitCount];
-        for (int i = 0; i < hitJudgmentCompleted.Length; i++)
-        {
-            hitJudgmentCompleted[i] = false;
-        }
-        
-        // 🆕 히트 판정 횟수 배열 초기화
-        hitJudgmentCount = new int[command.hitCount];
-        for (int i = 0; i < hitJudgmentCount.Length; i++)
-        {
-            hitJudgmentCount[i] = 0;
-        }
+        // 🆕 발사체/판정 상태 배열 초기화
+        ActiveBattle.EnsureHitArrays(command.hitCount);
+        Array.Clear(ActiveBattle.ProjectileLaunched, 0, ActiveBattle.ProjectileLaunched.Length);
+        Array.Clear(ActiveBattle.HitJudgmentCompleted, 0, ActiveBattle.HitJudgmentCompleted.Length);
+        Array.Clear(ActiveBattle.HitJudgmentCount, 0, ActiveBattle.HitJudgmentCount.Length);
 
 
         bool hasLoggedBlockedReason = false; // 히트 전환 디버깅용, PerformTurn 지역 변수로 선언
@@ -1279,8 +1290,8 @@ public class CombatManager : MonoBehaviour
                 float perfectWindowEnd = perfectWindow.start + perfectWindow.duration;
                 float inputAvailableEnd = GetInputDeadline();
                 float aiInputTime = perfectWindowStart; // AI 방어 시도 시간 (즉시)
-                bool aiAttackSuccess = Random.value < globalConfig.NpcAttackPerfectRate; // AI 공격 성공 여부
-                bool aiDefenseSuccess = Random.value < GlobalConfig.Instance.NpcParryPerfectRate; // AI 방어 성공 여부
+                bool aiAttackSuccess = UnityEngine.Random.value < globalConfig.NpcAttackPerfectRate; // AI 공격 성공 여부
+                bool aiDefenseSuccess = UnityEngine.Random.value < GlobalConfig.Instance.NpcParryPerfectRate; // AI 방어 성공 여부
                 
 
                 Debug.Log($"[UI표시:지금이닷!] 히트 {CurrentHit + 1}, elapsed={elapsed:F5}, 타이밍창=({perfectWindow.start:F5} ~ {perfectWindow.End:F5})");
@@ -2652,8 +2663,9 @@ public class CombatManager : MonoBehaviour
         CombatDebugDisplay.Instance?.ShowInputPrompt("전투 다시 시작!");
         
         // 5. 전투 결과 초기화
-        battleResult = new BattleResult();
-        battleResult.InitializeBattle();
+        battle = new BattleState(this);
+        battle.InitializeResult();
+        battleExecutor = new BattleExecutor(this);
         
         // 6. 전투 재시작
         StopAllCoroutines();
@@ -2754,6 +2766,214 @@ public class CombatManager : MonoBehaviour
         else
         {
             Debug.LogError("[CombatManager] SceneFlowController를 찾을 수 없습니다!");
+        }
+    }
+
+    private class BattleState
+    {
+        public CombatManager Owner { get; }
+
+        public CombatTurnContext CurrentTurnContext { get; set; }
+        public CombatCharacterManager.CombatantSlot CurrentAttackerSlot { get; set; }
+        public CombatCharacterManager.CombatantSlot CurrentDefenderSlot { get; set; }
+        public ICombatController CurrentAttackerController { get; set; }
+        public ICombatController CurrentDefenderController { get; set; }
+
+        public bool? AttackerPerfectInput { get; set; }
+        public bool? DefenderPerfectInput { get; set; }
+        public float? AttackerInputTime { get; set; }
+        public float? DefenderInputTime { get; set; }
+
+        public float CurrentTurnDuration { get; set; }
+        public int CurrentTurnNumber { get; set; } = 1;
+        public int CurrentHit { get; set; }
+
+        public bool CurrentAttackResultShown { get; set; }
+        public bool CurrentDefenseResultShown { get; set; }
+        public bool CurrentClashResultShown { get; set; }
+        public bool WindowPrompted { get; set; }
+        public bool FloatingTextShown { get; set; }
+
+        public bool IsInterrupted { get; set; }
+        public bool IsBattleEnded { get; set; }
+
+        public BattleResult BattleResult { get; }
+
+        public bool[] ProjectileLaunched { get; private set; }
+        public bool[] HitJudgmentCompleted { get; private set; }
+        public int[] HitJudgmentCount { get; private set; }
+
+        public ICombatController CurrentController { get; set; }
+        public CharacterCommandResult CurrentResult { get; set; }
+
+        public BattleState(CombatManager owner)
+        {
+            Owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            BattleResult = new BattleResult();
+        }
+
+        public void InitializeResult()
+        {
+            BattleResult.InitializeBattle();
+        }
+
+        public void ResetTurnState()
+        {
+            AttackerPerfectInput = null;
+            DefenderPerfectInput = null;
+            AttackerInputTime = null;
+            DefenderInputTime = null;
+            CurrentAttackResultShown = false;
+            CurrentDefenseResultShown = false;
+            CurrentClashResultShown = false;
+            WindowPrompted = false;
+            FloatingTextShown = false;
+        }
+
+        public void EnsureHitArrays(int hitCount)
+        {
+            if (hitCount <= 0)
+            {
+                ProjectileLaunched = Array.Empty<bool>();
+                HitJudgmentCompleted = Array.Empty<bool>();
+                HitJudgmentCount = Array.Empty<int>();
+                return;
+            }
+
+            if (ProjectileLaunched == null || ProjectileLaunched.Length != hitCount)
+            {
+                ProjectileLaunched = new bool[hitCount];
+            }
+
+            if (HitJudgmentCompleted == null || HitJudgmentCompleted.Length != hitCount)
+            {
+                HitJudgmentCompleted = new bool[hitCount];
+            }
+
+            if (HitJudgmentCount == null || HitJudgmentCount.Length != hitCount)
+            {
+                HitJudgmentCount = new int[hitCount];
+            }
+            else
+            {
+                Array.Clear(HitJudgmentCount, 0, HitJudgmentCount.Length);
+            }
+
+            Array.Clear(ProjectileLaunched, 0, ProjectileLaunched.Length);
+            Array.Clear(HitJudgmentCompleted, 0, HitJudgmentCompleted.Length);
+        }
+    }
+
+    private class BattleExecutor
+    {
+        private readonly CombatManager manager;
+
+        public BattleExecutor(CombatManager manager)
+        {
+            this.manager = manager ?? throw new ArgumentNullException(nameof(manager));
+        }
+
+        public IEnumerator RunBattle()
+        {
+            Debug.Log($"[RunCombat] CombatStartTime 세팅됨: {CombatStartTime}");
+            if (manager.attackerInputHandler != null)
+            {
+                Debug.Log($"[RunCombat] HandlerInstance: {manager.attackerInputHandler.GetInstanceID()}");
+                Debug.Log($"[RunCombat] timingInputHandler InstanceID: {manager.attackerInputHandler.GetInstanceID()}");
+            }
+            else
+            {
+                Debug.LogWarning("[RunCombat] attackerInputHandler가 null입니다 (NPC vs NPC 시나리오일 수 있습니다)");
+            }
+
+            yield return new WaitForSeconds(GlobalConfig.Instance.CombatStartDelay);
+
+            manager.ResetBehaviorTreeStates();
+
+            var selectionManager = ActionCommandSelectionManager.Instance;
+            var teamAActionUI = selectionManager?.GetTeamActionUI(CombatCharacterManager.CombatTeam.TeamA);
+            if (teamAActionUI != null)
+            {
+                Debug.Log("[CombatManager] TeamA ActionSelectUI 초기화 요청");
+                teamAActionUI.RefreshButtons();
+            }
+            else
+            {
+                Debug.LogWarning("[CombatManager] TeamA ActionSelectUI를 찾을 수 없습니다!");
+            }
+
+            while (!manager.isBattleEnded)
+            {
+                if (manager.isBattleEnded)
+                {
+                    Debug.Log("[RunCombat] 전투가 종료되어 루프를 중단합니다.");
+                    break;
+                }
+
+                var teamAContext = PrepareTeamTurn(CombatCharacterManager.CombatTeam.TeamA);
+                if (teamAContext == null)
+                {
+                    yield break;
+                }
+
+                yield return manager.PerformTurn(teamAContext);
+
+                if (manager.isBattleEnded)
+                {
+                    Debug.Log("[RunCombat] TeamA 턴 후 전투 종료 감지");
+                    break;
+                }
+
+                var teamBContext = PrepareTeamTurn(CombatCharacterManager.CombatTeam.TeamB);
+                if (teamBContext == null)
+                {
+                    yield break;
+                }
+
+                yield return manager.PerformTurn(teamBContext);
+
+                manager.ResetNPCProbabilities();
+
+                if (manager.isBattleEnded)
+                {
+                    Debug.Log("[RunCombat] 적 턴 후 전투 종료 감지");
+                    break;
+                }
+
+                Debug.Log($"[RunCombat] ========== 턴 {manager.CurrentTurnNumber} 완료 - 다음 턴으로 ==========");
+                var characterManager = CombatCharacterManager.Instance;
+                int? teamALeaderHp = characterManager?.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamA)?.Character?.HP;
+                int? teamBLeaderHp = characterManager?.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamB)?.Character?.HP;
+                Debug.Log($"[RunCombat] TeamA Leader HP: {(teamALeaderHp.HasValue ? teamALeaderHp.Value.ToString() : "N/A")}, TeamB Leader HP: {(teamBLeaderHp.HasValue ? teamBLeaderHp.Value.ToString() : "N/A")}");
+                Debug.Log($"[RunCombat] isBattleEnded: {manager.isBattleEnded}");
+            }
+
+            Debug.Log("전투 종료!");
+        }
+
+        private CombatTurnContext PrepareTeamTurn(CombatCharacterManager.CombatTeam team)
+        {
+            var context = manager.BuildTurnContext(team);
+            if (context == null || !context.IsValid)
+            {
+                Debug.LogError($"[RunCombat] {team} 턴 컨텍스트 생성 실패로 전투를 종료합니다.");
+                manager.isBattleEnded = true;
+                return null;
+            }
+
+            switch (team)
+            {
+                case CombatCharacterManager.CombatTeam.TeamA:
+                    CombatStartTime = Time.time;
+                    manager.CurrentTurnNumber++;
+                    Debug.Log($"[RunCombat] 턴 {manager.CurrentTurnNumber} 시작 - TeamA 리더 턴 ({context.AttackerCharacter?.Name} vs {context.DefenderCharacter?.Name})");
+                    break;
+                case CombatCharacterManager.CombatTeam.TeamB:
+                    Debug.Log($"[RunCombat] 턴 {manager.CurrentTurnNumber} 계속 - TeamB 리더 턴 ({context.AttackerCharacter?.Name} vs {context.DefenderCharacter?.Name})");
+                    break;
+            }
+
+            return context;
         }
     }
 }

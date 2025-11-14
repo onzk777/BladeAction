@@ -89,7 +89,7 @@ GameObject:
   - component: {fileID: 401575450409852770}
   - component: {fileID: 7778913498428364298}
   m_Layer: 5
-  m_Name: Enemy
+  m_Name: TeamB
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -164,7 +164,7 @@ GameObject:
   - component: {fileID: 747246928659841653}
   - component: {fileID: 6752466959085256798}
   m_Layer: 5
-  m_Name: Player
+  m_Name: TeamA
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -732,8 +732,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cf685683f5b4b484f8d80cc38db03a27, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerHPBar: {fileID: 1712096009939494048}
-  enemyHPBar: {fileID: 3079109478617764088}
+  teamAHPBar: {fileID: 1712096009939494048}
+  teamBHPBar: {fileID: 3079109478617764088}
   animationSpeed: 2
   debugMode: 0
 --- !u!1 &7969505626627170494
