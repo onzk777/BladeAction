@@ -12,6 +12,10 @@ public class Projectile : MonoBehaviour
     private ActionCommandData sourceCommand;
     // ❌ 제거: private int hitIndex; (public hitIndex와 중복)
     private bool isFromPlayer;
+    private CombatCharacterManager.CombatantSlot ownerSlot;
+    private ICombatController ownerController;
+    private GameObject ownerActorObject;
+    private Transform ownerRootTransform;
     
     [Header("물리 설정")]
     public float baseSpeed = 10f;
@@ -25,7 +29,7 @@ public class Projectile : MonoBehaviour
     // public Collider2D projectileCollider;
     
     // 상태 관리
-    private bool isLaunched = false;
+    public bool isLaunched = false;
     private bool isCompleted = false;
     private float currentLifetime = 0f;
     private float currentSpeed; // 현재 속도
@@ -108,14 +112,49 @@ public class Projectile : MonoBehaviour
             Debug.LogWarning($"[Projectile] CharacterHitSystem을 찾을 수 없습니다. projectile:{name}");
         }
     }
-    
-    public void Launch(Vector3 direction, float speed)
+
+    public void SetOwner(CombatCharacterManager.CombatantSlot slot, ICombatController controller, GameObject actorObject)
     {
-        this.direction = direction.normalized;
-        this.baseSpeed = speed;
-        isLaunched = true;
-        
-        // 발사체 발사 (디버깅 로그 제거)
+        ownerSlot = slot;
+        ownerController = controller;
+        ownerActorObject = actorObject;
+
+        if (ownerActorObject != null)
+        {
+            ownerRootTransform = ownerActorObject.transform;
+        }
+        else if (ownerController is Component component)
+        {
+            ownerRootTransform = component.transform;
+        }
+        else
+        {
+            ownerRootTransform = null;
+        }
+    }
+
+    private bool IsOwnerTransform(Transform target)
+    {
+        if (target == null)
+        {
+            return false;
+        }
+
+        if (ownerRootTransform != null && (target == ownerRootTransform || target.IsChildOf(ownerRootTransform)))
+        {
+            return true;
+        }
+
+        if (ownerController != null)
+        {
+            var controllerInParent = target.GetComponentInParent<ICombatController>();
+            if (controllerInParent == ownerController)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
     
     private void OnTriggerEnter2D(Collider2D other)
@@ -127,14 +166,9 @@ public class Projectile : MonoBehaviour
         Transform current = other.transform;
         while (current != null)
         {
-            if (isFromPlayer && current.GetComponent<PlayerController>() != null)
+            if (IsOwnerTransform(current))
             {
-                Debug.Log($"[Projectile] 플레이어 발사체가 플레이어 계층과 충돌 - 무시");
-                return;
-            }
-            if (!isFromPlayer && current.GetComponent<AIController>() != null)
-            {
-                Debug.Log($"[Projectile] 적 발사체가 적 계층과 충돌 - 무시");
+                Debug.Log("[Projectile] 발사체가 소유자 계층과 충돌 - 무시");
                 return;
             }
             current = current.parent;
@@ -210,6 +244,10 @@ public class Projectile : MonoBehaviour
         ownerHitSystem?.UnregisterProjectile(this);
         ownerHitSystem = null;
         ownerCombatManager = null;
+        ownerSlot = null;
+        ownerController = null;
+        ownerActorObject = null;
+        ownerRootTransform = null;
     }
     
     // 디버깅 메서드들 제거됨

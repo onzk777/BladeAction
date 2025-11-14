@@ -60,7 +60,7 @@ public class CombatCharacterManager : MonoBehaviour
         public CombatTeam Team { get; }
         public bool HasController => Controller != null;
         public bool HasCharacter => Character != null;
-        public CharacterType? CharacterType
+        public CharacterType? SlotCharacterType
         {
             get
             {
@@ -69,8 +69,8 @@ public class CombatCharacterManager : MonoBehaviour
                 return null;
             }
         }
-        public bool IsPlayerSlot => CharacterType == CharacterType.Player;
-        public bool IsEnemySlot => CharacterType == CharacterType.Enemy;
+        public bool IsPlayerSlot => SlotCharacterType == CharacterType.Player;
+        public bool IsEnemySlot => SlotCharacterType == CharacterType.Enemy;
 
         public CombatantSlot(string instanceId, CombatTeam team, bool isLeader)
         {

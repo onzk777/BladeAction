@@ -182,15 +182,12 @@ public class DefenderInputHandler : BaseInputHandler
         base.Awake(); // 부모 클래스의 Awake() 호출
         
         // 🆕 같은 오브젝트에서 CharacterHitSystem 자동 참조
-        characterHitSystem = GetComponent<CharacterHitSystem>();
-        if (characterHitSystem == null)
+        var existingHitSystem = GetComponent<CharacterHitSystem>();
+        if (existingHitSystem == null)
         {
-            Debug.LogError($"[DefenderInputHandler] {gameObject.name}에 CharacterHitSystem 컴포넌트가 없습니다!");
-            return;
+            Debug.LogWarning($"[DefenderInputHandler] {gameObject.name}에 CharacterHitSystem 컴포넌트가 없습니다. 후속 설정을 기다립니다.");
         }
-        
-        Debug.Log($"[DefenderInputHandler] CharacterHitSystem 자동 참조 성공: {characterHitSystem.name}");
-        SubscribeToHitSystemEvents();
+        SetCharacterHitSystem(existingHitSystem);
         
         // 🆕 AI 의사결정 시스템 초기화
         InitializeAIDecisionSystem();
@@ -198,7 +195,7 @@ public class DefenderInputHandler : BaseInputHandler
     
     private void OnDestroy()
     {
-        UnsubscribeFromHitSystemEvents();
+        SetCharacterHitSystem(null);
     }
     
     private void SubscribeToHitSystemEvents()
@@ -216,6 +213,23 @@ public class DefenderInputHandler : BaseInputHandler
         {
             characterHitSystem.OnProjectileEnterPerfectZone -= OnProjectileEnterPerfectZone;
             characterHitSystem.OnProjectileEnterHitZone -= OnProjectileEnterHitZone;
+        }
+    }
+    
+    public void SetCharacterHitSystem(CharacterHitSystem newHitSystem)
+    {
+        if (characterHitSystem == newHitSystem)
+        {
+            return;
+        }
+
+        UnsubscribeFromHitSystemEvents();
+        characterHitSystem = newHitSystem;
+
+        if (characterHitSystem != null)
+        {
+            SubscribeToHitSystemEvents();
+            Debug.Log($"[DefenderInputHandler] CharacterHitSystem 설정 완료: {characterHitSystem.name}");
         }
     }
     
@@ -694,32 +708,15 @@ public class DefenderInputHandler : BaseInputHandler
             return;
         }
         
-            if (IsPlayer)
-            {
-                var playerController = CombatManager.Instance.GetPlayerController();
-            if (playerController != null)
-            {
-                playerController.OnPlayDefence();
-                Debug.Log("[DefenderInputHandler] 플레이어 막기 애니메이션 재생");
-            }
-            else
-            {
-                Debug.LogError("[DefenderInputHandler] PlayerController가 null입니다!");
-            }
-            }
-            else
-            {
-                var aiController = CombatManager.Instance.GetNonPlayerController();
-            if (aiController != null)
-            {
-                aiController.OnPlayDefence();
-                Debug.Log("[DefenderInputHandler] AI 막기 애니메이션 재생");
-            }
-            else
-            {
-                Debug.LogError("[DefenderInputHandler] AIController가 null입니다!");
-            }
+        var controller = boundSlot?.Controller ?? CombatManager.Instance.CurrentDefenderSlot?.Controller;
+        if (controller == null)
+        {
+            Debug.LogError("[DefenderInputHandler] 방어자 컨트롤러를 찾을 수 없습니다!");
+            return;
         }
+
+        controller.OnPlayDefence();
+        Debug.Log($"[DefenderInputHandler] 막기 애니메이션 재생 - controller:{controller}");
     }
     
     /// <summary>
@@ -742,33 +739,15 @@ public class DefenderInputHandler : BaseInputHandler
             return;
         }
         
-            if (IsPlayer)
-            {
-                var playerController = CombatManager.Instance.GetPlayerController();
-            if (playerController != null)
-            {
-                playerController.OnStopDefence();
-                Debug.Log("[DefenderInputHandler] 플레이어 막기 애니메이션 중단");
-            }
-            else
-            {
-                Debug.LogError("[DefenderInputHandler] PlayerController가 null입니다!");
-            }
-            }
-            else
-            {
-                var aiController = CombatManager.Instance.GetNonPlayerController();
-            if (aiController != null)
-            {
-                Debug.Log("[DefenderInputHandler] 🆕 AIController.OnStopDefence() 호출 시작");
-                aiController.OnStopDefence();
-                Debug.Log("[DefenderInputHandler] 🆕 AIController.OnStopDefence() 호출 완료");
-            }
-            else
-            {
-                Debug.LogError("[DefenderInputHandler] AIController가 null입니다!");
-            }
+        var controller = boundSlot?.Controller ?? CombatManager.Instance.CurrentDefenderSlot?.Controller;
+        if (controller == null)
+        {
+            Debug.LogError("[DefenderInputHandler] 방어자 컨트롤러를 찾을 수 없습니다!");
+            return;
         }
+
+        controller.OnStopDefence();
+        Debug.Log($"[DefenderInputHandler] 막기 애니메이션 중단 - controller:{controller}");
     }
     
     /// <summary>
@@ -854,31 +833,20 @@ public class DefenderInputHandler : BaseInputHandler
             return new AIContext();
         }
         
-        // 🆕 현재 턴 경과 시간 계산
-        float turnElapsedTime = combatManager.CurrentTurnDuration;
-        
-        // 🆕 현재 자세 포인트 가져오기
-        float posturePoints = 100f; // 기본값
-        if (combatManager.CurrentController?.Character != null)
-        {
-            posturePoints = combatManager.CurrentController.Character.CurrentPoise;
-        }
-        
-        // 🆕 중단 상태 확인
-        bool isInterrupted = combatManager.CurrentController?.Character?.IsInterrupted ?? false;
-        
-        // 🆕 총 히트 수 가져오기
+        float turnElapsedTime = TurnTimer.ElapsedTime;
+        var attackerSlot = combatManager.CurrentAttackerSlot;
+        var defenderSlot = combatManager.CurrentDefenderSlot ?? boundSlot;
+
+        Character defenderCharacter = defenderSlot?.Character;
+        float posturePoints = defenderCharacter?.CurrentPoise ?? 100f;
+        bool isInterrupted = defenderCharacter?.IsInterrupted ?? false;
         int totalHitCount = combatManager.CurrentResult?.HitCount ?? 1;
-        
-        // 방어자 Character 가져오기 (BT 확률 참조용)
-        Character defenderCharacter = combatManager.IsPlayerAttacker 
-            ? CombatCharacterManager.Instance?.CurrentEnemy 
-            : CombatCharacterManager.Instance?.PlayerCharacter;
-        
+        bool attackerIsPlayer = attackerSlot?.Character is PlayerCharacter;
+
         return new AIContext(
             projectile.hitIndex,
             turnElapsedTime,
-            combatManager.IsPlayerAttacker,
+            attackerIsPlayer,
             totalHitCount,
             posturePoints,
             isInterrupted,
@@ -955,27 +923,20 @@ public class DefenderInputHandler : BaseInputHandler
             return new AIContext(0, 0f, false, 1, 100f, false, false);
         }
         
-        // 🆕 턴 경과 시간 계산
         float turnElapsedTime = TurnTimer.ElapsedTime;
-        
-        // 🆕 자세 포인트 가져오기
-        float posturePoints = combatManager.CurrentController?.Character?.CurrentPoise ?? 100f;
-        
-        // 🆕 중단 상태 확인
-        bool isInterrupted = combatManager.CurrentController?.Character?.IsInterrupted ?? false;
-        
-        // 🆕 총 히트 수 가져오기
+        var attackerSlot = combatManager.CurrentAttackerSlot;
+        var defenderSlot = combatManager.CurrentDefenderSlot ?? boundSlot;
+
+        Character defenderCharacter = defenderSlot?.Character;
+        float posturePoints = defenderCharacter?.CurrentPoise ?? 100f;
+        bool isInterrupted = defenderCharacter?.IsInterrupted ?? false;
         int totalHitCount = combatManager.CurrentResult?.HitCount ?? 1;
-        
-        // 방어자 Character 가져오기 (BT 확률 참조용)
-        Character defenderCharacter = combatManager.IsPlayerAttacker 
-            ? CombatCharacterManager.Instance?.CurrentEnemy 
-            : CombatCharacterManager.Instance?.PlayerCharacter;
-        
+        bool attackerIsPlayer = attackerSlot?.Character is PlayerCharacter;
+
         return new AIContext(
             0, // 막기 의사결정 시에는 hitIndex 0 사용
             turnElapsedTime,
-            combatManager.IsPlayerAttacker,
+            attackerIsPlayer,
             totalHitCount,
             posturePoints,
             isInterrupted,
@@ -1059,52 +1020,38 @@ public class DefenderInputHandler : BaseInputHandler
     /// </summary>
     private bool ValidateAnimatorOwnership()
     {
-        if (CombatManager.Instance == null)
+        var combatManager = CombatManager.Instance;
+        if (combatManager == null)
         {
             Debug.LogError("[DefenderInputHandler] CombatManager.Instance가 null입니다!");
             return false;
         }
-        
-        // 🆕 현재 DefenderInputHandler가 올바른 캐릭터의 Animator를 제어하는지 검증
-        if (IsPlayer)
+
+        if (boundSlot == null)
         {
-            // 플레이어 DefenderInputHandler는 플레이어의 Animator만 제어해야 함
-            var playerController = CombatManager.Instance.GetPlayerController();
-            if (playerController == null)
-            {
-                Debug.LogError("[DefenderInputHandler] PlayerController가 null입니다!");
-                return false;
-            }
-            
-            // 🆕 현재 턴이 플레이어 공격 턴인지 확인 (플레이어가 방어자여야 함)
-            if (CombatManager.Instance.IsPlayerAttacker)
-            {
-                Debug.LogError("[DefenderInputHandler] 플레이어가 공격자 턴인데 플레이어 DefenderInputHandler가 실행됨!");
-                return false;
-            }
-            
-            Debug.Log("[DefenderInputHandler] ✅ 플레이어 Animator 소유권 검증 성공");
-            return true;
+            Debug.LogError("[DefenderInputHandler] boundSlot이 설정되지 않았습니다!");
+            return false;
         }
-        else
+
+        var defenderSlot = combatManager.CurrentDefenderSlot;
+        if (defenderSlot == null)
         {
-            // 적 DefenderInputHandler는 적의 Animator만 제어해야 함
-            var aiController = CombatManager.Instance.GetNonPlayerController();
-            if (aiController == null)
-            {
-                Debug.LogError("[DefenderInputHandler] AIController가 null입니다!");
-                return false;
-            }
-            
-            // 🆕 현재 턴이 적 공격 턴인지 확인 (적이 방어자여야 함)
-            if (!CombatManager.Instance.IsPlayerAttacker)
-            {
-                Debug.LogError("[DefenderInputHandler] 적이 공격자 턴인데 적 DefenderInputHandler가 실행됨!");
-                return false;
-            }
-            
-            Debug.Log("[DefenderInputHandler] ✅ 적 Animator 소유권 검증 성공");
-            return true;
+            Debug.LogError("[DefenderInputHandler] 현재 방어자 슬롯을 찾을 수 없습니다!");
+            return false;
         }
+
+        if (defenderSlot != boundSlot)
+        {
+            Debug.LogWarning($"[DefenderInputHandler] 현재 방어자 슬롯과 Bind된 슬롯이 다릅니다. (bound:{boundSlot}, current:{defenderSlot})");
+            return false;
+        }
+
+        if (defenderSlot.Controller == null)
+        {
+            Debug.LogError("[DefenderInputHandler] 방어자 컨트롤러가 연결되지 않았습니다!");
+            return false;
+        }
+
+        return true;
     }
 }

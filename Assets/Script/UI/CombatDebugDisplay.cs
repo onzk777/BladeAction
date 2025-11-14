@@ -163,9 +163,18 @@ public class CombatDebugDisplay : MonoBehaviour
     /// </summary>
     public void UpdatePlayerStatus()
     {
-        if (CombatCharacterManager.Instance?.PlayerCharacter == null) return;
+        var manager = CombatCharacterManager.Instance;
+        if (manager == null)
+        {
+            return;
+        }
 
-        var combatant = CombatCharacterManager.Instance.PlayerCharacter;
+        var slot = manager.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamA);
+        var combatant = slot?.Character ?? manager.PlayerCharacter;
+        if (combatant == null)
+        {
+            return;
+        }
         
         // 이름 업데이트
         if (playerName != null) playerName.text = combatant.Name;
@@ -193,9 +202,18 @@ public class CombatDebugDisplay : MonoBehaviour
     /// </summary>
     public void UpdateEnemyStatus()
     {
-        if (CombatCharacterManager.Instance?.CurrentEnemy == null) return;
+        var manager = CombatCharacterManager.Instance;
+        if (manager == null)
+        {
+            return;
+        }
 
-        var combatant = CombatCharacterManager.Instance.CurrentEnemy;
+        var slot = manager.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamB);
+        var combatant = slot?.Character ?? manager.CurrentEnemy;
+        if (combatant == null)
+        {
+            return;
+        }
         
         // 이름 업데이트
         if (enemyName != null) enemyName.text = combatant.Name;

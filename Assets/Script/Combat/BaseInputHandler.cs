@@ -220,8 +220,19 @@ public abstract class BaseInputHandler : MonoBehaviour
         
         Debug.LogWarning($"[InputTrace][OnTiming] handler:{GetType().Name} phase:{ctx.phase} isListening:{isListening} device:{ctx.control?.device?.name} time:{Time.time:F4} frame:{Time.frameCount}");
 
-        CombatManager manager = FindAnyObjectByType<CombatManager>();
-        bool isPlayerAttacker = manager.IsPlayerAttacker;
+        var combatManager = CombatManager.Instance;
+        if (combatManager == null)
+        {
+            Debug.LogError("[InputTrace][OnTiming] CombatManager.Instance가 null입니다.");
+            return;
+        }
+
+        if (boundSlot != null && combatManager.CurrentAttackerSlot != null && combatManager.CurrentAttackerSlot != boundSlot)
+        {
+            Debug.Log($"[InputTrace][OnTiming] handler:{GetType().Name} 입력 무시 - 활성 공격자 슬롯이 아님 (bound:{boundSlot}, current:{combatManager.CurrentAttackerSlot})");
+            return;
+        }
+
         if (ShouldIgnoreInput()) return; // 입력 무시 여부 확인
         Debug.Log("[OnTimingInput] ShouldIgnoreInput 통과함. 판정 루틴 진입 중.");
         lastInputTime = TurnTimer.ElapsedTime;
@@ -244,6 +255,13 @@ public abstract class BaseInputHandler : MonoBehaviour
     {
         lastInputTime = inputTime;
         aiInputIsPerfect = isPerfect; // AI 입력의 완벽 입력 여부를 저장
+
+        var combatManager = CombatManager.Instance;
+        if (combatManager != null && boundSlot != null && combatManager.CurrentAttackerSlot != null && combatManager.CurrentAttackerSlot != boundSlot)
+        {
+            Debug.Log($"[InputTrace][AIInput] handler:{GetType().Name} 입력 무시 - 활성 공격자 슬롯이 아님 (bound:{boundSlot}, current:{combatManager.CurrentAttackerSlot})");
+            return;
+        }
 
         if (CombatManager.Instance.windowPrompted)
         {

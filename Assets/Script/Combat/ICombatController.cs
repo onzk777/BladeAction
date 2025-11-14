@@ -41,4 +41,7 @@
     
     /// <summary>방어 시 호출 - 방어 애니메이션 재생</summary>
     void OnPlayDefence();
+
+    /// <summary>방어 종료 시 호출 - 방어 애니메이션 종료</summary>
+    void OnStopDefence();
 }
