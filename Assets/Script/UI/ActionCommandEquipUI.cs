@@ -115,6 +115,12 @@ namespace BladeAction.UI
             
             // GridAreaDropZone의 Raycast 비활성화 (드래그 시에만 활성화)
             SetGridDropZoneEnabled(false);
+            
+            // DetailPanel 초기 상태: 비활성화 (검술이 선택되지 않은 상태)
+            if (detailPanel != null)
+            {
+                detailPanel.gameObject.SetActive(false);
+            }
         }
         
         /// <summary>
@@ -128,13 +134,76 @@ namespace BladeAction.UI
                 return;
             }
             
+            // 기존 Character 이벤트 구독 해제
+            if (targetCharacter != null)
+            {
+                UnsubscribeFromCharacterEvents(targetCharacter);
+            }
+            
             targetCharacter = character;
             
             // Detail Panel은 별도로 Character 연결 불필요 (Show 시에 전달)
             
             Log($"[ActionCommandEquipUI] {character.Name}의 검술 장착 UI에 연결되었습니다.");
             
+            // Character 이벤트 구독
+            SubscribeToCharacterEvents(character);
+            
+            // 검술 무결성 점검 및 UI 갱신
+            character.ValidateEquippedActions();
             RefreshAll();
+        }
+        
+        /// <summary>
+        /// Character 이벤트 구독
+        /// </summary>
+        private void SubscribeToCharacterEvents(Character character)
+        {
+            if (character == null) return;
+            
+            character.OnStyleEquipped += OnStyleEquipped;
+            character.OnStyleUnequipped += OnStyleUnequipped;
+        }
+        
+        /// <summary>
+        /// Character 이벤트 구독 해제
+        /// </summary>
+        private void UnsubscribeFromCharacterEvents(Character character)
+        {
+            if (character == null) return;
+            
+            character.OnStyleEquipped -= OnStyleEquipped;
+            character.OnStyleUnequipped -= OnStyleUnequipped;
+        }
+        
+        /// <summary>
+        /// 유파 장착 이벤트 핸들러
+        /// </summary>
+        private void OnStyleEquipped(SwordArtStyleData styleData)
+        {
+            Log($"[ActionCommandEquipUI] 유파 장착됨: {styleData?.styleName ?? "null"}");
+            
+            if (targetCharacter != null)
+            {
+                // 검술 무결성 점검 및 UI 갱신
+                targetCharacter.ValidateEquippedActions();
+                RefreshAll();
+            }
+        }
+        
+        /// <summary>
+        /// 유파 해제 이벤트 핸들러
+        /// </summary>
+        private void OnStyleUnequipped(SwordArtStyleData styleData)
+        {
+            Log($"[ActionCommandEquipUI] 유파 해제됨: {styleData?.styleName ?? "null"}");
+            
+            if (targetCharacter != null)
+            {
+                // 검술 무결성 점검 및 UI 갱신
+                targetCharacter.ValidateEquippedActions();
+                RefreshAll();
+            }
         }
         
         private void OnEnable()
@@ -198,6 +267,12 @@ namespace BladeAction.UI
             
             // 드래그 하이라이트 정리
             OnDragEnd();
+            
+            // Character 이벤트 구독 해제
+            if (targetCharacter != null)
+            {
+                UnsubscribeFromCharacterEvents(targetCharacter);
+            }
         }
         
         /// <summary>
@@ -240,6 +315,10 @@ namespace BladeAction.UI
             if (!EnsureCharacterConnection()) return;
             
             Log("[ActionCommandEquipUI] 전체 UI 갱신 시작");
+            
+            // 검술 무결성 점검
+            targetCharacter.ValidateEquippedActions();
+            
             RefreshUI();
         }
         
@@ -322,6 +401,20 @@ namespace BladeAction.UI
             if (!EnsureCharacterConnection() || actionSlotsContainer == null) 
                 return;
             
+            // actionGridPanel 활성화 확인
+            if (actionGridPanel != null && !actionGridPanel.activeSelf)
+            {
+                Log($"⚠️ actionGridPanel이 비활성화되어 있습니다! 활성화합니다.");
+                actionGridPanel.SetActive(true);
+            }
+            
+            // actionSlotsContainer 활성화 확인
+            if (!actionSlotsContainer.gameObject.activeSelf)
+            {
+                Log($"⚠️ actionSlotsContainer가 비활성화되어 있습니다! 활성화합니다.");
+                actionSlotsContainer.gameObject.SetActive(true);
+            }
+            
             Log("[ActionCommandEquipUI] 검술 그리드 갱신 시작");
             
             // 기존 슬롯 제거
@@ -331,6 +424,23 @@ namespace BladeAction.UI
             var styleActions = targetCharacter.GetStyleActions();
             
             Log($"습득 검술: {acquiredActions?.Count ?? 0}개, 유파 검술: {styleActions?.Count ?? 0}개");
+            
+            // 디버그: 습득 검술 상세 정보 출력
+            if (acquiredActions != null && acquiredActions.Count > 0)
+            {
+                Log($"습득 검술 상세:");
+                foreach (var action in acquiredActions)
+                {
+                    if (action != null)
+                    {
+                        Log($"  - {action.commandName} (Key: {action.name})");
+                    }
+                }
+            }
+            else
+            {
+                Log($"⚠️ 습득 검술이 비어있습니다!");
+            }
             
             // 장착된 검술 Key 목록 (제외용)
             var database = ActionCommandDatabase.Instance;
@@ -362,16 +472,26 @@ namespace BladeAction.UI
             {
                 foreach (var styleAction in styleActions)
                 {
-                    if (styleAction == null) continue;
+                    if (styleAction == null)
+                    {
+                        Log($"⚠️ 유파 검술 리스트에 null 항목이 있습니다.");
+                        continue;
+                    }
                     
                     string key = database.GetKey(styleAction);
-                    if (string.IsNullOrEmpty(key)) continue;
+                    if (string.IsNullOrEmpty(key))
+                    {
+                        Log($"⚠️ 유파 검술 '{styleAction.commandName}'의 Key를 찾을 수 없습니다. (ActionCommandDatabase에 등록되지 않았을 수 있습니다)");
+                        continue;
+                    }
                     
                     displayActions[key] = new DisplayActionInfo(
                         action: styleAction,
                         isAcquired: false,
                         isSwordArtStyleGetted: true
                     );
+                    
+                    Log($"✅ 유파 검술 추가: '{styleAction.commandName}' (Key: {key})");
                 }
             }
             
@@ -380,10 +500,18 @@ namespace BladeAction.UI
             {
                 foreach (var acquiredAction in acquiredActions)
                 {
-                    if (acquiredAction == null) continue;
+                    if (acquiredAction == null)
+                    {
+                        Log($"⚠️ 습득 검술 리스트에 null 항목이 있습니다.");
+                        continue;
+                    }
                     
                     string key = database.GetKey(acquiredAction);
-                    if (string.IsNullOrEmpty(key)) continue;
+                    if (string.IsNullOrEmpty(key))
+                    {
+                        Log($"⚠️ 검술 '{acquiredAction.commandName}'의 Key를 찾을 수 없습니다. (ActionCommandDatabase에 등록되지 않았을 수 있습니다)");
+                        continue;
+                    }
                     
                     // 이미 유파 검술로 존재하면 isSwordArtStyleGetted 유지
                     bool hasStyle = displayActions.ContainsKey(key);
@@ -393,6 +521,8 @@ namespace BladeAction.UI
                         isAcquired: true,
                         isSwordArtStyleGetted: hasStyle
                     );
+                    
+                    Log($"✅ 습득 검술 추가: '{acquiredAction.commandName}' (Key: {key}, 유파 보유: {hasStyle})");
                 }
             }
             
@@ -460,13 +590,55 @@ namespace BladeAction.UI
         /// </summary>
         private void CreateActionSlot(ActionCommandData action, bool isStyleAction, bool isEnhanced)
         {
+            if (actionSlotPrefab == null)
+            {
+                Debug.LogError("[ActionCommandEquipUI] actionSlotPrefab이 null입니다! Inspector에서 연결해주세요.");
+                return;
+            }
+            
+            if (actionSlotsContainer == null)
+            {
+                Debug.LogError("[ActionCommandEquipUI] actionSlotsContainer가 null입니다! Inspector에서 연결해주세요.");
+                return;
+            }
+            
+            // 부모 컨테이너 활성화 상태 확인
+            if (!actionSlotsContainer.gameObject.activeInHierarchy)
+            {
+                Log($"⚠️ actionSlotsContainer가 비활성화되어 있습니다! 활성화합니다.");
+                actionSlotsContainer.gameObject.SetActive(true);
+            }
+            
             GameObject slotObj = Instantiate(actionSlotPrefab, actionSlotsContainer);
+            
+            // 슬롯 오브젝트 활성화 확인
+            if (!slotObj.activeSelf)
+            {
+                Log($"⚠️ 생성된 슬롯이 비활성화되어 있습니다! 활성화합니다.");
+                slotObj.SetActive(true);
+            }
+            
             ActionCommandSlotUI slotUI = slotObj.GetComponent<ActionCommandSlotUI>();
             
             if (slotUI != null)
             {
                 slotUI.Initialize(action, this, -1, false, isStyleAction, isEnhanced);
                 actionSlots.Add(slotUI);
+                
+                // 슬롯의 RectTransform 확인
+                RectTransform rectTransform = slotObj.GetComponent<RectTransform>();
+                if (rectTransform != null)
+                {
+                    Log($"✅ 검술 슬롯 생성 완료: '{action.commandName}' - 위치: {rectTransform.anchoredPosition}, 크기: {rectTransform.sizeDelta}, 활성화: {slotObj.activeSelf}, 부모 활성화: {actionSlotsContainer.gameObject.activeInHierarchy}");
+                }
+                else
+                {
+                    Log($"✅ 검술 슬롯 생성 완료: '{action.commandName}' - RectTransform 없음");
+                }
+            }
+            else
+            {
+                Debug.LogError($"[ActionCommandEquipUI] ActionCommandSlotUI 컴포넌트를 찾을 수 없습니다! 프리팹 '{actionSlotPrefab.name}'에 ActionCommandSlotUI 컴포넌트가 있는지 확인해주세요.");
             }
         }
         
@@ -551,7 +723,13 @@ namespace BladeAction.UI
         /// </summary>
         public void OnSlotSelected(ActionCommandSlotUI slot)
         {
-            if (slot == null) return;
+            if (slot == null)
+            {
+                Log("⚠️ OnSlotSelected: slot이 null입니다.");
+                return;
+            }
+            
+            Log($"🖱️ 슬롯 선택됨: '{slot.ActionData?.commandName ?? "null"}'");
             
             // 토글 동작: 이미 선택된 슬롯을 다시 클릭하면 선택 해제
             bool wasAlreadySelected = (selectedSlot == slot);
@@ -565,10 +743,14 @@ namespace BladeAction.UI
             if (wasAlreadySelected)
             {
                 // 선택 해제
+                Log("🔄 선택 해제");
                 selectedSlot = null;
                 if (detailPanel != null)
                 {
-                    detailPanel.Hide();
+                    // DetailPanel 비활성화 (검술이 선택되지 않은 상태)
+                    Log("📋 DetailPanel 비활성화");
+                    detailPanel.gameObject.SetActive(false);
+                    detailPanel.Hide(); // 내부 상태 초기화
                 }
                 return;
             }
@@ -580,7 +762,21 @@ namespace BladeAction.UI
             // 상세 정보 표시
             if (detailPanel != null && slot.ActionData != null)
             {
+                // DetailPanel 활성화 후 정보 표시
+                Log($"📋 DetailPanel 활성화 및 정보 표시: '{slot.ActionData.commandName}'");
+                detailPanel.gameObject.SetActive(true);
                 detailPanel.Show(slot.ActionData, targetCharacter);
+            }
+            else
+            {
+                if (detailPanel == null)
+                {
+                    Log("⚠️ DetailPanel이 null입니다!");
+                }
+                if (slot.ActionData == null)
+                {
+                    Log("⚠️ slot.ActionData가 null입니다!");
+                }
             }
         }
         
@@ -611,6 +807,10 @@ namespace BladeAction.UI
             if (targetCharacter.EquipAction(action, targetSlotIndex))
             {
                 Log($"[ActionCommandEquipUI] '{action.commandName}' 검술을 슬롯 {targetSlotIndex}에 장착했습니다.");
+                
+                // 검술 무결성 점검
+                targetCharacter.ValidateEquippedActions();
+                
                 RefreshUI();
                 
                 // 드래그 후 포커스 유지: 장착된 슬롯으로 이동
@@ -648,6 +848,10 @@ namespace BladeAction.UI
             if (targetCharacter.UnequipAction(slotIndex))
             {
                 Log($"[ActionCommandEquipUI] 슬롯 {slotIndex}의 검술을 해제했습니다.");
+                
+                // 검술 무결성 점검
+                targetCharacter.ValidateEquippedActions();
+                
                 RefreshUI();
                 
                 // 드래그 후 포커스 유지: 해제된 검술을 그리드에서 찾아 포커스
@@ -688,6 +892,13 @@ namespace BladeAction.UI
             if (equippedSwordArtStyleUI != null)
             {
                 equippedSwordArtStyleUI.ClearSelection();
+            }
+            
+            // DetailPanel 비활성화 (검술이 선택되지 않은 상태)
+            if (detailPanel != null)
+            {
+                detailPanel.gameObject.SetActive(false);
+                detailPanel.Hide(); // 내부 상태 초기화
             }
         }
         

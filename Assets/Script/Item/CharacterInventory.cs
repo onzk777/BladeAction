@@ -343,12 +343,20 @@ namespace BladeAction.Item
                 return false;
                 
             // 기존 장착된 아이템 해제
+            string unequippedKey = null;
             if (!slot.IsEmpty())
             {
-                string unequippedKey = slot.UnequipItem();
+                unequippedKey = slot.UnequipItem();
                 // 해제된 아이템을 인벤토리에 다시 추가
                 AddItem(unequippedKey, 1);
                 SafeTriggerEvent(events => events.TriggerItemUnequipped(unequippedKey, slotType, inventoryName));
+                
+                // 유파 해제 시 Character 이벤트 호출 및 검술 자동 해제
+                if (slotType == EquipmentSlotType.SwordArtStyle && Owner != null)
+                {
+                    Owner.UnequipStyle();
+                    Owner.UnequipAllStyleActions();
+                }
             }
             
             // 새 아이템 장착
@@ -359,8 +367,34 @@ namespace BladeAction.Item
                 {
                     SafeTriggerEvent(events => events.TriggerItemEquipped(itemKey, slotType, inventoryName));
                     
+                    // 유파 장착 시 Character 이벤트 호출
+                    if (slotType == EquipmentSlotType.SwordArtStyle && Owner != null)
+                    {
+                        var styleData = item.swordArtStyleData;
+                        if (styleData == null && !string.IsNullOrEmpty(item.swordArtStyleKey))
+                        {
+                            // Key로 조회
+                            var styleDb = SwordArtStyleDatabase.Instance;
+                            if (styleDb != null)
+                            {
+                                styleData = styleDb.GetStyle(item.swordArtStyleKey);
+                            }
+                        }
+                        
+                        if (styleData != null)
+                        {
+                            Owner.EquipSwordArtStyle(styleData);
+                        }
+                    }
+                    
                     // 스탯 재계산 트리거
                     TriggerStatsRecalculation();
+                    
+                    // 유파 장착/해제 시 검술 무결성 점검
+                    if (slotType == EquipmentSlotType.SwordArtStyle && Owner != null)
+                    {
+                        Owner.ValidateEquippedActions();
+                    }
                     
                     // 실제 장착된 슬롯 반환
                     equippedSlot = slot;
@@ -466,7 +500,8 @@ namespace BladeAction.Item
         {
             if (isLocked || slot == null || slot.IsEmpty())
                 return false;
-                
+            
+            var slotType = slot.slotType;
             string unequippedKey = slot.UnequipItem();
             if (!string.IsNullOrEmpty(unequippedKey))
             {
@@ -474,7 +509,15 @@ namespace BladeAction.Item
                 bool success = AddItem(unequippedKey, 1);
                 if (success)
                 {
-                    SafeTriggerEvent(events => events.TriggerItemUnequipped(unequippedKey, slot.slotType, inventoryName));
+                    SafeTriggerEvent(events => events.TriggerItemUnequipped(unequippedKey, slotType, inventoryName));
+                    
+                    // 유파 해제 시 Character 이벤트 호출 및 검술 자동 해제
+                    if (slotType == EquipmentSlotType.SwordArtStyle && Owner != null)
+                    {
+                        Owner.UnequipStyle();
+                        Owner.UnequipAllStyleActions();
+                        Owner.ValidateEquippedActions();
+                    }
                     
                     // 스탯 재계산 트리거
                     TriggerStatsRecalculation();

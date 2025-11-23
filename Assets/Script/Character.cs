@@ -474,6 +474,59 @@ public abstract class Character
         }
     }
     
+    /// <summary>
+    /// 장착된 검술의 유효성을 점검하고 갱신합니다.
+    /// 장착된 검술은 습득 검술 또는 유파 검술 중 하나에 해당해야 합니다.
+    /// 유효하지 않은 검술은 자동으로 해제됩니다.
+    /// 
+    /// 앞으로 "유효하지 않은 검술"을 점검할 수 있는 추가 로직이 개발되면
+    /// 이 메서드에 추가합니다.
+    /// </summary>
+    /// <returns>해제된 검술의 개수</returns>
+    public int ValidateEquippedActions()
+    {
+        int unequippedCount = 0;
+        
+        // 습득 검술 목록
+        var acquiredActionsSet = new HashSet<ActionCommandData>(acquiredActions);
+        
+        // 유파 검술 목록
+        var styleActions = GetStyleActions();
+        var styleActionsSet = new HashSet<ActionCommandData>(styleActions);
+        
+        // 모든 슬롯을 순회하며 유효성 검사
+        for (int i = 0; i < 4; i++)
+        {
+            var equippedAction = equippedActions[i];
+            if (equippedAction == null)
+                continue;
+            
+            // 습득 검술 또는 유파 검술 중 하나에 해당하는지 확인
+            bool isValid = acquiredActionsSet.Contains(equippedAction) || styleActionsSet.Contains(equippedAction);
+            
+            if (!isValid)
+            {
+                // 유효하지 않은 검술 해제
+                var unequipped = equippedAction;
+                equippedActions[i] = null;
+                unequippedCount++;
+                
+                Debug.LogWarning($"[Character] {Name} - 유효하지 않은 검술 자동 해제: '{unequipped.commandName}' (슬롯 {i}) - 습득 검술도 아니고 유파 검술도 아닙니다.");
+            }
+        }
+        
+        if (unequippedCount > 0)
+        {
+            Debug.Log($"[Character] {Name} - 검술 무결성 점검 완료: {unequippedCount}개 검술 자동 해제");
+        }
+        else
+        {
+            Debug.Log($"[Character] {Name} - 검술 무결성 점검 완료: 모든 검술이 유효합니다.");
+        }
+        
+        return unequippedCount;
+    }
+    
     #endregion
     
     #region 장신구 슬롯 관리
