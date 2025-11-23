@@ -92,6 +92,10 @@ public class CombatDebugDisplay : MonoBehaviour
     [Tooltip("입력 프롬프트 표시 (Debug)")]
     public TextMeshProUGUI inputPromptText;
 
+    [Header("Restart Button")]
+    [Tooltip("전투 재시작 버튼 (자동으로 찾거나 수동 할당)")]
+    public UnityEngine.UI.Button restartButton;
+
     private void Awake()
     {
         if (Instance == null)
@@ -107,8 +111,59 @@ public class CombatDebugDisplay : MonoBehaviour
 
     private void Start()
     {
+        // 재시작 버튼 찾기 및 연결
+        InitializeRestartButton();
+        
         // CombatCharacterManager가 초기화될 때까지 대기 후 구독
         StartCoroutine(WaitForCombatCharacterManager());
+    }
+
+    /// <summary>
+    /// 재시작 버튼을 찾아서 CombatManager.RestartBattle에 연결
+    /// </summary>
+    private void InitializeRestartButton()
+    {
+        // 버튼이 수동으로 할당되지 않았다면 자동으로 찾기
+        if (restartButton == null)
+        {
+            // Button_Restart 이름으로 찾기
+            GameObject buttonObj = GameObject.Find("Button_Restart");
+            if (buttonObj != null)
+            {
+                restartButton = buttonObj.GetComponent<UnityEngine.UI.Button>();
+                Debug.Log("[CombatDebugDisplay] 재시작 버튼 자동 찾기 성공");
+            }
+            else
+            {
+                Debug.LogWarning("[CombatDebugDisplay] 재시작 버튼을 찾을 수 없습니다. Button_Restart 이름을 가진 GameObject가 있는지 확인하세요.");
+                return;
+            }
+        }
+
+        // 버튼이 있으면 이벤트 연결
+        if (restartButton != null)
+        {
+            // 기존 리스너 제거 후 새로 추가
+            restartButton.onClick.RemoveAllListeners();
+            restartButton.onClick.AddListener(OnRestartButtonClicked);
+            Debug.Log("[CombatDebugDisplay] 재시작 버튼 이벤트 연결 완료");
+        }
+    }
+
+    /// <summary>
+    /// 재시작 버튼 클릭 시 호출되는 메서드
+    /// </summary>
+    private void OnRestartButtonClicked()
+    {
+        Debug.Log("[CombatDebugDisplay] 재시작 버튼 클릭됨");
+        if (CombatManager.Instance != null)
+        {
+            CombatManager.Instance.RestartBattle();
+        }
+        else
+        {
+            Debug.LogError("[CombatDebugDisplay] CombatManager.Instance가 null입니다!");
+        }
     }
 
     private IEnumerator WaitForCombatCharacterManager()

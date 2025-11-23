@@ -44,14 +44,14 @@ public class CombatManager : MonoBehaviour
 [SerializeField] private Transform actorsRoot;
 [SerializeField] private bool flipTeamBActors = true;
 
-    private PlayerController playerController;
+    internal PlayerController playerController;
     private AIController enemyController; // TeamB NonPlayer 컨트롤러 인스턴스
     private readonly List<GameObject> spawnedActors = new List<GameObject>();
     private readonly Dictionary<CombatCharacterManager.CombatantSlot, GameObject> spawnedActorMap = new Dictionary<CombatCharacterManager.CombatantSlot, GameObject>();
     private BattleState battle;
     private BattleExecutor battleExecutor;
 
-    private BattleState ActiveBattle => battle ?? throw new InvalidOperationException("[CombatManager] Battle is not initialized.");
+    internal BattleState ActiveBattle => battle ?? throw new InvalidOperationException("[CombatManager] Battle is not initialized.");
     
     // UI에서 접근할 수 있도록 public 프로퍼티 추가
     public PlayerController PlayerController
@@ -83,49 +83,49 @@ public class CombatManager : MonoBehaviour
         return defenderInputHandler != null ? defenderInputHandler.CharacterHitSystem : null;
     }
     
-    private AttackerInputHandler attackerInputHandler; // 공격자 타이밍 입력 핸들러
-    private DefenderInputHandler defenderInputHandler; // 방어자 타이밍 입력 핸들러
-    private CombatCharacterManager.CombatantSlot currentAttackerSlot
+    internal AttackerInputHandler attackerInputHandler; // 공격자 타이밍 입력 핸들러
+    internal DefenderInputHandler defenderInputHandler; // 방어자 타이밍 입력 핸들러
+    internal CombatCharacterManager.CombatantSlot currentAttackerSlot
     {
         get => ActiveBattle.CurrentAttackerSlot;
         set => ActiveBattle.CurrentAttackerSlot = value;
     }
-    private CombatCharacterManager.CombatantSlot currentDefenderSlot
+    internal CombatCharacterManager.CombatantSlot currentDefenderSlot
     {
         get => ActiveBattle.CurrentDefenderSlot;
         set => ActiveBattle.CurrentDefenderSlot = value;
     }
-    private CombatTurnContext currentTurnContext
+    internal CombatTurnContext currentTurnContext
     {
         get => ActiveBattle.CurrentTurnContext;
         set => ActiveBattle.CurrentTurnContext = value;
     }
-    private ICombatController currentAttackerController
+    internal ICombatController currentAttackerController
     {
         get => ActiveBattle.CurrentAttackerController;
         set => ActiveBattle.CurrentAttackerController = value;
     }
-    private ICombatController currentDefenderController
+    internal ICombatController currentDefenderController
     {
         get => ActiveBattle.CurrentDefenderController;
         set => ActiveBattle.CurrentDefenderController = value;
     }
-    private bool? attackerPerfectInput
+    internal bool? attackerPerfectInput
     {
         get => ActiveBattle.AttackerPerfectInput;
         set => ActiveBattle.AttackerPerfectInput = value;
     }
-    private bool? defenderPerfectInput
+    internal bool? defenderPerfectInput
     {
         get => ActiveBattle.DefenderPerfectInput;
         set => ActiveBattle.DefenderPerfectInput = value;
     }
-    private float? attackerInputTime
+    internal float? attackerInputTime
     {
         get => ActiveBattle.AttackerInputTime;
         set => ActiveBattle.AttackerInputTime = value;
     }
-    private float? defenderInputTime
+    internal float? defenderInputTime
     {
         get => ActiveBattle.DefenderInputTime;
         set => ActiveBattle.DefenderInputTime = value;
@@ -143,18 +143,18 @@ public class CombatManager : MonoBehaviour
     }
 
     [Header("전역 설정")]
-    [SerializeField] private GlobalConfig globalConfig;
+    [SerializeField] internal GlobalConfig globalConfig;
     
 
     
     // 발사체 발사 상태 추적
-    private bool[] projectileLaunched => ActiveBattle.ProjectileLaunched; // 각 히트별 발사 상태
+    internal bool[] projectileLaunched => ActiveBattle.ProjectileLaunched; // 각 히트별 발사 상태
     
     // 🆕 히트당 판정 한 번만 발생하도록 추적
-    private bool[] hitJudgmentCompleted => ActiveBattle.HitJudgmentCompleted; // 각 히트별 판정 완료 상태
+    internal bool[] hitJudgmentCompleted => ActiveBattle.HitJudgmentCompleted; // 각 히트별 판정 완료 상태
     
     // 🆕 중복 판정 추적을 위한 카운터
-    private int[] hitJudgmentCount => ActiveBattle.HitJudgmentCount; // 각 히트별 판정 발생 횟수
+    internal int[] hitJudgmentCount => ActiveBattle.HitJudgmentCount; // 각 히트별 판정 발생 횟수
     
     // ❌ 제거: 턴 종료 플래그들 (PerformTurn에서 직접 처리)
     // private bool turnEndRequested = false;
@@ -169,14 +169,14 @@ public class CombatManager : MonoBehaviour
     public float CurrentTurnDuration
     {
         get => ActiveBattle.CurrentTurnDuration;
-        private set => ActiveBattle.CurrentTurnDuration = value;
+        internal set => ActiveBattle.CurrentTurnDuration = value;
     }
     
     // 현재 턴 번호 (BT에서 사용)
     public int CurrentTurnNumber
     {
         get => ActiveBattle.CurrentTurnNumber;
-        private set => ActiveBattle.CurrentTurnNumber = value;
+        internal set => ActiveBattle.CurrentTurnNumber = value;
     }
     
     // 공격 턴 여부 (BT에서 사용)
@@ -189,19 +189,19 @@ public class CombatManager : MonoBehaviour
     public int CurrentHit
     {
         get => ActiveBattle.CurrentHit;
-        private set => ActiveBattle.CurrentHit = value;
+        internal set => ActiveBattle.CurrentHit = value;
     } // 현재 히트 인덱스. (연타 공격일 경우 체크용)
     public bool CurrentAttackResultShown
     {
         get => ActiveBattle.CurrentAttackResultShown;
-        private set => ActiveBattle.CurrentAttackResultShown = value;
+        internal set => ActiveBattle.CurrentAttackResultShown = value;
     } // 히트 결과가 표시되었는지 여부
     public bool CurrentDefenseResultShown
     {
         get => ActiveBattle.CurrentDefenseResultShown;
-        private set => ActiveBattle.CurrentDefenseResultShown = value;
+        internal set => ActiveBattle.CurrentDefenseResultShown = value;
     } // 히트 결과가 표시되었는지 여부
-    private bool CurrentClashResultShown
+    internal bool CurrentClashResultShown
     {
         get => ActiveBattle.CurrentClashResultShown;
         set => ActiveBattle.CurrentClashResultShown = value;
@@ -209,18 +209,18 @@ public class CombatManager : MonoBehaviour
     public bool windowPrompted
     {
         get => ActiveBattle.WindowPrompted;
-        private set => ActiveBattle.WindowPrompted = value;
+        internal set => ActiveBattle.WindowPrompted = value;
     } // 히트 윈도우가 열렸는지 여부
     
     // 중단 상태 추적
-    private bool isInterrupted
+    internal bool isInterrupted
     {
         get => ActiveBattle.IsInterrupted;
         set => ActiveBattle.IsInterrupted = value;
     } // 현재 턴에서 중단이 발생했는지 여부
     
     // 전투 종료 상태 추적
-    private bool isBattleEnded
+    internal bool isBattleEnded
     {
         get => ActiveBattle.IsBattleEnded;
         set => ActiveBattle.IsBattleEnded = value;
@@ -229,7 +229,7 @@ public class CombatManager : MonoBehaviour
     public event System.Action<BattleResult> OnBattleEnded; // 전투 종료 이벤트
     
     // FloatingText 생성 상태 추적 (입력 처리 결과와 분리)
-    private bool floatingTextShown
+    internal bool floatingTextShown
     {
         get => ActiveBattle.FloatingTextShown;
         set => ActiveBattle.FloatingTextShown = value;
@@ -237,14 +237,14 @@ public class CombatManager : MonoBehaviour
     public ICombatController CurrentController
     {
         get => ActiveBattle.CurrentController;
-        private set => ActiveBattle.CurrentController = value;
+        internal set => ActiveBattle.CurrentController = value;
     } // player/enemy 컨트롤러의 인터페이스
     public CharacterCommandResult CurrentResult
     {
         get => ActiveBattle.CurrentResult;
-        private set => ActiveBattle.CurrentResult = value;
+        internal set => ActiveBattle.CurrentResult = value;
     } // 현재 커맨드 결과
-    public static float CombatStartTime { get; private set; } // 전투 시작 시간 (초 단위 f.)
+    public static float CombatStartTime { get; internal set; } // 전투 시작 시간 (초 단위 f.)
     public CombatCharacterManager.CombatantSlot CurrentAttackerSlot => currentTurnContext?.AttackerSlot ?? currentAttackerSlot;
     public CombatCharacterManager.CombatantSlot CurrentDefenderSlot => currentTurnContext?.DefenderSlot ?? currentDefenderSlot;
     public float GetInputDeadline() // 입력 마감 시간 계산
@@ -322,6 +322,17 @@ public class CombatManager : MonoBehaviour
         Debug.Log($"[CombatManager] 전투원: TeamA[{string.Join(", ", teamAIds ?? new List<string>())}] vs TeamB[{string.Join(", ", teamBIds ?? new List<string>())}]");
 
         CombatCharacterManager.Instance.InitializeBattle(teamAIds, teamBIds);
+
+        // 🆕 슬롯 기반으로 모든 캐릭터 스테이터스 초기화
+        var characterManager = CombatCharacterManager.Instance;
+        foreach (var slot in characterManager.EnumerateAllSlots())
+        {
+            if (slot?.Character != null)
+            {
+                slot.Character.InitializeRuntimeStats();
+                Debug.Log($"[CombatManager] 전투 시작 - 스테이터스 초기화 - Team:{slot.Team} {slot.Character.Name} - HP: {slot.Character.GetHPStatus()}, Poise: {slot.Character.GetPoiseStatus()}");
+            }
+        }
 
         SpawnTeamActors();
         EnsureInputHandlers();
@@ -566,7 +577,7 @@ public class CombatManager : MonoBehaviour
         }
     }
 
-    private Character GetCurrentAttackerCharacter()
+    internal Character GetCurrentAttackerCharacter()
     {
         if (currentTurnContext?.AttackerCharacter != null)
         {
@@ -581,7 +592,7 @@ public class CombatManager : MonoBehaviour
         return currentAttackerController?.Character;
     }
 
-    private Character GetCurrentDefenderCharacter()
+    internal Character GetCurrentDefenderCharacter()
     {
         if (currentTurnContext?.DefenderCharacter != null)
         {
@@ -727,7 +738,7 @@ public class CombatManager : MonoBehaviour
         }
     }
 
-    private void BindInputHandler(BaseInputHandler handler, CombatCharacterManager.CombatantSlot slot)
+    internal void BindInputHandler(BaseInputHandler handler, CombatCharacterManager.CombatantSlot slot)
     {
         if (handler == null)
         {
@@ -861,7 +872,7 @@ public class CombatManager : MonoBehaviour
     /// </summary>
     /// <param name="command">사용할 검술 커맨드</param>
     /// <returns>계산된 턴 지속 시간 (초)</returns>
-    private float CalculateTurnDuration(ActionCommandData command)
+    internal float CalculateTurnDuration(ActionCommandData command)
     {
         if (command == null || command.perfectTimings == null || command.perfectTimings.Count == 0)
         {
@@ -903,15 +914,16 @@ public class CombatManager : MonoBehaviour
         
         yield return new WaitForSeconds(totalWaitTime);
         
-        // 다음 턴 시작
-        var manager = CombatCharacterManager.Instance;
-        var slot = manager?.FindSlotByController(nextController);
-        var team = slot != null ? slot.Team : CombatCharacterManager.CombatTeam.TeamB;
-        var context = BuildTurnContext(team);
-        if (context != null)
-        {
-            yield return StartCoroutine(PerformTurn(context));
-        }
+        // 다음 턴 시작 (이제는 BattleExecutor가 처리하므로 여기서는 처리하지 않음)
+        // var manager = CombatCharacterManager.Instance;
+        // var slot = manager?.FindSlotByController(nextController);
+        // var team = slot != null ? slot.Team : CombatCharacterManager.CombatTeam.TeamB;
+        // var context = BuildTurnContext(team);
+        // if (context != null)
+        // {
+        //     yield return StartCoroutine(PerformTurn(context));
+        // }
+        Debug.LogWarning("[CombatManager] WaitForAnimationAndStartNextTurn는 더 이상 사용되지 않습니다. BattleExecutor가 턴 관리를 처리합니다.");
     }
 
 
@@ -957,7 +969,7 @@ public class CombatManager : MonoBehaviour
     /// - Combatant의 Blackboard.ResetCombat() 호출
     /// - BT 자체는 상태가 없으므로 리셋 불필요
     /// </summary>
-    private void ResetBehaviorTreeStates()
+    internal void ResetBehaviorTreeStates()
     {
         var characterManager = CombatCharacterManager.Instance;
         if (characterManager == null)
@@ -1000,7 +1012,7 @@ public class CombatManager : MonoBehaviour
     /// - 각 턴 종료 후 (RunCombat에서 호출)
     /// - 다음 턴 시작 시 BT가 다시 새롭게 확률을 조정함
     /// </summary>
-    private void ResetNPCProbabilities()
+    internal void ResetNPCProbabilities()
     {
         var characterManager = CombatCharacterManager.Instance;
         if (characterManager == null)
@@ -1019,517 +1031,7 @@ public class CombatManager : MonoBehaviour
         }
     }
 
-    private IEnumerator PerformTurn(CombatTurnContext turnContext)
-    {
-        if (turnContext == null)
-        {
-            Debug.LogError("[CombatManager] PerformTurn 호출 시 turnContext가 null입니다.");
-            yield break;
-        }
-
-        if (!turnContext.IsValid)
-        {
-            Debug.LogError($"[CombatManager] PerformTurn - turnContext가 유효하지 않습니다. {turnContext}");
-            yield break;
-        }
-
-        Debug.Log($"[턴 시작] PerformTurn 호출, currentCommandIndex 초기화");
-        var characterManager = CombatCharacterManager.Instance;
-        var actorSlot = turnContext.AttackerSlot ?? characterManager?.FindSlotByController(turnContext.AttackerController);
-        var defenderSlot = turnContext.DefenderSlot ?? characterManager?.GetOpponentLeaderSlot(actorSlot != null ? actorSlot.Team : CombatCharacterManager.CombatTeam.TeamB);
-        var controller = turnContext.AttackerController;
-
-        currentTurnContext = turnContext;
-        currentAttackerSlot = actorSlot;
-        currentDefenderSlot = defenderSlot;
-        currentAttackerController = controller;
-        currentDefenderController = turnContext.DefenderController ?? defenderSlot?.Controller;
-
-        CombatDebugDisplay.Instance?.ForceUpdateUI();
-
-        Character actor = turnContext.AttackerCharacter ?? actorSlot?.Character ?? controller?.Character;
-        Character defender = turnContext.DefenderCharacter ?? defenderSlot?.Character;
-
-        if (defender == null && actorSlot != null)
-        {
-            defender = characterManager?.GetOpponentLeaderSlot(actorSlot.Team)?.Character;
-        }
-
-        if (currentDefenderController == null && defenderSlot?.Controller != null)
-        {
-            currentDefenderController = defenderSlot.Controller;
-        }
-
-        if (currentDefenderController == null && defender != null)
-        {
-            var manager = CombatCharacterManager.Instance;
-            var resolvedSlot = manager?.FindSlotByCharacter(defender);
-            if (resolvedSlot?.Controller != null)
-            {
-                currentDefenderController = resolvedSlot.Controller;
-            }
-            else if (defender is PlayerCharacter && playerController != null)
-            {
-                currentDefenderController = playerController;
-            }
-        }
-
-        if (actor == null || defender == null)
-        {
-            Debug.LogError("[CombatManager] 공격자 또는 방어자 정보를 찾지 못했습니다.");
-            yield break;
-        }
-
-        bool attackerIsPlayer = actorSlot != null ? actorSlot.IsPlayerControlledSlot : actor is PlayerCharacter;
-        
-        // 🆕 BT 평가 (공격자 + 방어자 모두!)
-        // 왜 필요한가?
-        // - BT Condition에서 isAttackTurn을 체크하려면 방어 턴에도 평가되어야 함
-        // - 예: "방어 턴이면서 HP < 50%면 막기 확률 100%"
-        
-        Debug.Log($"[CombatManager] 🌳 BT 평가 시작 - 공격자: {actor.Name}, 방어자: {defender.Name}");
-        
-        // 1. 공격자 BT 평가 (isAttackTurn = true)
-        if (actor is PlayerCharacter playerActor)
-        {
-            Debug.Log($"[CombatManager]   → Player 공격 턴 BT 평가");
-            playerActor.ResetBTEvaluation();
-            playerActor.ExecuteBehaviorTrees();
-        }
-        else if (actor is EnemyCharacter enemyActor)
-        {
-            Debug.Log($"[CombatManager]   → Enemy 공격 턴 BT 평가");
-            enemyActor.ResetBTEvaluation();
-            enemyActor.ExecuteBehaviorTrees();
-        }
-        
-        // 2. 방어자 BT 평가 (isAttackTurn = false)
-        if (defender is PlayerCharacter playerDefender)
-        {
-            Debug.Log($"[CombatManager]   → Player 방어 턴 BT 평가");
-            playerDefender.ResetBTEvaluation();
-            playerDefender.ExecuteBehaviorTrees();
-        }
-        else if (defender is EnemyCharacter enemyDefender)
-        {
-            Debug.Log($"[CombatManager]   → Enemy 방어 턴 BT 평가");
-            enemyDefender.ResetBTEvaluation();
-            enemyDefender.ExecuteBehaviorTrees();
-        }
-        
-        // 3. Enemy 공격 턴이면 선택 캐시 리셋
-        if (controller is AIController enemyCtrl)
-        {
-            enemyCtrl.ResetSelectionCache();
-        }
-
-        // 검술 선택 (공격자만 필요, BT는 이미 평가됨!)
-        int selectedCommandIndex = controller.GetSelectedCommandIndex();
-        
-        // 유효성 검증 (방어 코드)
-        if (actor.AvailableCommands == null || actor.AvailableCommands.Count == 0)
-        {
-            Debug.LogError($"[CombatManager] {actor.Name}에게 사용 가능한 검술이 없습니다! 턴 진행 중단.");
-            yield break;
-        }
-        
-        if (selectedCommandIndex < 0 || selectedCommandIndex >= actor.AvailableCommands.Count)
-        {
-            Debug.LogError($"[CombatManager] 유효하지 않은 검술 인덱스: {selectedCommandIndex} (범위: 0~{actor.AvailableCommands.Count - 1})");
-            yield break;
-        }
-        
-        ActionCommandData command = actor.AvailableCommands[selectedCommandIndex];
-        
-        // Enemy 턴일 때 UI 업데이트 (선택된 검술 표시)
-        if (!attackerIsPlayer && actorSlot != null)
-        {
-            var actionUI = ActionCommandSelectionManager.Instance?.GetTeamActionUI(actorSlot.Team);
-            if (actionUI != null)
-            {
-                actionUI.SetSelectedButton(selectedCommandIndex);
-                Debug.Log($"[CombatManager] {actorSlot.Team} ActionSelectUI 업데이트 - 선택된 커맨드 인덱스: {selectedCommandIndex}");
-            }
-        }
-        CharacterCommandResult result = new CharacterCommandResult(command); // 커맨드 결과 객체 생성
-        BindInputHandler(attackerInputHandler, actorSlot);
-        BindInputHandler(defenderInputHandler, defenderSlot);
-        Debug.Log($"[InputTrace][Turn] BindToSlot - attacker:{attackerInputHandler?.BoundSlot} defender:{defenderInputHandler?.BoundSlot} (attackerIsPlayer:{attackerIsPlayer}) Time:{Time.time:F4} Frame:{Time.frameCount}");
-        TurnTimer.Reset(); // 턴 시작 시각 초기화        
-        float turnDuration = CalculateTurnDuration(command); // 검술 기반 턴 지속 시간 계산
-        CurrentTurnDuration = turnDuration; // 전역 접근 가능하도록 설정
-        int hitCount = command.hitCount; // 커맨드의 히트 카운트(연타 공격일 경우 체크용)
-        attackerPerfectInput = null; // 공격자 완벽 입력 여부 초기화
-        defenderPerfectInput = null; // 방어자 완벽 입력 여부 초기화
-        attackerInputTime = null; // 공격자 입력 시간 초기화
-        defenderInputTime = null; // 방어자 입력 시간 초기화
-        CurrentAttackResultShown = false; // 현재 공격자 결과 표시 여부 초기화
-        CurrentDefenseResultShown = false; // 현재 방어자 결과 표시 여부 초기화
-        CurrentClashResultShown = false; // 현재 타격 판정 결과 표시 여부 초기화
-        windowPrompted = false; // 히트 윈도우가 열렸는지 여부 초기화
-        floatingTextShown = false; // 공격자 FloatingText 생성 여부 초기화
-        attackerInputHandler?.ResetCooldown(); // 공격자 입력 핸들러 쿨다운 초기화
-        defenderInputHandler?.ResetCooldown(); // 방어자 입력 핸들러 쿨다운 초기화
-        CurrentHit = 0; // 현재 히트 인덱스 초기화
-        CurrentController = controller; // 현재 컨트롤러 설정
-        CurrentResult = result; // 현재 커맨드 결과 설정
-        
-        // Poise 회복 및 중단 상태 초기화
-        actor.ResetPoise(); // 공격 턴 시작 시 Poise 회복
-        isInterrupted = false; // 중단 상태 초기화
-        
-        // HUD 초기화
-        CombatHUD.Instance?.ClearHUD(); // HUD 초기화 (Perfect Timing 가이드 제거)
-        
-        // Perfect Timing 가이드 표시
-        CombatHUD.Instance?.ShowPerfectTimingGuides(command, turnDuration);
-        
-        // 디버그 패널 초기화
-        CombatDebugDisplay.Instance?.ClearDebugResults(); // 디버그 결과 표시 초기화
-
-        if (attackerIsPlayer && attackerInputHandler != null)
-        {
-            attackerInputHandler.EnableInput(); // 공격자 입력 리스닝 시작
-            Debug.Log("[CombatManager] 공격자 입력 허용됨");
-        }
-
-        if (defender != null && defenderInputHandler != null)
-        {
-            defenderInputHandler.EnableInput();
-            Debug.Log("[CombatManager] 방어자 입력 허용됨");
-        }
-
-        // 1.1. 커맨드 유효성 확인
-        if (selectedCommandIndex < 0 || selectedCommandIndex >= actor.AvailableCommands.Count)
-        {
-            Debug.LogWarning($"[{actor.Name}] 선택 인덱스가 유효하지 않습니다: {selectedCommandIndex}");
-            yield break;  // 잘못된 인덱스면 턴 건너뜀
-        }
-
-        // 디버그 정보: 커맨드 시작 표시
-        CombatDebugDisplay.Instance?.ShowCommandStart(attackerIsPlayer, command.commandName);
-        
-        // 디버그 패널: 입력 프롬프트 표시
-        CombatDebugDisplay.Instance?.ShowInputPrompt("입력 대기");
-        Debug.Log($"[InputTrace][Turn] PerformTurn Start - actor:{actor.Name}, defender:{defender.Name}, Time:{Time.time:F4}, Frame:{Time.frameCount}");
-        
-        // ❌ 제거: 턴 종료 플래그 초기화 (PerformTurn에서 직접 처리)
-        // turnEndRequested = false;
-        // isWaitingForTurnEnd = false;
-        
-        // Spine 애니메이션 연동: 공격 턴 시작 시 애니메이션 재생
-        controller?.OnPlayActionCommand();
-        
-        // 타이밍 윈도우 등록 및 입력 수신 시작
-        attackerInputHandler?.LoadTimingWindows(command.perfectTimings); // 커맨드의 완벽 타이밍 윈도우를 로드        
-        // ❌ 제거: 발사체 기반 시스템에서는 방어자가 공격자 커맨드 데이터를 로드할 필요 없음
-        // defenderInputHandler.LoadFromOpponentCommand(command);
-        
-        // 🆕 발사체/판정 상태 배열 초기화
-        ActiveBattle.EnsureHitArrays(command.hitCount);
-        Array.Clear(ActiveBattle.ProjectileLaunched, 0, ActiveBattle.ProjectileLaunched.Length);
-        Array.Clear(ActiveBattle.HitJudgmentCompleted, 0, ActiveBattle.HitJudgmentCompleted.Length);
-        Array.Clear(ActiveBattle.HitJudgmentCount, 0, ActiveBattle.HitJudgmentCount.Length);
-
-
-        bool hasLoggedBlockedReason = false; // 히트 전환 디버깅용, PerformTurn 지역 변수로 선언
-        float turnDurationBuffer = 0.02f; // 턴 지속 시간 버퍼 (초 단위, 히트 윈도우가 끝나기 전에 턴이 종료되는 것을 방지하기 위한 용도)
-
-        // 5. 메인 루프 시작
-        while (TurnTimer.ElapsedTime < turnDuration + turnDurationBuffer)
-        {
-            float elapsed = TurnTimer.ElapsedTime; // 현재 경과 시간
-            float remaining = turnDuration - elapsed; // 잔여 시간
-
-            // 턴 타이머 UI 업데이트
-            CombatHUD.Instance?.UpdateTurnProgressBar(remaining, turnDuration); // 게임 HUD: 진행률 바
-            CombatDebugDisplay.Instance?.UpdateTurnInfo(remaining, turnDuration); // 디버그 패널: 시간 텍스트
-            
-            // ❌ 제거: 턴 종료 플래그 확인 (PerformTurn에서 직접 처리)
-            // if (turnEndRequested)
-            // {
-            //     Debug.Log("[PerformTurn] 턴 종료 요청됨 - 턴 종료");
-            //     break;
-            // }
-            
-            // 전투 종료 조건 체크 (HP가 0이 되었는지 확인)
-            if (isBattleEnded)
-            {
-                Debug.LogWarning("[PerformTurn] 전투가 종료되어 턴을 중단합니다.");
-                break;
-            }
-            
-            // 중단 발생 시 턴 조기 종료
-            if (isInterrupted)
-            {
-                Debug.LogWarning("[PerformTurn] 중단 발생으로 턴이 조기 종료됩니다.");
-                
-                // 남은 히트 판정 강제 완료 (무한 대기 방지)
-                ForceCompleteRemainingHits(CurrentHit, hitCount);
-                
-                break;
-            }
-            
-            if (CheckInterruptCondition())
-            {
-                Debug.Log("턴이 중단되었습니다.");
-                
-                // 남은 히트 판정 강제 완료 (무한 대기 방지)
-                ForceCompleteRemainingHits(CurrentHit, hitCount);
-                
-                break;
-            }
-            // 초기화
-
-            if (CurrentHit < hitCount)  // 현재 히트가 유효한 경우
-            {   
-                // 1) 이번 히트 윈도우 정의
-                var perfectWindow = command.perfectTimings[CurrentHit];
-                float inputAvailableStart = GlobalConfig.Instance.InputBufferStartSeconds;
-                float perfectWindowStart = perfectWindow.start;
-                float perfectWindowEnd = perfectWindow.start + perfectWindow.duration;
-                float inputAvailableEnd = GetInputDeadline();
-                float aiInputTime = perfectWindowStart; // AI 방어 시도 시간 (즉시)
-                bool aiAttackSuccess = UnityEngine.Random.value < globalConfig.NpcAttackPerfectRate; // AI 공격 성공 여부
-                bool aiDefenseSuccess = UnityEngine.Random.value < GlobalConfig.Instance.NpcParryPerfectRate; // AI 방어 성공 여부
-                
-
-                Debug.Log($"[UI표시:지금이닷!] 히트 {CurrentHit + 1}, elapsed={elapsed:F5}, 타이밍창=({perfectWindow.start:F5} ~ {perfectWindow.End:F5})");
-
-                // 윈도우 오픈: prompt 한 번만 띄우기
-                if (!windowPrompted && elapsed >= inputAvailableStart)
-                {
-                    Debug.Log($"[PerformTurn] 히트 {CurrentHit} 오픈");
-                    windowPrompted = true; // 히트 윈도우가 열렸음을 설정
-                    CurrentAttackResultShown = false;
-                    CurrentDefenseResultShown = false;
-                    CurrentClashResultShown = false;
-                    attackerInputHandler?.ResetInputState(); // 👈 히트마다 입력 기록 초기화
-                    defenderInputHandler?.ResetInputState(); // 👈 히트마다 입력 기록 초기화
-                    CombatDebugDisplay.Instance?.ShowInputPrompt("입력 가능!");
-                    CurrentController = controller;
-                    CurrentResult = result;
-                    attackerInputHandler?.RegisterHitTiming(perfectWindow);
-                    // ❌ 제거: 발사체 기반 시스템에서는 방어자 타이밍 윈도우 등록 불필요
-                    // defenderInputHandler.RegisterHitTiming(perfectWindow);
-                }
-
-                if (!floatingTextShown && elapsed >= perfectWindowStart) // 공격자 FloatingText 생성
-                {
-                    // PerfectTiming 시작 시점에 공격자에게만 FloatingText 생성
-                    if (FloatingTextManager.Instance != null)
-                    {
-                        Vector3 textPosition = GetFloatingTextPosition(attackerIsPlayer);
-                        FloatingTextManager.Instance.ShowPerfectTimingStart(textPosition, CurrentHit + 1, perfectWindow);
-                    }
-                    
-                    // FloatingText 생성 후 플래그 설정하여 중복 생성 방지
-                    floatingTextShown = true;
-                }
-                
-                if (!CurrentAttackResultShown && elapsed >= perfectWindowStart) // 공격자 입력 처리
-                {
-                    bool attackerHandlerIsPlayer = attackerInputHandler != null && attackerInputHandler.IsPlayer;
-                    if (attackerHandlerIsPlayer)
-                    {
-                        // 플레이어 입력 대기 UI 표시
-                        if (elapsed < perfectWindowEnd)
-                        {
-                            CombatDebugDisplay.Instance?.ShowInputPrompt("지금이닷!");
-                            Debug.Log($"[UI표시:막아!] 히트 {CurrentHit + 1}, elapsed={elapsed:F5}, 타이밍창=({perfectWindow.start:F5} ~ {perfectWindow.End:F5})");
-                        }
-                        else if (elapsed >= perfectWindowEnd)
-                        {
-                            Debug.Log($"[PerformTurn] 히트 {CurrentHit} fallback");
-                            attackerInputHandler?.NotifyWindowClosed(true); // 공격자 입력 실패 처리
-                            // 🆕 플레이어 공격자 실패 시에도 ResolveInput 호출
-                            if (attackerInputHandler != null)
-                            {
-                                ResolveInput(attackerInputHandler, false);
-                            }
-                        }
-                    }
-                    else // AI 공격자 처리
-                    {
-                        if (elapsed >= aiInputTime)
-                        {
-                            attackerInputHandler?.RecordAIInput(aiInputTime, aiAttackSuccess); // AI 입력 기록
-                            // 🆕 AI 공격자 성공 시 ResolveInput 호출
-                            if (attackerInputHandler != null)
-                            {
-                                ResolveInput(attackerInputHandler, aiAttackSuccess);
-                            }
-                        }
-                        else if (elapsed >= perfectWindowEnd)
-                        {
-                            // 🆕 AI 공격자 실패 시 ResolveInput 호출
-                            if (attackerInputHandler != null)
-                            {
-                                ResolveInput(attackerInputHandler, false);
-                            }
-                        }
-                    }
-                }
-                
-                // ❌ 제거: 발사체 기반 시스템에서는 방어자 입력 처리가 발사체 트리거로 대체됨
-                // if (!CurrentDefenseResultShown && elapsed >= perfectWindowStart) // 방어자 입력 처리
-                // {
-                //     // 타이밍 윈도우 기반 방어자 입력 처리 로직 제거
-                // }
-                if(attackerIsPlayer && CurrentAttackResultShown)
-                {
-                    CombatDebugDisplay.Instance?.ShowInputPrompt("V");
-                }
-                else if (!attackerIsPlayer && CurrentDefenseResultShown)
-                {
-                    CombatDebugDisplay.Instance?.ShowInputPrompt("V");
-                }
-                
-
-                // ❌ 제거: PerformTurn에서 발사체 발사 로직 제거 (ResolveInput에서 처리)
-                // 발사체 발사는 ResolveInput을 통해 통합 처리
-
-                if (elapsed >= perfectWindowEnd && windowPrompted && CurrentAttackResultShown && CurrentDefenseResultShown && !CurrentClashResultShown)
-                {
-                    Debug.Log($"[히트 전환 조건 통과] Hit={CurrentHit}, 결과 표시됨: 공격자={CurrentAttackResultShown}, 방어자={CurrentDefenseResultShown}, Clash={CurrentClashResultShown}");
-                }
-                else if (!hasLoggedBlockedReason)
-                {
-                    Debug.Log($"[히트 전환 BLOCKED] 조건 미충족 - 공격자={CurrentAttackResultShown}, 방어자={CurrentDefenseResultShown}, Clash={CurrentClashResultShown}, WindowEnd={perfectWindowEnd}, Elapsed={elapsed}");
-                    hasLoggedBlockedReason = true;
-
-                }
-
-                // 🆕 발사체 기반 히트 전환 (액션 커맨드 타이밍에 따라)
-                if (elapsed >= perfectWindowEnd && windowPrompted)
-                {
-                    // PerfectTiming 종료 시점에 FloatingText 생성
-                    if (FloatingTextManager.Instance != null)
-                    {
-                        Vector3 textPosition = GetFloatingTextPosition(attackerIsPlayer);
-                        FloatingTextManager.Instance.ShowPerfectTimingEnd(textPosition, CurrentHit + 1, perfectWindow);
-                    }
-                    
-                    Debug.Log($"[PerformTurn] 🆕 발사체 기반 히트 {CurrentHit} 완료 → 전환, CurrentClashResultShown:{CurrentClashResultShown}");
-
-                    CombatDebugDisplay.Instance?.ShowInputPrompt("");
-                    CurrentAttackResultShown = false; // 히트 결과 표시 초기화
-                    CurrentDefenseResultShown = false; // 히트 결과 표시 초기화
-                    CurrentClashResultShown = false; // 판정 결과 표시 초기화
-                    floatingTextShown = false; // FloatingText 생성 상태 초기화
-
-                    Debug.LogWarning($"[DEBUG] 🆕 발사체 기반 히트 {CurrentHit} 완료 조건 만족 - windowPrompted false로 전환됨");
-                    windowPrompted = false;
-                    CurrentHit++;
-                    
-                    // 모든 히트가 완료되었는지 확인
-                    if (CurrentHit >= command.hitCount)
-                    {
-                        Debug.Log($"[PerformTurn] 모든 히트 완료! CurrentHit={CurrentHit}, hitCount={command.hitCount} - 마지막 히트 판정 확인");
-                        
-                        // 🆕 마지막 히트의 판정이 발생했는지 확인 (발사체 기반)
-                        if (hitJudgmentCompleted[CurrentHit - 1]) // 마지막 히트의 판정 완료 확인
-                        {
-                            Debug.Log($"[PerformTurn] 마지막 히트 발사체 기반 판정 완료 - 턴 종료 대기 시작");
-                            yield return new WaitForSeconds(GlobalConfig.Instance.TurnEndBuffer);
-                            Debug.Log($"[PerformTurn] 턴 종료 대기 완료 - 턴 종료");
-                            break; // 턴 종료
-                        }
-                        else
-                        {
-                            Debug.Log($"[PerformTurn] 마지막 히트 발사체 기반 판정 대기 중...");
-                        }
-                    }
-                }
-            }
-            yield return null;
-        }
-          
-        Debug.Log($"[{actor.Name}] 커맨드 실행 완료: {command.commandName}");  // 최종 결과 로그
-        Debug.Log($"[InputTrace][Turn] PerformTurn End - actor:{actor.Name}, Time:{Time.time:F4}, Frame:{Time.frameCount}");
-        Debug.Log($"[PerformTurn] 🔵 메인 루프 종료 - {actor.Name} 턴 완료");
-        controller.ReceiveCommandResult(result);    // 커맨드 결과를 컨트롤러에 전달
-
-        // 1) 모든 히트에 대한 최종 적중 판정이 완료될 때까지 대기
-        yield return StartCoroutine(EnsureAllHitJudgmentsCompleted(command.hitCount));
-        Debug.Log("[CombatManager] 🆕 EnsureAllHitJudgmentsCompleted 완료 - 턴 종료 버퍼 대기 시작");
-
-        // 3) 턴 종료 버퍼 시간 대기
-        float turnEndBuffer = GlobalConfig.Instance.TurnEndBuffer;
-        if (turnEndBuffer > 0f)
-        {
-            Debug.Log($"[InputTrace][Turn] Waiting TurnEndBuffer - duration:{turnEndBuffer:F4}s, time:{Time.time:F4}");
-            yield return new WaitForSeconds(turnEndBuffer);
-        }
-        Debug.Log("[CombatManager] 🆕 턴 종료 버퍼 대기 완료 - 입력 비활성화 시작");
-
-        // 2) 입력 비활성화 및 상태 초기화
-        Debug.Log($"[CombatManager] 🆕 턴 종료 - 입력 비활성화 시작 (attackerIsPlayer:{attackerIsPlayer})");
-        
-        // 🆕 턴 종료 시 공격자와 방어자 모두 비활성화
-        Debug.Log("[CombatManager] 🆕 공격자 입력 비활성화");
-        attackerInputHandler.DisableInput();
-        
-        Debug.Log("[CombatManager] 🆕 방어자 입력 비활성화");
-        defenderInputHandler.DisableInput();
-
-        attackerInputHandler.ResetInputState();
-        defenderInputHandler.ResetInputState();
-
-        // 4) 애니메이션 완료 대기
-        yield return StartCoroutine(WaitForAnimationsComplete(actor, defender));
-    }
-
-    private IEnumerator EnsureAllHitJudgmentsCompleted(int hitCount)
-    {
-        // hitCount가 0이면 즉시 반환
-        if (hitCount <= 0)
-        {
-            Debug.Log($"[CombatManager] 🔍 hitCount가 0 이하 - 대기 생략");
-            yield break;
-        }
-        
-        float waitStart = Time.time;
-        Debug.Log($"[CombatManager] 🔍 === Hit 판정 완료 대기 시작 === hitCount:{hitCount}");
-        
-        // 초기 상태 확인
-        Debug.Log($"[CombatManager] 🔍 초기 상태 체크:");
-        for (int i = 0; i < hitCount; i++)
-        {
-            bool isCompleted = (i < hitJudgmentCompleted.Length) && hitJudgmentCompleted[i];
-            Debug.Log($"  - Hit {i}: {(isCompleted ? "✅ 이미 완료" : "⏳ 대기 중")}");
-        }
-        
-        float lastLogTime = waitStart;
-        int frameCount = 0;
-        
-        while (!AreAllHitJudgmentsCompleted(hitCount))
-        {
-            frameCount++;
-            float waited = Time.time - waitStart;
-            
-            // 1초마다 상태 로그
-            if (Time.time - lastLogTime >= 1.0f)
-            {
-                Debug.Log($"[CombatManager] 🔍 대기 중... 경과: {waited:F2}초, 프레임: {frameCount}");
-                for (int i = 0; i < hitCount; i++)
-                {
-                    if (i >= hitJudgmentCompleted.Length || !hitJudgmentCompleted[i])
-                    {
-                        Debug.Log($"  ⏳ Hit {i}: 미완료 (발사체 충돌 대기)");
-                    }
-                }
-                lastLogTime = Time.time;
-            }
-            
-            yield return null;
-        }
-        
-        float finalWait = Time.time - waitStart;
-        Debug.Log($"[CombatManager] 🔍 === Hit 판정 완료 대기 종료 === 대기 시간: {finalWait:F4}초, 프레임: {frameCount}");
-    }
-
-    private bool AreAllHitJudgmentsCompleted(int hitCount)
+    internal bool AreAllHitJudgmentsCompleted(int hitCount)
     {
         if (hitJudgmentCompleted == null)
         {
@@ -1567,7 +1069,7 @@ public class CombatManager : MonoBehaviour
     /// </summary>
     /// <param name="currentHit">현재 히트 인덱스</param>
     /// <param name="totalHits">총 히트 수</param>
-    private void ForceCompleteRemainingHits(int currentHit, int totalHits)
+    internal void ForceCompleteRemainingHits(int currentHit, int totalHits)
     {
         if (hitJudgmentCompleted == null)
         {
@@ -1601,7 +1103,7 @@ public class CombatManager : MonoBehaviour
     /// <summary>
     /// 공격자와 피격자의 애니메이션이 모두 완료될 때까지 대기
     /// </summary>
-    private IEnumerator WaitForAnimationsComplete(Character attacker, Character target)
+    internal IEnumerator WaitForAnimationsComplete(Character attacker, Character target)
     {
         Debug.Log($"[CombatManager] 애니메이션 완료 대기 시작 - 공격자: {attacker.Name}, 피격자: {target.Name}");
         
@@ -1734,7 +1236,7 @@ public class CombatManager : MonoBehaviour
     /// </summary>
     /// <param name="attackerIsPlayer">플레이어가 공격자인지 여부</param>
     /// <returns>FloatingText가 표시될 월드 위치</returns>
-    private Vector3 GetFloatingTextPosition(bool attackerIsPlayer)
+    internal Vector3 GetFloatingTextPosition(bool attackerIsPlayer)
     {
         Transform referenceTransform = GetActorTransform(currentTurnContext?.AttackerController ?? currentAttackerController);
 
@@ -1861,8 +1363,79 @@ public class CombatManager : MonoBehaviour
         }
     }
 
-    // 플레이어 또는 적이 입력을 성공적으로 처리했을 때 호출 (TimingInputHandler에서 호출됨)
-    public void ResolveInput(BaseInputHandler handler, bool isPerfect)
+    // 🆕 AI 입력 직접 처리 메서드 (InputHandler 없이)
+    internal void ResolveAIInput(bool isAttacker, bool isPerfect)
+    {
+        Debug.Log($"[ResolveAIInput] 호출됨! isAttacker={isAttacker}, isPerfect={isPerfect}");
+
+        if (!attackerPerfectInput.HasValue) attackerPerfectInput = false;
+        if (!defenderPerfectInput.HasValue) defenderPerfectInput = false;
+
+        // 안전한 범위 체크 추가
+        if (CurrentResult != null && CurrentHit >= 0 && CurrentHit < CurrentResult.HitCount)
+        {
+            if (isAttacker)
+            {
+                CurrentResult.SetHitResult(CurrentHit, isPerfect);
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[CombatManager] SetHitResult 실패: CurrentHit={CurrentHit}, HitCount={CurrentResult?.HitCount ?? 0}");
+        }
+
+        if (isAttacker) // 공격자 AI
+        {
+            if (CurrentAttackResultShown)
+            {
+                Debug.LogWarning("[ResolveAIInput] 공격자 입력 이미 처리됨 → 무시");
+                return;
+            }
+
+            attackerPerfectInput = isPerfect;
+            attackerInputTime = TurnTimer.ElapsedTime;
+
+            var aiController = GetCurrentAttackerAI();
+            if (aiController != null)
+            {
+                aiController.OnHitResult(CurrentHit, isPerfect);
+            }
+
+            CurrentAttackResultShown = true;
+
+            // 완벽 입력 성공 시 가이드 완료 상태로 전환
+            if (isPerfect && CombatHUD.Instance != null)
+            {
+                CombatHUD.Instance.MarkGuideAsCompleted(CurrentHit);
+            }
+
+            // 공격자 입력 처리 시 발사체 발사 (성공/실패 무관)
+            Debug.Log($"[CombatManager] AI 공격자 입력 처리 완료 - 발사체 발사: 히트 {CurrentHit}, 완벽 입력: {isPerfect}");
+            CreateProjectileForCurrentHit(isPerfect);
+        }
+        else // 방어자 AI
+        {
+            if (CurrentDefenseResultShown)
+            {
+                Debug.LogWarning("[ResolveAIInput] 방어자 입력 이미 처리됨 → 무시");
+                return;
+            }
+
+            defenderPerfectInput = isPerfect;
+            defenderInputTime = TurnTimer.ElapsedTime;
+
+            var aiController = GetCurrentDefenderAI();
+            if (aiController != null)
+            {
+                aiController.OnHitResult(CurrentHit, isPerfect);
+            }
+
+            CurrentDefenseResultShown = true;
+        }
+    }
+
+    // 플레이어 입력을 처리할 때 호출 (InputHandler에서 호출됨)
+    internal void ResolveInput(BaseInputHandler handler, bool isPerfect)
     {
         Debug.Log($"[ResolveInput] 호출됨! handler={handler}, isPerfect ={isPerfect}");
 
@@ -1955,8 +1528,12 @@ public class CombatManager : MonoBehaviour
         bool defPerfect = defenderPerfectInput ?? false;
         float defTime = defenderInputTime ?? float.MaxValue;
 
-        // 방어 커맨드 여부 설정 - 실제 막기 상태 사용
-        bool guard = defenderInputHandler.IsGuardActive;
+        // 방어 커맨드 여부 설정 - 실제 막기 상태 사용 (플레이어 + AI)
+        bool guard = defenderInputHandler != null ? defenderInputHandler.IsGuardActive : false;
+        if (!guard && battleExecutor != null)
+        {
+            guard = battleExecutor.IsAIGuardActive();
+        }
 
         var ivr = new InputVersusResult(atkPerfect, atkTime, defPerfect, defTime, guard); // 입력 결과 생성
         var resultVersus = ivr.GetResult(atkPerfect, atkTime, defPerfect, defTime, guard); // 입력 결과 생성
@@ -1982,7 +1559,11 @@ public class CombatManager : MonoBehaviour
         }
         
         // 피해량 계산 및 적용 - 올바른 히트 인덱스 사용
-        ProcessDamageCalculation(attacker, defender, currentCommand, resultVersus, hitIndex);
+        if (battleExecutor == null)
+        {
+            battleExecutor = new BattleExecutor(this);
+        }
+        battleExecutor.ProcessDamageCalculation(attacker, defender, currentCommand, resultVersus, hitIndex);
         
         // 쳐내기 판정 시 공격자 자세 포인트 감소
         if (resultVersus == InputVersusResult.ResultType.Parry || resultVersus == InputVersusResult.ResultType.HalfParry)
@@ -1994,6 +1575,12 @@ public class CombatManager : MonoBehaviour
             attacker.LosePoise(poiseDamage); // 쳐내기 당했을 때 Poise 감소
             
             Debug.Log($"[CombatManager] {attacker.Name}의 Poise 감소 완료 (감소 후: {attacker.GetPoiseStatus()})");
+            
+            // 🆕 쳐내기 성공 시 AI 막기 해제 (방어자가 AI인 경우)
+            if (defender is EnemyCharacter && battleExecutor != null)
+            {
+                battleExecutor.StopAIGuardOnParry(currentTurnContext);
+            }
             
             // 중단 발생 확인
             if (attacker.IsInterrupted)
@@ -2063,7 +1650,7 @@ public class CombatManager : MonoBehaviour
     /// 현재 히트에 대한 발사체 생성 및 발사
     /// </summary>
     /// <param name="isPerfect">완벽 입력 여부</param>
-    private void CreateProjectileForCurrentHit(bool isPerfect = false)
+    internal void CreateProjectileForCurrentHit(bool isPerfect = false)
     {
         Debug.Log($"[CombatManager] 발사체 생성 시도 - 히트 {CurrentHit}, 이미 발사됨: {projectileLaunched[CurrentHit]}");
         
@@ -2303,101 +1890,16 @@ public class CombatManager : MonoBehaviour
         }
     }
     
-    private bool CheckInterruptCondition()
+    internal bool CheckInterruptCondition()
     {
         return InterruptManager.IsInterrupted();        
     }
 
-    /// <summary>
-    /// 피해량 계산 및 적용
-    /// </summary>
-    private void ProcessDamageCalculation(Character attacker, Character defender, ActionCommandData command, InputVersusResult.ResultType resultType, int hitIndex = 0)
-    {
-        // ========== 피해량 계산 시작 ==========
-        Debug.Log($"\n[피해량 계산] ========== {attacker.Name} → {defender.Name} ==========");
-        Debug.Log($"[피해량 계산] 판정: {resultType}, 히트: {hitIndex + 1}");
-        
-        // 히트별 damageRatio 사용
-        float currentHitDamageRatio = command.GetDamageRatio(hitIndex);
-        int attackerATK = BladeAction.Combat.StatsCalculationManager.Instance != null 
-            ? BladeAction.Combat.StatsCalculationManager.Instance.GetFinalATK(attacker)
-            : attacker.ATK;
-        int baseDamage = Mathf.RoundToInt(attackerATK * currentHitDamageRatio);
-        
-        Debug.Log($"[피해량 계산] 기본 피해량: {attackerATK} × {currentHitDamageRatio} = {baseDamage}");
-        
-        // 치명타 판정
-        bool isCritical = attacker.IsCriticalHit();
-        if (isCritical)
-        {
-            int criticalDamage = attacker.CalculateCriticalDamage(baseDamage);
-            Debug.Log($"[피해량 계산] 치명타 발생! {baseDamage} → {criticalDamage}");
-            baseDamage = criticalDamage;
-        }
-        else
-        {
-            Debug.Log($"[피해량 계산] 치명타 없음");
-        }
-        
-        // 판정 결과에 따른 피해량 감소 적용
-        float damageReduction = GetDamageReduction(resultType);
-        int damageAfterReduction = Mathf.RoundToInt(baseDamage * damageReduction);
-        Debug.Log($"[피해량 계산] 판정 감소: {baseDamage} × {damageReduction} = {damageAfterReduction}");
-        
-        // DR 적용 (막기 상태에 따라 다른 DR 사용)
-        int effectiveDR;
-        if (defenderInputHandler.IsGuardActive)
-        {
-            effectiveDR = defender.GetGuardFinalDR();
-        }
-        else
-        {
-            effectiveDR = defender.GetFinalDR();
-        }
-        
-        int damageAfterDR = ApplyDefenseReduction(damageAfterReduction, effectiveDR);
-        
-        // DR 적용 결과 로그
-        if (defenderInputHandler.IsGuardActive)
-        {
-            Debug.Log($"[피해량 계산] 막기 상태 - 막기 DR 적용: {damageAfterReduction} - {effectiveDR} = {damageAfterDR} (기본 DR: {defender.DR}, 막기 보너스: {defender.CharacterInitData.baseStats.guardDRBonus}, 임시 보너스: {defender.tempDRBonus})");
-        }
-        else
-        {
-            Debug.Log($"[피해량 계산] 일반 상태 - 일반 DR 적용: {damageAfterReduction} - {effectiveDR} = {damageAfterDR} (기본 DR: {defender.DR}, 임시 보너스: {defender.tempDRBonus})");
-        }
-        
-        // 피해량이 0보다 크면 HP 감소 적용
-        if (damageAfterDR > 0)
-        {
-            int oldHP = defender.HP;
-            defender.TakeDamage(damageAfterDR);
-            int newHP = defender.HP;
-            int actualDamage = oldHP - newHP;
-            
-            Debug.Log($"[피해량 계산] HP 감소: {oldHP} → {newHP} (실제 감소량: {actualDamage})");
-            Debug.Log($"[피해량 계산] 최종 결과: {defender.Name}이 {actualDamage} 피해를 받았습니다!");
-            
-            // HP 0 체크 및 전투 종료 처리 (즉시 체크)
-            if (defender.IsDefeated)
-            {
-                Debug.LogWarning($"[피해량 계산] {defender.Name}이 패배했습니다! (HP: {defender.GetHPStatus()})");
-                EndBattle(defender == CombatCharacterManager.Instance.PlayerCharacter ? BattleResult.BattleEndReason.PlayerDefeated : BattleResult.BattleEndReason.EnemyDefeated);
-                return; // 피해 처리 후 즉시 종료
-            }
-        }
-        else
-        {
-            Debug.Log($"[피해량 계산] 피해량이 0이므로 HP 감소 없음");
-        }
-        
-        Debug.Log($"[피해량 계산] ========== 계산 완료 ==========\n");
-    }
     
     /// <summary>
     /// 판정 결과에 따른 피해량 감소 비율 반환
     /// </summary>
-    private float GetDamageReduction(InputVersusResult.ResultType resultType)
+    internal float GetDamageReduction(InputVersusResult.ResultType resultType)
     {
         float reduction;
         
@@ -2470,7 +1972,7 @@ public class CombatManager : MonoBehaviour
     /// <summary>
     /// 방어력(DR) 적용하여 최종 피해량 계산
     /// </summary>
-    private int ApplyDefenseReduction(int damage, int defenderDR)
+    internal int ApplyDefenseReduction(int damage, int defenderDR)
     {
         int finalDamage;
         
@@ -2493,7 +1995,7 @@ public class CombatManager : MonoBehaviour
     /// <summary>
     /// 전투 종료 처리 (새로운 방식)
     /// </summary>
-    private void EndBattle(BattleResult.BattleEndReason reason)
+    internal void EndBattle(BattleResult.BattleEndReason reason)
     {
         if (isBattleEnded) return; // 이미 전투가 종료된 경우 무시
         
@@ -2608,6 +2110,9 @@ public class CombatManager : MonoBehaviour
         Debug.Log("[CombatManager] 재시작 버튼 클릭됨!");
         Debug.Log("[CombatManager] 전투 다시 시작 요청");
         
+        // 🆕 모든 코루틴 중지 (DelayedSceneTransition 포함, 재시작 시 자동 Scene 전환 취소)
+        StopAllCoroutines();
+        
         // EventSystem 상태 확인
         var eventSystem = UnityEngine.EventSystems.EventSystem.current;
         if (eventSystem == null)
@@ -2638,22 +2143,19 @@ public class CombatManager : MonoBehaviour
         // 3. 캐릭터 재활성화 및 스테이터스 초기화
         EnableCharacters();
         
+        // 🆕 슬롯 기반으로 모든 캐릭터 스테이터스 초기화
         if (CombatCharacterManager.Instance != null)
         {
-            // 플레이어 스테이터스 초기화
-            var playerCharacter = CombatCharacterManager.Instance.PlayerCharacter;
-            if (playerCharacter != null)
-            {
-                playerCharacter.InitializeRuntimeStats();
-                Debug.Log($"[CombatManager] 플레이어 스테이터스 초기화 - HP: {playerCharacter.GetHPStatus()}, Poise: {playerCharacter.GetPoiseStatus()}");
-            }
+            var characterManager = CombatCharacterManager.Instance;
             
-            // 적 스테이터스 초기화
-            var enemyCharacter = CombatCharacterManager.Instance.CurrentEnemy;
-            if (enemyCharacter != null)
+            // TeamA 모든 슬롯의 캐릭터 초기화
+            foreach (var slot in characterManager.EnumerateAllSlots())
             {
-                enemyCharacter.InitializeRuntimeStats();
-                Debug.Log($"[CombatManager] 적 스테이터스 초기화 - HP: {enemyCharacter.GetHPStatus()}, Poise: {enemyCharacter.GetPoiseStatus()}");
+                if (slot?.Character != null)
+                {
+                    slot.Character.InitializeRuntimeStats();
+                    Debug.Log($"[CombatManager] 스테이터스 초기화 - Team:{slot.Team} {slot.Character.Name} - HP: {slot.Character.GetHPStatus()}, Poise: {slot.Character.GetPoiseStatus()}");
+                }
             }
         }
         
@@ -2682,7 +2184,7 @@ public class CombatManager : MonoBehaviour
         }
     }
     
-    private CombatTurnContext BuildTurnContext(CombatCharacterManager.CombatTeam attackerTeam)
+    internal CombatTurnContext BuildTurnContext(CombatCharacterManager.CombatTeam attackerTeam)
     {
         var manager = CombatCharacterManager.Instance;
         if (manager == null)
@@ -2769,7 +2271,8 @@ public class CombatManager : MonoBehaviour
         }
     }
 
-    private class BattleState
+
+    internal class BattleState
     {
         public CombatManager Owner { get; }
 
@@ -2864,117 +2367,5 @@ public class CombatManager : MonoBehaviour
         }
     }
 
-    private class BattleExecutor
-    {
-        private readonly CombatManager manager;
-
-        public BattleExecutor(CombatManager manager)
-        {
-            this.manager = manager ?? throw new ArgumentNullException(nameof(manager));
-        }
-
-        public IEnumerator RunBattle()
-        {
-            Debug.Log($"[RunCombat] CombatStartTime 세팅됨: {CombatStartTime}");
-            if (manager.attackerInputHandler != null)
-            {
-                Debug.Log($"[RunCombat] HandlerInstance: {manager.attackerInputHandler.GetInstanceID()}");
-                Debug.Log($"[RunCombat] timingInputHandler InstanceID: {manager.attackerInputHandler.GetInstanceID()}");
-            }
-            else
-            {
-                Debug.LogWarning("[RunCombat] attackerInputHandler가 null입니다 (NPC vs NPC 시나리오일 수 있습니다)");
-            }
-
-            yield return new WaitForSeconds(GlobalConfig.Instance.CombatStartDelay);
-
-            manager.ResetBehaviorTreeStates();
-
-            var selectionManager = ActionCommandSelectionManager.Instance;
-            var teamAActionUI = selectionManager?.GetTeamActionUI(CombatCharacterManager.CombatTeam.TeamA);
-            if (teamAActionUI != null)
-            {
-                Debug.Log("[CombatManager] TeamA ActionSelectUI 초기화 요청");
-                teamAActionUI.RefreshButtons();
-            }
-            else
-            {
-                Debug.LogWarning("[CombatManager] TeamA ActionSelectUI를 찾을 수 없습니다!");
-            }
-
-            while (!manager.isBattleEnded)
-            {
-                if (manager.isBattleEnded)
-                {
-                    Debug.Log("[RunCombat] 전투가 종료되어 루프를 중단합니다.");
-                    break;
-                }
-
-                var teamAContext = PrepareTeamTurn(CombatCharacterManager.CombatTeam.TeamA);
-                if (teamAContext == null)
-                {
-                    yield break;
-                }
-
-                yield return manager.PerformTurn(teamAContext);
-
-                if (manager.isBattleEnded)
-                {
-                    Debug.Log("[RunCombat] TeamA 턴 후 전투 종료 감지");
-                    break;
-                }
-
-                var teamBContext = PrepareTeamTurn(CombatCharacterManager.CombatTeam.TeamB);
-                if (teamBContext == null)
-                {
-                    yield break;
-                }
-
-                yield return manager.PerformTurn(teamBContext);
-
-                manager.ResetNPCProbabilities();
-
-                if (manager.isBattleEnded)
-                {
-                    Debug.Log("[RunCombat] 적 턴 후 전투 종료 감지");
-                    break;
-                }
-
-                Debug.Log($"[RunCombat] ========== 턴 {manager.CurrentTurnNumber} 완료 - 다음 턴으로 ==========");
-                var characterManager = CombatCharacterManager.Instance;
-                int? teamALeaderHp = characterManager?.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamA)?.Character?.HP;
-                int? teamBLeaderHp = characterManager?.GetLeaderSlot(CombatCharacterManager.CombatTeam.TeamB)?.Character?.HP;
-                Debug.Log($"[RunCombat] TeamA Leader HP: {(teamALeaderHp.HasValue ? teamALeaderHp.Value.ToString() : "N/A")}, TeamB Leader HP: {(teamBLeaderHp.HasValue ? teamBLeaderHp.Value.ToString() : "N/A")}");
-                Debug.Log($"[RunCombat] isBattleEnded: {manager.isBattleEnded}");
-            }
-
-            Debug.Log("전투 종료!");
-        }
-
-        private CombatTurnContext PrepareTeamTurn(CombatCharacterManager.CombatTeam team)
-        {
-            var context = manager.BuildTurnContext(team);
-            if (context == null || !context.IsValid)
-            {
-                Debug.LogError($"[RunCombat] {team} 턴 컨텍스트 생성 실패로 전투를 종료합니다.");
-                manager.isBattleEnded = true;
-                return null;
-            }
-
-            switch (team)
-            {
-                case CombatCharacterManager.CombatTeam.TeamA:
-                    CombatStartTime = Time.time;
-                    manager.CurrentTurnNumber++;
-                    Debug.Log($"[RunCombat] 턴 {manager.CurrentTurnNumber} 시작 - TeamA 리더 턴 ({context.AttackerCharacter?.Name} vs {context.DefenderCharacter?.Name})");
-                    break;
-                case CombatCharacterManager.CombatTeam.TeamB:
-                    Debug.Log($"[RunCombat] 턴 {manager.CurrentTurnNumber} 계속 - TeamB 리더 턴 ({context.AttackerCharacter?.Name} vs {context.DefenderCharacter?.Name})");
-                    break;
-            }
-
-            return context;
-        }
-    }
 }
 

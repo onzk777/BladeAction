@@ -18,8 +18,9 @@ public abstract class BaseInputHandler : MonoBehaviour
     protected float nextAllowedInputTime = 0f; // 다음 입력이 허용되는 시간 (쿨타임 관련)
     public float NextAllowedInputTime => nextAllowedInputTime; // 외부에서 접근할 수 있도록 프로퍼티로 공개
     
-    // AI 입력의 완벽 입력 여부를 저장하는 필드
-    protected bool? aiInputIsPerfect = null;
+    // ❌ 제거 예정: AI 입력의 완벽 입력 여부를 저장하는 필드
+    // InputHandler는 플레이어 전용이므로 AI 관련 코드 제거 예정
+    // protected bool? aiInputIsPerfect = null;
 
     protected virtual void Awake()
     {
@@ -181,12 +182,12 @@ public abstract class BaseInputHandler : MonoBehaviour
         }
         ////////////////////////////////////////////////////////////////////////////
 
-        // AI 입력의 경우 전달받은 isPerfect 값을 우선적으로 사용
-        if (!IsPlayer && aiInputIsPerfect.HasValue)
-        {
-            Debug.Log($"[HasPerfectInput] AI 입력 - 전달받은 값 사용: {aiInputIsPerfect.Value}");
-            return aiInputIsPerfect.Value;
-        }
+        // ❌ 제거 예정: AI 입력 처리 (InputHandler는 플레이어 전용)
+        // if (!IsPlayer && aiInputIsPerfect.HasValue)
+        // {
+        //     Debug.Log($"[HasPerfectInput] AI 입력 - 전달받은 값 사용: {aiInputIsPerfect.Value}");
+        //     return aiInputIsPerfect.Value;
+        // }
 
         // 플레이어 입력의 경우 기존 로직 사용 (타이밍 윈도우 내에 있는지 확인)
         float relativeTime = lastInputTime.Value; // 현재 턴의 상대 시간 계산
@@ -250,31 +251,31 @@ public abstract class BaseInputHandler : MonoBehaviour
         }
         CombatManager.Instance.OnInputReceivedFromHandler(this);
     }
-    // AI 입력 기록 메서드
-    public void RecordAIInput(float inputTime, bool isPerfect)
-    {
-        lastInputTime = inputTime;
-        aiInputIsPerfect = isPerfect; // AI 입력의 완벽 입력 여부를 저장
-
-        var combatManager = CombatManager.Instance;
-        if (combatManager != null && boundSlot != null && combatManager.CurrentAttackerSlot != null && combatManager.CurrentAttackerSlot != boundSlot)
-        {
-            Debug.Log($"[InputTrace][AIInput] handler:{GetType().Name} 입력 무시 - 활성 공격자 슬롯이 아님 (bound:{boundSlot}, current:{combatManager.CurrentAttackerSlot})");
-            return;
-        }
-
-        if (CombatManager.Instance.windowPrompted)
-        {
-            float cooldown = isPerfect
-                ? GlobalConfig.Instance.ActionInputCooldown_Perfect
-                : GlobalConfig.Instance.ActionInputCooldown_Default;
-
-            nextAllowedInputTime = TurnTimer.ElapsedTime + cooldown;
-            Debug.Log($"[AI 입력 기록] isPerfect={isPerfect}, inputTime={inputTime}, cooldown={cooldown}");
-        }
-        // AI 입력이 기록되면 CombatManager에 알림
-        CombatManager.Instance.OnInputReceivedFromHandler(this);
-    }
+    // ❌ 제거 예정: AI 입력 기록 메서드 (InputHandler는 플레이어 전용)
+    // public void RecordAIInput(float inputTime, bool isPerfect)
+    // {
+    //     lastInputTime = inputTime;
+    //     aiInputIsPerfect = isPerfect; // AI 입력의 완벽 입력 여부를 저장
+    //
+    //     var combatManager = CombatManager.Instance;
+    //     if (combatManager != null && boundSlot != null && combatManager.CurrentAttackerSlot != null && combatManager.CurrentAttackerSlot != boundSlot)
+    //     {
+    //         Debug.Log($"[InputTrace][AIInput] handler:{GetType().Name} 입력 무시 - 활성 공격자 슬롯이 아님 (bound:{boundSlot}, current:{combatManager.CurrentAttackerSlot})");
+    //         return;
+    //     }
+    //
+    //     if (CombatManager.Instance.windowPrompted)
+    //     {
+    //         float cooldown = isPerfect
+    //             ? GlobalConfig.Instance.ActionInputCooldown_Perfect
+    //             : GlobalConfig.Instance.ActionInputCooldown_Default;
+    //
+    //         nextAllowedInputTime = TurnTimer.ElapsedTime + cooldown;
+    //         Debug.Log($"[AI 입력 기록] isPerfect={isPerfect}, inputTime={inputTime}, cooldown={cooldown}");
+    //     }
+    //     // AI 입력이 기록되면 CombatManager에 알림
+    //     CombatManager.Instance.OnInputReceivedFromHandler(this);
+    // }
 
 
     private bool ShouldIgnoreInput() // 입력을 무시해야 하는지 확인
@@ -307,7 +308,8 @@ public abstract class BaseInputHandler : MonoBehaviour
     public virtual void ResetInputState()
     {
         lastInputTime = null;
-        aiInputIsPerfect = null; // AI 입력 완벽 입력 여부도 초기화
+        // ❌ 제거 예정: AI 입력 완벽 입력 여부 초기화
+        // aiInputIsPerfect = null;
     }
     public virtual void BindToSlot(CombatCharacterManager.CombatantSlot slot)
     {

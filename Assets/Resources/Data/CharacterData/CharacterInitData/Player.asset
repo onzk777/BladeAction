@@ -68,7 +68,9 @@ MonoBehaviour:
   - 'itm_accessory_nec_test1 '
   - 'itm_accessory_ring_test3 '
   - 'itm_accessory_special_test1 '
-  initialAcquiredActions: []
+  initialAcquiredActions:
+  - actionKey: street_vertical
+  - actionKey: street_ult
   equippedActionSlot1: imperial_vertical
   equippedActionSlot2: imperial_horizontal
   equippedActionSlot3: imperial_defend
